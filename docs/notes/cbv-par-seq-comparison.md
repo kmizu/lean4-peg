@@ -1381,3 +1381,447 @@ acceptance, repeated evaluation, and loading ordinary input into the initial
 binary/original-input state remain to be connected. The general Par/Seq
 comparison remains unresolved; no class separation follows from this upper
 bound alone.
+
+
+### Terminal acceptance and the complete initialized evaluator
+
+`SequentialTerminalTest` reads the numeric terminal value word and accepts
+exactly `some (some 0)`. Missing results, failures, and successful matches with
+unconsumed input all produce a false answer. `compiled_runs` proves the actual
+numeric-to-list compilation, with a linear bound on workspace.
+
+`SequentialTerminalMachine` connects this check to the binary front parser and
+the seven-way dispatcher. Its handler consumes the whole terminal configuration,
+leaving the binary-state register empty and storing an acceptance marker in
+register 17. The original input encoding remains in register 11. The parser's
+remaining scratch value is harmless and stays within the verified capacity.
+
+`SequentialEvaluationMachine.loop_of_runs` follows a finite `SequentialStack.Runs`
+trace by induction, running the actual dispatcher once per nonterminal step and
+once more for the terminal check. Every encoded configuration has a nonempty
+binary-state register, while the terminal handler empties it. Consequently the
+actual compiled loop terminates without an externally supplied iteration count.
+`initialized_halts` includes the final acceptance-marker branch;
+`initialized_tape` transfers the entire execution to twenty actual tapes.
+`answer_iff` identifies its computed answer with full-consumption sequential CBV
+observation for first-order grammars and root expressions.
+
+The loop uses one capacity for the whole run: `reachable_space` chooses the
+previous grammar-dependent linear plus `O(n log n)` upper bound uniformly over
+all reachable configurations. Thus the proof bounds every intermediate scan,
+copy, terminal check, loop test, and final branch; it does not merely bound
+configuration endpoints. This is a space bound, with no new running-time bound.
+
+The initial tapes in these theorems already represent the binary initial stack
+configuration and the separately encoded original input. A loader from ordinary
+input still needs to compute the input length, initialization clock, numeric
+field width, and initial binary fields. The general Par/Seq equality or
+separation remains open. The initialized evaluator and its space bound alone do
+not establish a language-class separation from P.
+
+
+### Computing initialization numbers from the runtime length
+
+`Complexity.UnaryAffine.affine_runs` computes a fixed affine function of a
+runtime source-list length, restoring that source and its temporary register.
+Its capacity annotation covers all intermediate copies and constant pushes.
+`Complexity.BinaryWidth.width_runs` repeatedly executes the existing division
+and digit program, counting one unary cell per halving. It consumes the value,
+clears its scratch registers, and leaves the exact binary bit length in the
+output register. For positive values, `positive_width_runs` gives `log2 N + 1`;
+`width_tape` transfers the same bound to the actual compiled tape execution.
+
+`SequentialInitializationNumbers.bound_eq` expresses the evaluator's exact
+`numberBound` as a grammar-dependent affine function of the input length.
+The stage's actual program first computes this bound, then computes its bit
+length, and finally computes `SequentialClock.positionClock`. Its input
+`seed n X` contains only the unary input length in register 13 and the encoded
+original input in register 11. The result keeps these registers and places the
+width in register 8 and the clock in register 3. The bound value and arithmetic
+scratch registers are empty afterward. `runs` and `tape` verify the full stage;
+`space_linear` proves a grammar-dependent linear capacity in the original
+input length, including the preserved original-input encoding.
+
+This removes externally supplied clock, numeric-bound, and width values from
+this initialization stage. The full ordinary-input loader still needs to
+produce the length and original-input encoding, assemble the six initial
+numeric fields `[0, clock, n, rootExprId, 0, 0]`, and invoke the verified binary
+front writer. The initialized evaluator is already available after that
+boundary. General Par/Seq equality or separation is still unresolved.
+
+
+### Initial-field assembly and evaluation from the length/input seed
+
+`SequentialInitializationFields.initial_fields` identifies the six initial
+numeric fields exactly as `[0, clock, n, rootExprId, 0, 0]`. The fixed assembly
+program appends the field markers and root ID, transfers the runtime clock and
+length into their fields, initializes the two-marker register, and consumes
+the length/clock registers. `assemble_runs` proves the resulting state is the
+existing front writer's exact input, with the original-input register retained.
+`runs` invokes that verified writer and produces precisely
+`SequentialStepMachine.state g x e (SequentialStack.initial g x e)`.
+`space_linear` bounds the entire assembly and emission stage, including every
+copy and scan, by a grammar-dependent linear function of input length.
+
+`SequentialSeedMachine.program` now composes numeric initialization, field
+assembly and binary writing, and the complete evaluator on the same twenty
+registers. `halts` proves termination from `seed n X`, and `tape` transfers the
+entire computation to twenty actual tapes. `recognizes` attaches the exact
+first-order Seq full-consumption observation on the same original `List Char`
+to its halting answer. No clock, width, bound value, expression selector, or
+binary initial configuration is supplied separately. `space_bound` adds only
+a linear initialization term to the previously proved `O(n log n)` binary
+stack bound.
+
+The seed still contains the unary input length and `encS (codes x)`. An
+ordinary-input loader must produce both of these from the actual input tape;
+these theorems do not yet provide that loader or a standard-input TM class
+membership theorem. The general Par/Seq language-class comparison remains
+open, and the current space upper bound alone supplies no separating language.
+
+
+### Recovering input length and evaluating from a single encoded input
+
+`SequentialInputLength` scans the complete original-input encoding, counts its
+field-marker cells, and moves the scanned cells onto a temporary stack. It then
+reverses that transfer to restore the exact original encoding. `scan_runs` proves
+the actual loop, including all intermediate moves and counter updates.
+`encS_count` shows that each numeric field contributes exactly one marker;
+`original_runs` therefore produces the evaluator's seed with the exact original
+character count. Empty inputs are covered. The workspace capacity is the encoded
+input length plus four cells, so `space_linear` bounds this stage linearly in
+the original character length.
+
+`SequentialEncodedMachine` composes this restored-input length computation with
+the complete seed evaluator. Its sole initial data is `encS (codes x)` in
+register 11; all other registers are empty. No input length, clock, width,
+selector, or initial stack is provided separately. `halts` proves the whole
+program stops, `tape` transfers it to twenty actual tapes, and `recognizes`
+identifies its actual halting answer with first-order sequential
+full-consumption observation on the same original character list. `space_bound`
+retains the previous grammar-dependent linear plus binary `O(n log n)` capacity.
+
+The theorem still starts with the original input already encoded as numeric
+fields. It does not yet start at the standard raw input configuration, and
+therefore does not establish a standard-input TM space-class theorem. The
+ordinary-input encoding/loader and the general Par/Seq equality or separation
+remain unresolved. In particular, the current space upper bound alone does
+not give a separating language in P.
+
+
+### Standard-input TM space bound on ordinary a/b words
+
+`SequentialBinaryLoader` reads the standard list input, one input bit per
+ordinary a/b character. It emits each character's numeric field into a temporary
+stack in reverse order, then reverses the complete transfer into register 11.
+`runs` gives exactly `SequentialEncodedMachine.input (bitWord w)`. It supplies
+no repeated input, extra clock, length field, or binary stack state. The loader
+uses at most `100*n+4` cells per tape, including intermediate constant pushes.
+
+`SequentialBinaryInputMachine.program` composes the existing standard tape
+initializer `initP` with this loader and the complete evaluator. `tape` starts
+at the actual `initTapes 20 w`. `recognizes` ties its halting answer to sequential
+CBV full-consumption observation of `bitWord w`, the ordinary a/b word with one
+character per input bit. `finite_alphabet` obtains a fixed finite tape alphabet
+from the finite list program, and `machine` transfers the entire run to an
+actual deterministic twenty-tape TM from `initCfg 20 w`.
+
+For each fixed first-order grammar and root expression, that TM decides the
+same ordinary binary language with capacity
+
+```
+(C + 104)*(n+1) + 11*(A*(n+1))*((n+1).log2 + B.log2 + 2)
+```
+
+where `C`, `A`, and `B` depend only on the fixed source grammar and expression.
+This is an `O(n log(n+1))` bound on every intermediate configuration of the
+standard-input computation, including input import, encoding, length recovery,
+clock/width computation, initial-stack writing, evaluation, and final acceptance.
+No running-time improvement is claimed.
+
+This closes the standard-input connection for the ordinary a/b alphabet. The
+arbitrary-Char input decoder remains separate. General Par/Seq equality or
+separation is still open, and the space upper bound alone does not separate
+Seq from Par=P on the binary alphabet.
+
+
+### The language-class consequence and the remaining lower bound
+
+`Complexity.SpaceNLogN` states deterministic `DSPACE(n log(n+1))` with the
+standard binary-input convention: one fixed finite-tape TM and one constant
+`C` bound every input run by `C*(n+1)*(log2(n+1)+1)` cells per tape.
+`SequentialBinaryInputMachine.space_nlog_bound` absorbs the previous explicit
+source constants into this conventional bound.
+
+`Shallot.PegSeparation.binary_seq_in_nlog_space` therefore applies to the
+entire first-order Seq class on the ordinary a/b alphabet, without assuming
+a particular source grammar or a separate initialization routine.
+`binary_reverse_requires_P_nlog_space` and
+`original_reverse_requires_P_nlog_space` combine it with the verified binary
+Par=P theorem: either binary reverse inclusion or a general original-character
+reverse translation would imply that every P language belongs to this space
+class.
+
+`P_outside_nlog_space_separates_original` gives the other direction needed by
+a possible space-based separation strategy: an explicit P language outside
+this deterministic space bound would be recognized by a fixed Par grammar,
+while no Seq grammar could recognize it. It includes the already proved
+Seq-to-Par inclusion and the genuine original-character-language separation
+conclusion, using the same unpadded input correspondence.
+
+These are implications, with the complexity lower bound an explicit hypothesis.
+No such P witness is constructed here, and no converse from a space upper bound
+to Seq recognition is claimed. Consequently none of these theorems decides the
+Par/Seq comparison. This isolates the missing mathematical step in a space-based
+strategy; merely improving the input loader or repackaging the upper bound does
+not supply it. Direct reverse compilation, or a genuine non-inclusion witness,
+remains the requested conclusion.
+
+The [2019 article](https://kmizu.hatenablog.com/entry/2019/10/24/145039) also uses
+both evaluation conventions for tag matching. Rechecking that example confirms
+the calling-position distinction; it does not itself supply a language-class
+separation or a general translation. The repository's `SequentialCaptures`
+results already rule out retaining a nonempty literal capture at the same
+Seq argument/body position, and the earlier residual-interface impossibility
+results explicitly leave whole-grammar transformations and retained continuations
+open.
+
+
+### Direct reverse translations for recursive replay tests
+
+`CallLookahead` separates input restoration from capture evaluation. For an
+arbitrary fixed first-order Par grammar, let `tested g` put a positive lookahead
+around each rule body. Let `wrapped g` instead transform all body call sites
+into positive lookaheads, recursively transforming their argument expressions.
+`observations_iff` proves that `tested g` on an original expression and
+`wrapped g` on its transformed expression have exactly the same finite
+observations on every original input. The proof relates all table-approximation
+clocks with `Peeked`: successful rule results are reset to the caller position,
+while explicit failure and undefined results are retained. Calls of arbitrary
+arity, recursive calls, argument failure, missing rules, and arity mismatches
+are covered. No totality premise is required. This particular rule-to-call
+lookahead movement is proved for Par; it is not claimed for Seq, whose arguments
+already consume input before the body is entered.
+
+`ReplayTestFusion` composes this movement with the verified replay fusion.
+Its Par source rules have the shape `F(x) <- &(x B)`. The fixed Seq target
+rules are `F(x) <- translated(B)`, and every translated call is under positive
+lookahead. The Seq argument consumes the prefix which the Par body replays;
+the literal capture remains available in `B`, and the enclosing call lookahead
+restores the original caller position after the test. `observations_iff`
+preserves every finite observation, and `language_translation` constructs an
+actual fixed first-order target grammar and root expression recognizing the
+same original character strings, including empty input. Recursive first-order
+tails may freely reuse their captured literal values.
+
+`PrefixPairTestFusion` extends the same construction to the earlier factored
+two-prefix interface. Template calls `F(A,B)` mean `F(A,A B)` in the Par source
+and `F(A,B)` in the Seq target. Par retains the two common-origin values `u`
+and `u++v`; Seq captures consecutive chunks `u` and `v` and reconstructs both
+values when referenced. The source body tests a replay of its full second
+prefix followed by its template tail. The target omits that leading replay
+and uses positive lookahead at each call site to restore the caller position.
+`render_commute`, `wrapped_pair`, `observations_iff`, and `language_translation`
+connect the actual recursive fixed grammars. Template calls are required to
+have two arguments everywhere; this condition is stated by `PairCalls`.
+
+These results add genuine Par-to-Seq translations for recursive capture-using
+tests whose call results do not advance their callers. They do not normalize
+arbitrary Par bodies into replay-test form, nor factor arbitrary independent
+Par arguments into adjacent chunks. The earlier residual-interface
+impossibilities are not contradicted: the new construction changes call-site
+control and the callee's position together. The general equality/separation
+question remains open; these fragments are progress toward a reverse compiler,
+not a proof that the whole classes coincide.
+
+
+### Static literal captures: reverse compilation without leading replay
+
+`LiteralArguments` isolates a different route around the calling-position
+problem. When an actual argument is a literal expression or a forwarded
+parameter, its captured word is statically known from the enclosing value
+environment. This does not make the argument evaluation optional: the literal
+must still match at the original caller position, even when the callee ignores
+its parameter. `arguments_eval` proves that the actual left-to-right Par
+argument evaluation resolves the value vector and checks every word against
+that same original suffix. A missing forwarded parameter fails, and empty
+literals are covered. `guards_eval` realizes these checks as non-consuming
+positive-lookahead guards.
+
+`LiteralSpecialization` enumerates one finite specialization for each source
+rule and each value vector of the rule's arity over a fixed finite palette.
+`mem_specs` and `specs_valid` prove coverage and validity of the actual
+input-independent enumeration. The compiler replaces each parameter with its
+literal value and each call with argument guards followed by a zero-argument
+call to the appropriate specialized rule. Missing rules, arity mismatches,
+and unresolved arguments preserve failure. `target_zero_arity` verifies that
+every generated rule has arity zero. There is no leading-replay restriction
+on the source rule body.
+
+`evaluator_of_related` and `tables_related` connect the actual finite generated
+grammar to the source Par evaluator at every table clock. The target Seq call
+receives no consuming arguments, while the guards check the original arguments
+at the caller's unchanged position. `limit_eq` uses both fixed-point stability
+bounds; it does not assume that the differently sized source and target grammars
+have identical iteration bounds. `observations_iff` consequently preserves
+success with every residual input, finite failure, and absence of a finite
+result through arbitrary recursive supported bodies.
+
+`LiteralSpecializationCompiler` removes the supplied-palette premise. It
+collects the argument literals from all source rules and the root expression,
+proves that every resolved value stays within that palette, and produces one
+fixed first-order Seq grammar and root from the source syntax alone.
+`language_translation` preserves full-consumption recognition on exactly the
+same original character strings, with no totality or input-size assumption.
+Source bodies may contain arbitrary supported recursion, sequencing, choice,
+negation, repetition, and reuse of their parameters.
+
+The precise restriction is syntactic: every actual argument at every call is
+a `.lit` expression or a `.param` forwarding an existing value. The result does
+not yet cover `.any`, `.range`, an arbitrary finite-valued argument parser, or
+unbounded dynamically captured strings. Those require additional value-selection
+or residual parsing machinery. This gives a direct reverse compiler for a
+new source fragment with unrestricted body placement, but does not establish
+the general Par-to-Seq inclusion or a language-class separation.
+
+
+### Input-dependent finite choices and committed continuation failure
+
+`ChoiceArguments` extends the finite-value argument interface to nested ordered
+choices of literals and forwarded parameters. The captured word can now depend
+on which alternative matches the original input. The selector's continuation
+runs at the unchanged caller position after that value has been chosen.
+
+Plain distribution across the continuation would be incorrect: if `A` matches
+but its specialized callee fails, a naive alternative may retry `B` and accept
+with a different captured value. `plain_distribution_changes_result` gives a
+concrete formal counterexample on the same input `ab`: committed selection
+fails, while naive distribution accepts the entire word. `branch_eval` and
+`select_eval` prove the required commitment, including a continuation with no
+finite result. The implementation tests the first argument alternative with
+positive lookahead and protects the other branch with its negative guard.
+`selectArgs_eval` composes these selectors in the original argument order;
+all argument alternatives are checked against the same caller input.
+
+`ChoiceSpecialization` connects these selectors to the actual finite
+rule/value-vector enumeration from `LiteralSpecialization`. Every successful
+selected value stays in the palette (`arguments_bounds`), every generated rule
+has arity zero, and the selected specialization's result agrees with the source
+Par table. `tables_related`, `limit_eq`, and `observations_iff` preserve every
+finite observation through recursive source bodies. The proof uses the two
+grammars' separate stability bounds, rather than assuming equal-sized grammars.
+
+`ChoiceSpecializationCompiler` recursively collects literals from the ordered
+argument choices in all rules and the root. `language_translation` constructs
+one fixed first-order Seq grammar and root from this source syntax, preserving
+full-consumption recognition of exactly the same original character strings.
+There is no leading-replay restriction on source bodies.
+
+The argument grammar proved here is precisely `literal | parameter | argument /
+argument`. Arbitrary nesting and forwarding are covered. Character/range
+captures, concatenation of argument parsers, arbitrary finite-valued recursive
+argument parsers, and unbounded dynamically captured strings are not yet
+covered. This extends the reverse compiler to a concrete input-dependent
+finite-value fragment; general Par/Seq equality or separation remains open.
+
+
+### Sequential argument composition with a checked finite domain
+
+`SequenceArguments.selectAt` extends the selector to argument sequencing.
+Its continuation still runs at the original caller position. When the first
+part selects `u`, the next selector tests the second part after the known
+prefix followed by `u`; this replay occurs entirely inside lookahead. The
+selected result is `u++v`. `probe_eval`, `pre_concat`, and `selectAt_eval`
+prove that the probed position and the concatenated captured word agree with
+the actual sequential argument evaluation. Ordered choices retain their
+commitment before the continuation. `selectArgs_eval` then evaluates each
+whole Par argument against the original common caller position.
+
+`SequenceArgumentDomain.possible V a` enumerates the syntactically possible
+words of an argument: literals are singleton sets, parameters range over the
+palette `V`, choices combine lists, and sequences form concatenations. `Closed`
+requires the supported argument syntax and membership of every possible final
+word in `V`. Intermediate pieces of a composite argument need not themselves
+be members of `V`; `concrete_concatenation_checked` demonstrates that a palette
+containing only `ab` can cover the composite literal argument `a b`.
+`success_possible` and `arguments_bounds` prove this syntactic check covers
+every value selected in an actual run. `closedB_iff` and `supportedB_iff`
+connect the executable finite checks to their precise predicates.
+
+`SequenceSpecialization` connects this selector to the fixed finite
+rule/value-vector enumeration. Every target rule has arity zero. The full
+table, limit, and observation proofs cover recursive source bodies and
+preserve success, failure, and undefinedness. `check` tests a supplied finite,
+input-independent palette against every source rule and the root expression.
+`checked_observations` and `checked_language_translation` prove that a successful
+check produces one fixed first-order Seq grammar recognizing the same original
+character strings, without a leading-replay or totality requirement.
+
+A finite palette is an actual restriction, not an automatic consequence of
+argument sequencing. `no_nonempty_palette_for_duplication` proves that the
+syntactic closure check for `param(0) param(0)` cannot succeed with a palette
+containing a nonempty word: closure would contain words of arbitrarily large
+length. This theorem concerns the finite-domain interface and does not prove
+language-class non-inclusion. The check also overapproximates possible parameter
+combinations, so no completeness claim for finite-valued source semantics is
+made.
+
+The exact supported argument syntax is literal, parameter, sequencing, and
+ordered choice. Character/range atoms, argument repetition and recursion,
+and general unbounded captures remain outside this compiler. General Par/Seq
+equality or separation remains open; the finite-domain construction does not
+replace the required unbounded representation or a genuine separating witness.
+
+
+### One unbounded runtime capture with finitely many auxiliary values
+
+`HybridReplayFusion` combines the unbounded-capture replay transformation with
+finite static specialization. For a fixed number `d` of auxiliary parameters,
+each source rule has arity `d+1` and body `head tail`, where `head` replays
+parameter zero. The first actual argument may be an arbitrary supported
+recursive first-order expression, including repetition and reuse or duplication
+of the runtime head. The remaining actual arguments are literal words or
+positive-index parameter forwards, whose values remain in a finite palette.
+They are all evaluated against the same original Par caller input.
+
+The target enumerates only rule/auxiliary-value-vector specializations. Each
+generated Seq rule retains arity **one** (`target_arity_one`): the head word
+remains a real runtime capture, with no global length bound and no membership
+requirement in the finite palette. Positive parameters in the source body are
+replaced by their specialized literals; parameter zero remains a parameter.
+The source's leading head replay is omitted in the target because the Seq
+argument evaluation already consumes that same prefix.
+
+Argument evaluation order is essential. The compiled call first checks the
+translated head argument under lookahead, then checks the finite auxiliary
+arguments at the unchanged caller position, then invokes the specialized Seq
+rule with the translated head argument. The preliminary head check prevents
+an undefined first argument from being hidden by a later failing or unresolved
+auxiliary argument. The actual Seq call evaluates the head again; determinism
+makes its captured value and remainder agree with the preliminary check.
+The proof covers undefinedness, finite head failure, failed auxiliary matches,
+unresolved forwards, and successful entry to the body.
+
+`evaluator_of_shift` preserves this calling convention for arbitrary supported
+bodies. `tables_shifted` connects all recursive table approximations while
+retaining the unbounded head as a runtime value. `limit_eq` handles different
+fixed-point bounds of the source and specialized target. `observations_iff`
+and `language_translation` preserve every finite observation and the same
+original character language, without assuming totality.
+
+`HybridReplayCompiler` collects only the literal auxiliary values from all
+source tails and the root, proving the required palette property automatically.
+The head expression is traversed for nested calls, but its captured word is not
+placed in that palette. It therefore builds a fixed first-order Seq grammar
+and root from the source syntax alone. `duplication_shape` verifies that
+`param(0) param(0)` is permitted as a head argument: the finite-domain
+obstruction proved for specializing *all* values does not apply to this runtime
+head representation.
+
+This construction keeps one unbounded value and specializes any fixed number
+of finite auxiliary values. Its restrictions remain explicit: every source
+body begins by replaying the head, all source rules have the common arity
+`d+1`, and auxiliary arguments are literals or non-head parameter forwards.
+It does not yet accommodate several independent unbounded captures, arbitrary
+body placement, or a general Par normal form. Consequently it is a further
+direct reverse fragment, not a proof of general equality or separation.
