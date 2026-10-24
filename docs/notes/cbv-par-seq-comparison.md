@@ -6514,3 +6514,31 @@ and it is not a new recursive-helper language translation theorem. That
 composition, held-value-dependent header/control evaluation, arbitrary
 original argument shapes, and independent multiple source captures remain
 open. General Par/Seq equality or separation remains unresolved.
+
+
+### Recursive helper control inside mutually recursive users
+
+`CodewordControlHelperGrammar` completes the preceding composition. A
+single generated grammar contains the independent nullary header/test
+helpers, the unary comparison verifier, and mutually recursive users.
+Source users retain the whole argument A;D; target users retain consecutive
+A and D captures and reconstruct the source value through parameter views.
+Actual helper tables determine both prefix-failure seeds. Induction over
+user stages preserves the split environments, and ordinary-table
+cofinality gives all finite observations and the same original input
+language in fixed ordinary grammars.
+
+`CodewordControlHelperGrammarExamples` combines the recursive balanced-word
+header and nested recursive control tests with two mutually recursive
+users. Actual captures change from three words to one to two, including an
+empty second target value, and the parent value is reused after return.
+Kernel executions reject short parent/child copies and unequal captures.
+A nonproductive header stays undefined for all inputs, valid positions,
+environments, and ordinary stages; neither grammar has finite observations.
+
+The preceding local-only composition gap is therefore closed. The shared
+independent helper/header/control discipline, source leading A;param0,
+and one original unary capture remain restrictions. Held-value-dependent
+header/control evaluation, arbitrary original argument shapes, independent
+multiple source captures, and general Par/Seq equality or separation remain
+unresolved. All 33 additional public theorem guards use standard axioms.
