@@ -5706,3 +5706,41 @@ The examples pass retained `a` twice and append a fresh `b*`, capturing `aabbb` 
 The alphabet condition is essential for this identity construction. A capture `a#a#` on input `a#a#a#` crosses the scanner delimiter: Par accepts and Seq with the same grammar rejects, and the argument fails Safe. This is a boundary example, not a class-separating language. Captures crossing the scanner frontier, arbitrary consuming closed prefixes, integration of this family with the general body compiler, and multiple independent general captures remain open. General Par/Seq equality or separation is not established.
 
 Validation: full `lake build` passed (883 jobs), including Audit. All 133 public PR theorem dependencies were rechecked and guards passed; 21 guards are new. The three new modules compile without warnings/placeholders; source and whitespace audits passed.
+
+
+### A runtime shift cannot use one fixed finite capture filter
+
+`CBV/RuntimeShiftFilter.lean` examines the remaining consuming prefix
+`a*;#` directly. `scanner_eval` proves that this actual expression consumes
+`a^n#` on every input `a^n# ++ rest`, for either strategy and arbitrary
+tables and environments. The shift length is unbounded and input-dependent.
+
+Write `b(n)=a^n#`. For a capture `b(n)++b(m)`, the necessary overlap
+condition is exactly
+
+```text
+(b(n)++b(m)) is a prefix of b(n)++(b(n)++b(m)) iff n=m.
+```
+
+`no_uniform_filter` proves that no fixed valid finite `RegularCaptureProduct.Machine`,
+with any accepting-state predicate, decides this condition for all n,m.
+Correctness would make its states after b(n) pairwise distinct: append b(n)
+to distinguish any colliding b(n),b(m). `CaptureOrbit.bounded_collision`
+then contradicts the finite width. `fixed_shift_filter` separately confirms
+that the existing phase machine remains exact for each individual static
+shift. Merely choosing one larger fixed machine cannot extend that method
+to this unbounded runtime family.
+
+This is a compilation-method obstruction, **not a Par/Seq class separator**.
+Indeed `seq_compare_blocks` and `seq_observations` prove that one fixed
+first-order Seq grammar, `Replay(x)=x` with entry `Replay(a*;#)`, accepts
+every b(n)++b(n) and finitely rejects every b(n)++b(m) with n!=m. It stores
+the runtime block itself rather than a finite phase. No argument above
+excludes Seq mechanisms using retained captures, recursive work, or queries.
+
+The next missing construction must preserve that kind of unbounded runtime
+information while also preserving the original argument parser's selected
+capture, undefinedness, and later reuses. The direct two-block comparison
+is already handled by Seq; turning arbitrary crossing captures into such
+a representation remains unresolved. General equality or separation has
+not been established.

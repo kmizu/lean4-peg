@@ -13125,3 +13125,39 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ScannerArgumentExamples.crossing_boundary
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimeShiftFilter.scanner_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimeShiftFilter.scanner_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimeShiftFilter.block_prefix' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimeShiftFilter.block_prefix
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimeShiftFilter.overlap_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimeShiftFilter.overlap_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimeShiftFilter.distinguish' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimeShiftFilter.distinguish
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimeShiftFilter.no_uniform_filter' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimeShiftFilter.no_uniform_filter
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimeShiftFilter.fixed_shift_filter' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimeShiftFilter.fixed_shift_filter
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimeShiftFilter.strip_block' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimeShiftFilter.strip_block
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimeShiftFilter.seq_compare_blocks' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimeShiftFilter.seq_compare_blocks
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimeShiftFilter.seq_observations' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimeShiftFilter.seq_observations
