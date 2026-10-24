@@ -229,52 +229,66 @@ theorem evaluator_of_rows (nodes : List Node) (hNodes : RegularCaptureProduct.Va
         subst j
         simp [pre,run]
 
-theorem tailPrefix_actual (users : List User) (i : Nat) (r : User) (hr : users[i]?=some r) (w : List Char) :
+theorem tailPrefix_actual (users : List User) (i : Nat) (r : User) (hr : users[i]?=some r) (hu : r.shift≠[]) (w : List Char) :
     tailPrefix users i (profile (machine users) w) r =
       ProfiledDependentRecursion.tailPrefix r.shift (profile (PeriodicCaptureMachine.machine r.shift) w) := by
   have hi : (shifts users)[i]?=some r.shift := by simp [shifts,hr]
-  simp only [tailPrefix,phase,CaptureMachineFamily.phase_profile (shifts users) i r.shift hi w,
+  simp only [tailPrefix,if_neg hu,phase,CaptureMachineFamily.phase_profile (shifts users) i r.shift hi w,
     ProfiledDependentRecursion.tailPrefix,CaptureTransitionProfile.profile_get _ _ 0 (CaptureMachineFamily.phase_valid r.shift).1,
     Option.getD_some]
 
 theorem prefix_eq (g h : MGrammar) (x : List Char) (T U : ClockFreezing.Table)
-    (users : List User) (i : Nat) (r : User) (hr : users[i]?=some r) (hu : r.shift≠[])
+    (users : List User) (i : Nat) (r : User) (hr : users[i]?=some r)
     (w : List Char) (p j : Nat) (hp : p≤x.length) (hj : j≤x.length)
     (hcap : sfx x p=w++sfx x j) :
     evV g x .callByValuePar T [w] (.seq (.lit r.shift) (.param 0)) p =
       evV h x .callByValueSeq U [w] (tailPrefix users i (profile (machine users) w) r) j := by
-  let empty : MGrammar := ⟨[]⟩
-  let V : ClockFreezing.Table := fun _ _ => []
-  have hs : SoundTV empty x .callByValuePar V := by
-    intro n rule W hn
-    cases n <;> cases hn
-  have hv : evV empty x .callByValuePar V [] (.lit w) p=some (some j) := by
-    simp only [evV,(CBVtoCBN.stripPrefix_exact _ _ _).mpr hcap,length_sfx x hj]
-  have he := ProfiledDependentRecursion.prefix_eq empty h x V V U hs [] (.lit w)
-    True.intro r.shift hu p j hp hv
-  rw [CapturePrefixRows.captured_word x w p j hp hj hcap] at he
-  rw [tailPrefix_actual users i r hr]
-  exact (SeededClock.word_eval_eq g empty x .callByValuePar .callByValuePar T V [w]
-    (.seq (.lit r.shift) (.param 0)) ⟨True.intro,True.intro⟩ p).trans he
+  by_cases hu : r.shift=[]
+  · have hl : evV g x .callByValuePar T [w] (.lit r.shift) p=some (some p) := by
+      simp only [hu,evV,(CBVtoCBN.stripPrefix_exact [] (sfx x p) (sfx x p)).mpr (by simp),length_sfx x hp]
+    rw [evV_seq_ok hl]
+    simp only [tailPrefix,if_pos hu,evV,List.getElem?_cons_zero,
+      (CBVtoCBN.stripPrefix_exact _ _ _).mpr hcap,
+      (CBVtoCBN.stripPrefix_exact [] (sfx x j) (sfx x j)).mpr (by simp),length_sfx x hj]
+  ·
+    let empty : MGrammar := ⟨[]⟩
+    let V : ClockFreezing.Table := fun _ _ => []
+    have hs : SoundTV empty x .callByValuePar V := by
+      intro n rule W hn
+      cases n <;> cases hn
+    have hv : evV empty x .callByValuePar V [] (.lit w) p=some (some j) := by
+      simp only [evV,(CBVtoCBN.stripPrefix_exact _ _ _).mpr hcap,length_sfx x hj]
+    have he := ProfiledDependentRecursion.prefix_eq empty h x V V U hs [] (.lit w)
+      True.intro r.shift hu p j hp hv
+    rw [CapturePrefixRows.captured_word x w p j hp hj hcap] at he
+    rw [tailPrefix_actual users i r hr hu]
+    exact (SeededClock.word_eval_eq g empty x .callByValuePar .callByValuePar T V [w]
+      (.seq (.lit r.shift) (.param 0)) ⟨True.intro,True.intro⟩ p).trans he
 
 theorem tail_success (g : MGrammar) (x : List Char) (s : Strategy) (T : ClockFreezing.Table)
     (users : List User) (i : Nat) (P : List Nat) (r : User) (E : List (List Char)) (j z : Nat)
     (hj : j≤x.length) (hv : evV g x s T E (tailPrefix users i P r) j=some (some z)) :
     z≤x.length ∧ sfx x j=PeriodicCaptureMachine.phase r.shift (phase users i P)++sfx x z := by
-  unfold tailPrefix at hv
-  split at hv
-  · have hz := SequenceArguments.success_prefix g x s T E (.lit (PeriodicCaptureMachine.phase r.shift (phase users i P))) True.intro j z hj hv
-    have hw := WordArguments.value_of_success g x s T E (.lit (PeriodicCaptureMachine.phase r.shift (phase users i P))) True.intro j z hj hv
-    have he : PeriodicCaptureMachine.phase r.shift (phase users i P)=pre x j z := by
-      simpa only [WordArguments.value,Option.some.injEq] using hw
-    exact ⟨hz.1,he ▸ hz.2⟩
-  · simp [MExp.failAlways,evV] at hv
+  have hl : tailPrefix users i P r=.lit (PeriodicCaptureMachine.phase r.shift (phase users i P)) := by
+    by_cases he : r.shift=[]
+    · simp [tailPrefix,he,PeriodicCaptureMachine.phase]
+    · simp only [tailPrefix,if_neg he] at hv ⊢
+      split at hv
+      · rename_i hphase
+        rw [if_pos hphase]
+      · simp [MExp.failAlways,evV] at hv
+  rw [hl] at hv
+  have hz := SequenceArguments.success_prefix g x s T E (.lit (PeriodicCaptureMachine.phase r.shift (phase users i P))) True.intro j z hj hv
+  have hw := WordArguments.value_of_success g x s T E (.lit (PeriodicCaptureMachine.phase r.shift (phase users i P))) True.intro j z hj hv
+  have he : PeriodicCaptureMachine.phase r.shift (phase users i P)=pre x j z := by
+    simpa only [WordArguments.value,Option.some.injEq] using hw
+  exact ⟨hz.1,he ▸ hz.2⟩
 
 def modeResult (D : Machine) (x : List Char) (p : Nat) (m : Mode) (R : Res) : Res :=
   match m with | none => R | some (q,t) => filtered D x q t p R
 
 theorem row_zero (nodes : List Node) (users : List User) (x : List Char)
-    (i : Nat) (r : User) (hr : users[i]?=some r) (hu : r.shift≠[])
+    (i : Nat) (r : User) (hr : users[i]?=some r)
     (w : List Char) (p j : Nat) (hp : p≤x.length) (hj : j≤x.length) (hcap : sfx x p=w++sfx x j)
     (m : Mode) (hm : m∈modes (machine users)) :
     valAt (seqTable nodes users x 0 (address nodes users i (profile (machine users) w) m) [w]) j =
@@ -288,7 +302,7 @@ theorem row_zero (nodes : List Node) (users : List User) (x : List Char)
   have hrot := prefix_eq (parGrammar nodes users) (seqGrammar nodes users) x
     (ClockFreezing.frozen (parGrammar nodes users) x .callByValuePar (RecursiveParserStability.pick (helpers nodes users)) (RecursiveParserStability.floor (helpers nodes users) x) 0)
     (ClockFreezing.frozen (seqGrammar nodes users) x .callByValueSeq (RecursiveParserStability.pick (helpers nodes users)) (RecursiveParserStability.floor (helpers nodes users) x) 0)
-    users i r hr hu w p j hp hj hcap
+    users i r hr w p j hp hj hcap
   change valAt (SeededClock.prefixSeed _ x .callByValueSeq _ _ _ [w]) j =
     modeResult _ _ _ _ (valAt (SeededClock.prefixSeed _ x .callByValuePar _ _ _ [w]) p)
   rw [SeededClock.prefixSeed_query _ x .callByValuePar _ _ _ huser 1 _ _ (source_rule nodes users i r hr) _ p hp,
@@ -315,7 +329,7 @@ theorem row_step (nodes : List Node) (hNodes : RegularCaptureProduct.Valid nodes
   have htuser : RecursiveParserStability.pick (helpers nodes users) (address nodes users i (profile (machine users) w) m)=false := by
     simp [RecursiveParserStability.pick,helpers,component,address]
   have hrot := prefix_eq (parGrammar nodes users) (seqGrammar nodes users) x
-    (parTable nodes users x k) (seqTable nodes users x k) users i r hr hvalid.1 w p j hp hj hcap
+    (parTable nodes users x k) (seqTable nodes users x k) users i r hr w p j hp hj hcap
   rw [SeededClock.user_step _ x .callByValuePar _ _ _ k _ huser _ (source_rule nodes users i r hr) _ p hp,
     SeededClock.user_step _ x .callByValueSeq _ _ _ k _ htuser _
       (target_rule nodes users i r hr _ (CaptureTransitionProfile.profile_mem (machine users) hD w) m hm) _ j hj]
@@ -338,7 +352,7 @@ theorem row_step (nodes : List Node) (hNodes : RegularCaptureProduct.Valid nodes
     | some z =>
       have hzcap := tail_success (seqGrammar nodes users) x .callByValueSeq (seqTable nodes users x k)
         users i (profile (machine users) w) r [w] j z hj hv
-      have hbody := evaluator_of_rows nodes hNodes users x k ih r.body hvalid.2
+      have hbody := evaluator_of_rows nodes hNodes users x k ih r.body hvalid
         [profile (machine users) w] [w] (DependentCaptureFilter.environment_accurate (machine users) [w]) z hzcap.1
       cases m with
       | none => exact hbody.1
@@ -369,9 +383,9 @@ theorem tables_rows (nodes : List Node) (hNodes : RegularCaptureProduct.Valid no
   | zero =>
     intro i r hr w p j hp hj hcap
     constructor
-    · exact (row_zero nodes users x i r hr (hUsers r (List.mem_of_getElem? hr)).1 w p j hp hj hcap none (mode_plain_mem _)).symm
+    · exact (row_zero nodes users x i r hr w p j hp hj hcap none (mode_plain_mem _)).symm
     · intro q t hq ht
-      exact row_zero nodes users x i r hr (hUsers r (List.mem_of_getElem? hr)).1 w p j hp hj hcap _ (mode_filter_mem _ q t hq ht)
+      exact row_zero nodes users x i r hr w p j hp hj hcap _ (mode_filter_mem _ q t hq ht)
   | succ k ih =>
     intro i r hr w p j hp hj hcap
     constructor

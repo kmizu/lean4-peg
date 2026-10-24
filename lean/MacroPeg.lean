@@ -449,3 +449,5 @@ import MacroPeg.CBV.RecursiveArgumentCorrespondence
 import MacroPeg.CBV.RecursiveArgumentExamples
 import MacroPeg.CBV.OriginControlNormalization
 import MacroPeg.CBV.OriginControlExamples
+import MacroPeg.CBV.EmptyReplayExamples
+import MacroPeg.CBV.ClosedOriginExamples

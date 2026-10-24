@@ -11,7 +11,7 @@ def argument : Arg := .star (.user 0 (.param 0))
 def body1 : Arg := .seq (.lit ['#']) (.seq (.param 0)
   (.alt (.notP (.lit ['!']))
     (.seq (.lit ['!']) (.seq (.user 1 argument) (.seq (.lit ['?']) (.param 0))))))
-def leaves : List Leaf := [⟨['a'],body0⟩,⟨['a','a'],body1⟩,⟨['a'],.lit []⟩,⟨['a'],.lit ['?']⟩]
+def leaves : List Leaf := [⟨some ['a'],body0⟩,⟨some ['a','a'],body1⟩,⟨some ['a'],.lit []⟩,⟨some ['a'],.lit ['?']⟩]
 def specs : List Plan := [.leaf 0,.alt (.guard (.leaf 2) (.leaf 1)) (.notP (.leaf 3))]
 def rootArgument : Arg := .star (.user 0 (.lit ['a','a']))
 def entry : Arg := .seq (.user 1 rootArgument) (.lit ['$'])

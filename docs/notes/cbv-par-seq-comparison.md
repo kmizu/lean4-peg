@@ -5512,3 +5512,59 @@ not established.
 Validation: full `lake build` passed (854 jobs), including Audit. All
 twenty-eight new public axiom guards use only standard Lean axioms or no
 axioms. The two added modules have no proof placeholders or Lean warnings.
+
+
+### Empty replay shifts and capture-independent consuming branches
+
+The recursive argument compiler now permits an empty fixed replay shift.
+For `u = []`, the source replays the actual captured word and the target tail
+starts immediately at its endpoint, with an empty literal prefix. No
+periodicity test is appropriate in this case. `UsersValid` consequently
+requires only valid body syntax. The complete simultaneous plain/product row
+proof, finite observations, and fixed-grammar language translation apply to
+these users together with users having nonempty shifts.
+
+`OriginControlNormalization.Leaf` now explicitly distinguishes replay leaves
+(`some u`, including `some []`) from capture-independent leaves (`none`). A
+closed leaf body may consume literals, sequence, choice, star, independent
+helpers, or invoke recursive users that capture and use their own arguments.
+It cannot refer to the incoming argument value at its own lexical scope. That
+condition is syntactic (`Closed`), and `render_closed` proves the actual source
+expression's environment independence.
+
+A replay leaf receives the original normalized argument; a closed leaf
+receives an empty literal argument and has an empty core replay prefix. This
+lets it start at the original origin without advancing over the discarded
+capture. Both kinds still query installed unary core rows at the same physical
+round. The normalization row induction uses the closed source body's
+independence to relate its incoming environment to `[[]]`. Therefore source
+origin control can choose between replay and capture-independent consuming
+branches in the same recursive family. The outer argument guard still
+preserves argument failure and undefinedness even when the selected body
+ignores that argument.
+
+The new kernel example mixes a nonempty replay, an unshifted replay, and a
+closed consuming fallback. The fallback consumes a literal, runs a recursive
+capture parser, repeats literals, and calls the same control user with a fresh
+argument. After return the outer parent value is reused. Both the replay and
+fallback inputs are accepted, and an incorrect inner copy is rejected. A
+separate physical core execution shows that passing the six-character original
+argument to the closed leaf incorrectly advances it and fails, while its empty
+argument succeeds. Generated Seq observations follow from the full compiler.
+
+An unshifted replay accepts the nonperiodic capture `abac` in `abac#abac`.
+A direct recursive cycle through an empty argument remains unknown in every
+source physical round; the generated Seq grammar has no finite success or
+failure observation on that input. This checks that removing nonempty shifts
+does not introduce an implicit progress assumption.
+
+Remaining scope: general capture-dependent consuming sequences/stars before
+replay, multiple independent general arguments, character-atom normalization,
+and normalization of arbitrary original first-order grammars. General Par/Seq
+equality or separation remains unresolved.
+
+Validation: full `lake build` passed (856 jobs), including Audit. All 93
+public PR theorem dependencies were rechecked. Fourteen new guards use only
+standard Lean axioms or no axioms; four existing normalization guards now
+include standard `Classical.choice`. The new modules have no proof
+placeholders or Lean warnings.

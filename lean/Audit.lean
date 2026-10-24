@@ -11912,7 +11912,9 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.OriginControlNormalization.parRender_expand
 
-/-- info: 'Shallot.MacroPeg.CBV.OriginControlNormalization.callLeaf_eval' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'Shallot.MacroPeg.CBV.OriginControlNormalization.callLeaf_eval' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.OriginControlNormalization.callLeaf_eval
 
@@ -11920,15 +11922,19 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.OriginControlNormalization.coreRender_user
 
-/-- info: 'Shallot.MacroPeg.CBV.OriginControlNormalization.evaluator_of_rows' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'Shallot.MacroPeg.CBV.OriginControlNormalization.evaluator_of_rows' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.OriginControlNormalization.evaluator_of_rows
 
-/-- info: 'Shallot.MacroPeg.CBV.OriginControlNormalization.tables_rows' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'Shallot.MacroPeg.CBV.OriginControlNormalization.tables_rows' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.OriginControlNormalization.tables_rows
 
-/-- info: 'Shallot.MacroPeg.CBV.OriginControlNormalization.evaluator_eq' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'Shallot.MacroPeg.CBV.OriginControlNormalization.evaluator_eq' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.OriginControlNormalization.evaluator_eq
 
@@ -12001,3 +12007,79 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.OriginControlExamples.target_undefined' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.OriginControlExamples.target_undefined
+
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginControlNormalization.render_closed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginControlNormalization.render_closed
+
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyReplayExamples.users_valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyReplayExamples.users_valid
+
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyReplayExamples.source_execution' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyReplayExamples.source_execution
+
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyReplayExamples.translated_observation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyReplayExamples.translated_observation
+
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyReplayExamples.cycle_valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyReplayExamples.cycle_valid
+
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyReplayExamples.cycle_row' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyReplayExamples.cycle_row
+
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyReplayExamples.source_cycle' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyReplayExamples.source_cycle
+
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyReplayExamples.target_cycle' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyReplayExamples.target_cycle
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ClosedOriginExamples.plans_valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ClosedOriginExamples.plans_valid
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ClosedOriginExamples.leaves_valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ClosedOriginExamples.leaves_valid
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ClosedOriginExamples.entry_valid' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ClosedOriginExamples.entry_valid
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ClosedOriginExamples.source_execution' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ClosedOriginExamples.source_execution
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ClosedOriginExamples.translated_observations' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ClosedOriginExamples.translated_observations
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ClosedOriginExamples.empty_handoff_required' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ClosedOriginExamples.empty_handoff_required

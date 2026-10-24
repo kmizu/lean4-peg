@@ -82,7 +82,7 @@ def phase (users : List User) (i : Nat) (P : List Nat) : Nat :=
   P[CaptureMachineFamily.start (shifts users) i]?.getD 0-CaptureMachineFamily.start (shifts users) i
 
 def tailPrefix (users : List User) (i : Nat) (P : List Nat) (r : User) : MExp :=
-  if phase users i P<r.shift.length then .lit (PeriodicCaptureMachine.phase r.shift (phase users i P)) else MExp.failAlways
+  if r.shift=[] then .lit [] else if phase users i P<r.shift.length then .lit (PeriodicCaptureMachine.phase r.shift (phase users i P)) else MExp.failAlways
 
 def targetBody (nodes : List Node) (users : List User) (i : Nat) (P : List Nat) (m : Mode) (r : User) : MExp :=
   .seq (tailPrefix users i P r) (match m with
@@ -113,7 +113,7 @@ def Valid (nodes : List Node) (users : List User) : Expr → Prop
   | .lit _ | .param _ => True
 
 def UsersValid (nodes : List Node) (users : List User) : Prop :=
-  ∀ r∈users, r.shift≠[] ∧ Valid nodes users r.body
+  ∀ r∈users, Valid nodes users r.body
 
 theorem parRender_firstOrder (nodes : List Node) (users : List User) :
     ∀ e, (parRender nodes users e).FirstOrder
@@ -195,7 +195,10 @@ theorem target_rule (nodes : List Node) (users : List User) (i : Nat) (r : User)
 theorem targetBody_firstOrder (nodes : List Node) (users : List User) (i : Nat) (P : List Nat) (m : Mode) (r : User) :
     (targetBody nodes users i P m r).FirstOrder := by
   refine ⟨?_,?_⟩
-  · unfold tailPrefix; split <;> trivial
+  · unfold tailPrefix
+    split
+    · trivial
+    · split <;> trivial
   · cases m with
     | none => exact plain_firstOrder nodes users [P] r.body
     | some pair => exact filter_firstOrder nodes users [P] r.body _ pair.2
