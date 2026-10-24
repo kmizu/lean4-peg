@@ -397,3 +397,5 @@ import MacroPeg.CBV.ReplayControlFusion
 import MacroPeg.CBV.WordArguments
 import MacroPeg.CBV.WordControlFusion
 import MacroPeg.CBV.MixedControlFusion
+import MacroPeg.CBV.SymbolicWordSelection
+import MacroPeg.CBV.SelectedControlFusion

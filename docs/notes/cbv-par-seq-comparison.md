@@ -4030,3 +4030,63 @@ parser at a consuming-control call, normalize all capture-dependent bodies
 into these parts, or handle multiple independent general arguments. The
 unrestricted equality/separation objective remains unresolved. Root imports
 and 15 new public axiom guards cover the mixed connection.
+
+
+### Committing composite argument choices before consuming body control
+
+`CBV/SymbolicWordSelection.lean` builds a selector from argument **syntax**
+alone. Its supported arguments contain literals, current parameters,
+concatenation, and prioritized choice. The selector chooses a word expression
+made only from literals, parameters, and concatenation. It does not enumerate
+runtime character strings or require a finite palette for the parameter values.
+Thus choices between a current word and its duplication remain supported at
+arbitrary captured lengths.
+
+`selectAt` retains a word expression for the already selected prefix and uses
+input-restoring PEG probes to inspect the next subargument at its actual
+position. Concatenation selects its right operand after the left operand's
+consumed prefix; a failed later operand does not retry the left operand's
+choice. Prioritized choice uses guarded dispatch, so failure or undefinedness
+of the selected continuation cannot change the selected argument alternative.
+`selectAt_eval` and `select_eval` prove the full partial result and the value of
+the selected word expression for arbitrary continuations respecting that value.
+The construction depends on source expressions and their finite branch structure,
+not on an environment, input, table, capture length, or captured characters.
+
+`CBV/SelectedControlFusion.lean` discharges that continuation interface using
+actual installed target part rules. A call with such a composite argument
+selects its word expression at the original position, then enters the body
+control with that fixed expression. Later replay leaves evaluate the selected
+word expression, not the original choice-containing parser. Arbitrary consuming
+sequence, repetition, choice, and predicates in the body therefore preserve
+the original captured value even if another alternative would match at a later
+position. `growing_argument_supported` checks choices involving `x x` and `x`
+without a palette-closure condition.
+
+This new compiler also retains arbitrary supported argument parsers at
+`AtOrigin` callees. `mixed_fragment_supported` embeds the preceding mixed
+fragment into its syntax predicate. Such calls may recursively cross into
+composite-argument consuming calls and back. The source grammar constructor
+is unchanged; the target is a fixed entry rule and a fixed rule per part,
+with the syntax selectors generated at call sites.
+
+`evaluator_of_shift` connects actual selection, actual captures, and actual
+part queries. `tables_shifted` proves the recursive relation at every physical
+round; no user-call simulation or argument-value oracle is retained in
+`observations_iff` or `language_translation`. They preserve all finite results
+and the same original full-consumption language.
+
+The kernel-checked `chosen_word_stays_committed` example uses a consuming
+source body `F(x) <- 'a' x` and a composite argument `(aa / a) eps`. Input
+`aaa` succeeds, while `aab` finitely fails under both actual grammars. On the
+second input the initial choice committed to `aa`; retrying `a` after the
+body fails, or re-evaluating the original choice at the advanced position,
+would incorrectly produce a success. The example also checks the syntax
+conditions for the root and every part.
+
+Consuming-control arguments still exclude repetition, predicates, and recursive
+calls; those remain allowed only under the separate origin-control discipline.
+The unary source restriction and replay/local body factorization also remain.
+General Par/Seq equality or a language-class separator is still unresolved.
+Root imports and 28 new public axiom guards cover the selector and its complete
+recursive compiler application.

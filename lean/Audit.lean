@@ -8729,3 +8729,119 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.MixedControlFusion.fresh_parser_then_consuming_call' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.MixedControlFusion.fresh_parser_then_consuming_call
+
+/-- info: 'Shallot.MacroPeg.CBV.SymbolicWordSelection.arg_equiv' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SymbolicWordSelection.arg_equiv
+
+/-- info: 'Shallot.MacroPeg.CBV.SymbolicWordSelection.probe_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SymbolicWordSelection.probe_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.SymbolicWordSelection.word_arg' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SymbolicWordSelection.word_arg
+
+/-- info: 'Shallot.MacroPeg.CBV.SymbolicWordSelection.selectAt_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SymbolicWordSelection.selectAt_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.SymbolicWordSelection.select_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SymbolicWordSelection.select_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.SymbolicWordSelection.selectAt_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SymbolicWordSelection.selectAt_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.SymbolicWordSelection.select_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SymbolicWordSelection.select_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedControlFusion.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedControlFusion.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedControlFusion.supported_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedControlFusion.supported_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedControlFusion.arg_supported' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedControlFusion.arg_supported
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedControlFusion.mixed_fragment_supported' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedControlFusion.mixed_fragment_supported
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedControlFusion.par_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedControlFusion.par_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedControlFusion.seq_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedControlFusion.seq_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedControlFusion.gate_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedControlFusion.gate_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedControlFusion.seq_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedControlFusion.seq_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedControlFusion.physical_gate_ok' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedControlFusion.physical_gate_ok
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedControlFusion.callLeaf_congr' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedControlFusion.callLeaf_congr
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedControlFusion.enter_origin' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedControlFusion.enter_origin
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedControlFusion.callLeaf_word' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedControlFusion.callLeaf_word
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedControlFusion.enter_word' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedControlFusion.enter_word
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedControlFusion.evaluator_of_shift' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedControlFusion.evaluator_of_shift
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedControlFusion.tables_shifted' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedControlFusion.tables_shifted
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedControlFusion.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedControlFusion.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedControlFusion.decide_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedControlFusion.decide_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedControlFusion.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedControlFusion.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedControlFusion.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedControlFusion.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedControlFusion.chosen_word_stays_committed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedControlFusion.chosen_word_stays_committed
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedControlFusion.growing_argument_supported' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedControlFusion.growing_argument_supported
