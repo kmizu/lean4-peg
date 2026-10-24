@@ -247,3 +247,4 @@ import MacroPeg.CBV.SequentialReturnMachine
 import MacroPeg.CBV.SequentialArgsEntryMachine
 import MacroPeg.CBV.SequentialQueryEntryMachine
 import MacroPeg.CBV.SequentialStructuralEntryMachine
+import MacroPeg.CBV.SequentialCallEntryMachine
