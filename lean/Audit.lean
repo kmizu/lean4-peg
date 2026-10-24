@@ -3505,3 +3505,47 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SequentialWordCycle.field_cycle_tape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialWordCycle.field_cycle_tape
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFront.step_front' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFront.step_front
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFront.local_stack_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFront.local_stack_length
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFront.encoded_step' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFront.encoded_step
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFront.reachable_prefix_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFront.reachable_prefix_length
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFront.reachable_step_prefix' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFront.reachable_step_prefix
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFrontRead.read_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFrontRead.read_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFrontRead.read_tape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFrontRead.read_tape
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFrontRead.frontSpace_bound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFrontRead.frontSpace_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFrontRead.reachable_read_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFrontRead.reachable_read_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFrontRead.reachable_read_tape' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFrontRead.reachable_read_tape

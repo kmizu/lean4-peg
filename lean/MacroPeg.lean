@@ -204,6 +204,8 @@ import MacroPeg.CBV.SequentialStackBinary
 import MacroPeg.CBV.SequentialWordRead
 import MacroPeg.CBV.SequentialWordWrite
 import MacroPeg.CBV.SequentialWordCycle
+import MacroPeg.CBV.SequentialFront
+import MacroPeg.CBV.SequentialFrontRead
 import MacroPeg.CBV.PrefixSuccessor
 import MacroPeg.CBV.PrefixTupleSearch
 import MacroPeg.CBV.PrefixNumerals
