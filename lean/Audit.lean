@@ -13161,3 +13161,45 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.RuntimeShiftFilter.seq_observations' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.RuntimeShiftFilter.seq_observations
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixCodeCapture.prefix_identifies' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixCodeCapture.prefix_identifies
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixCodeCapture.two_word_overlap' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixCodeCapture.two_word_overlap
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixCodeCapture.view_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixCodeCapture.view_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixCodeCapture.collapse' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixCodeCapture.collapse
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixCodeCapture.actual_capture' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixCodeCapture.actual_capture
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixCodeCapture.actual_entry' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixCodeCapture.actual_entry
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixCodeCapture.delimited_prefixFree' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixCodeCapture.delimited_prefixFree
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixCodeCapture.scanner_at' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixCodeCapture.scanner_at
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixCodeCapture.two_header_entry' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixCodeCapture.two_header_entry
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixCodeCaptureExamples.recursive_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixCodeCaptureExamples.recursive_execution

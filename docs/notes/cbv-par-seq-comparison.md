@@ -5744,3 +5744,48 @@ capture, undefinedness, and later reuses. The direct two-block comparison
 is already handled by Seq; turning arbitrary crossing captures into such
 a representation remains unresolved. General equality or separation has
 not been established.
+
+
+### Retaining a runtime prefix codeword for crossing captures
+
+`CBV/PrefixCodeCapture.lean` begins the replacement for a uniform finite
+filter. For any prefix-free code, if the actually selected argument capture
+is `u++v` for complete codewords u,v, successful replay after consuming u
+forces u=v. The codeword set and the individual words may be infinite and
+unbounded. `actual_capture` derives this from actual first-order argument,
+head, and replay evaluations through a sound table. The argument may use
+retained values or recursion; its selected capture is never guessed anew.
+
+`collapse` is a complete partial-result identity at the advanced body entry.
+With a complete v at the current suffix, matching the old `u++v` and using
+it in an arbitrary first-order continuation is equivalent to matching the
+retained u twice and replacing every old parameter occurrence by that
+duplicated view. Unequal codewords give failure on both sides. Equal words
+preserve every continuation result, including undefinedness. `view_eval`
+uses `CaptureViews.evV_rebind`, so parameter uses inside call arguments,
+choice, predicates, and repetition are covered through the same arbitrary
+recursive table. The proof does not assume the continuation succeeds.
+
+`actual_entry` derives this identity at a real source call from its argument
+and head evaluations; it does not assume the final replay succeeds.
+`two_header_entry` instantiates it with the actual two-header argument
+`(a*;#);(a*;#)` and body prefix `a*;#` at every valid physical suffix, for
+all first/second header lengths and every first-order continuation.
+`scanner_at` supplies the actual argument/head results. No finite phase or
+finite value palette is used for this representation.
+
+`PrefixCodeCaptureExamples.recursive_execution` kernel-checks physical
+source Par and candidate target Seq grammars on the same ordinary input.
+The source retains parent `aa#aa#`, captures child `aaa#aaa#`, and reuses
+the parent after the child returns. The candidate retains `aa#`/`aaa#`
+and duplicates them where the source uses its longer capture. Both accept
+`aa#aa#aa#@aaa#aaa#aaa#!?aa#aa#`; both finitely reject the short parent
+copy and unequal child headers. A preflight of the original two-header
+argument precedes candidate Seq calls.
+
+**Scope:** the unbounded theorem is a local entry/representation identity
+within one strategy and recursive table. The finite recursive executions
+do not establish an all-input recursive grammar translation. The remaining
+work includes translating the recursive rows, preserving argument failure
+and undefinedness at calls, and handling captures beyond the two-complete-
+codeword shape. No general Par/Seq equality or separation is claimed.
