@@ -4915,3 +4915,39 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SequentialEvaluationMachine.answer_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialEvaluationMachine.answer_iff
+
+/-- info: 'Complexity.BinaryWord.bitLength_step' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.BinaryWord.bitLength_step
+
+/-- info: 'Complexity.BinaryWord.width_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.BinaryWord.width_runs
+
+/-- info: 'Complexity.BinaryWord.positive_width_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.BinaryWord.positive_width_runs
+
+/-- info: 'Complexity.BinaryWord.width_tape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.BinaryWord.width_tape
+
+/-- info: 'Complexity.affine_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.affine_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialInitializationNumbers.bound_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialInitializationNumbers.bound_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialInitializationNumbers.runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialInitializationNumbers.runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialInitializationNumbers.tape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialInitializationNumbers.tape
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialInitializationNumbers.space_linear' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialInitializationNumbers.space_linear

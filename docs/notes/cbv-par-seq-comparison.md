@@ -1418,3 +1418,33 @@ input still needs to compute the input length, initialization clock, numeric
 field width, and initial binary fields. The general Par/Seq equality or
 separation remains open. The initialized evaluator and its space bound alone do
 not establish a language-class separation from P.
+
+
+### Computing initialization numbers from the runtime length
+
+`Complexity.UnaryAffine.affine_runs` computes a fixed affine function of a
+runtime source-list length, restoring that source and its temporary register.
+Its capacity annotation covers all intermediate copies and constant pushes.
+`Complexity.BinaryWidth.width_runs` repeatedly executes the existing division
+and digit program, counting one unary cell per halving. It consumes the value,
+clears its scratch registers, and leaves the exact binary bit length in the
+output register. For positive values, `positive_width_runs` gives `log2 N + 1`;
+`width_tape` transfers the same bound to the actual compiled tape execution.
+
+`SequentialInitializationNumbers.bound_eq` expresses the evaluator's exact
+`numberBound` as a grammar-dependent affine function of the input length.
+The stage's actual program first computes this bound, then computes its bit
+length, and finally computes `SequentialClock.positionClock`. Its input
+`seed n X` contains only the unary input length in register 13 and the encoded
+original input in register 11. The result keeps these registers and places the
+width in register 8 and the clock in register 3. The bound value and arithmetic
+scratch registers are empty afterward. `runs` and `tape` verify the full stage;
+`space_linear` proves a grammar-dependent linear capacity in the original
+input length, including the preserved original-input encoding.
+
+This removes externally supplied clock, numeric-bound, and width values from
+this initialization stage. The full ordinary-input loader still needs to
+produce the length and original-input encoding, assemble the six initial
+numeric fields `[0, clock, n, rootExprId, 0, 0]`, and invoke the verified binary
+front writer. The initialized evaluator is already available after that
+boundary. General Par/Seq equality or separation is still unresolved.
