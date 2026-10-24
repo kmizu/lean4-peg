@@ -201,6 +201,7 @@ import MacroPeg.CBV.SequentialStackPool
 import MacroPeg.CBV.SequentialStackCodec
 import MacroPeg.CBV.SequentialStackCodecBound
 import MacroPeg.CBV.SequentialStackBinary
+import MacroPeg.CBV.SequentialWordRead
 import MacroPeg.CBV.PrefixSuccessor
 import MacroPeg.CBV.PrefixTupleSearch
 import MacroPeg.CBV.PrefixNumerals

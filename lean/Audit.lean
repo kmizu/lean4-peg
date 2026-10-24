@@ -3437,3 +3437,27 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.PegSeparation.binary_P_witness_separates_original' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.PegSeparation.binary_P_witness_separates_original
+
+/-- info: 'Complexity.BinaryWord.take_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.BinaryWord.take_runs
+
+/-- info: 'Complexity.BinaryWord.horner_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.BinaryWord.horner_runs
+
+/-- info: 'Complexity.BinaryWord.read_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.BinaryWord.read_runs
+
+/-- info: 'Complexity.BinaryWord.runs_tape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.BinaryWord.runs_tape
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialWordRead.read_word_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialWordRead.read_word_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialWordRead.read_word_tape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialWordRead.read_word_tape
