@@ -17375,3 +17375,89 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ControlledPartialRecursiveExamples.undefined_stopping_test
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentReplay.preflight_none' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentReplay.preflight_none
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentReplay.preflight_fail' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentReplay.preflight_fail
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentReplay.fragment_loop_none' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentReplay.fragment_loop_none
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentReplay.linked_fragment_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentReplay.linked_fragment_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentReplay.trace_replay_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentReplay.trace_replay_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentReplay.physical_tail_compare' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentReplay.physical_tail_compare
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentReplay.split_arguments' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentReplay.split_arguments
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentReplay.wholeView_eval' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentReplay.wholeView_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentReplay.physical_preflight_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentReplay.physical_preflight_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentExamples.early_fragment_and_three_captures' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentExamples.early_fragment_and_three_captures
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentExamples.caller_selects_fragment' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentExamples.caller_selects_fragment
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentExamples.varied_captures_and_reuse' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentExamples.varied_captures_and_reuse
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentExamples.malformed_copies_rejected' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentExamples.malformed_copies_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentExamples.controlled_stop_and_early_fragment' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentExamples.controlled_stop_and_early_fragment
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentExamples.immediate_delimiter_body_fails' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentExamples.immediate_delimiter_body_fails
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentExamples.firstOrder_grammars_and_entry' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentExamples.firstOrder_grammars_and_entry

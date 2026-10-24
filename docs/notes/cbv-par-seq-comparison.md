@@ -7348,3 +7348,47 @@ has not been combined with the earlier before/after-test or mixed-body
 compilers. Arbitrary consuming arguments, general initial body positions,
 independent multiple captures, and general Par/Seq equality or separation
 remain unresolved.
+
+### Caller-selected fragments before the end of an a-run
+
+`ControlledFragmentReplay` investigates the next boundary directly:
+`B_(G,H) = (A;&(A;G))*;H`, with A=a*;#. H may select a proper prefix
+of the final a-run, rather than consume its greedy maximum. The argument
+can therefore end on an a, invalidating `argument_stop` and the old
+immediate-# target body.
+
+`linked_fragment_iff` proves a general prefix-code equivalence for a
+complete-word trace followed by any fragment. `trace_replay_iff`
+specializes it to an a-fragment followed by the remaining a-run and #;
+it does not equate the fragment length with the initial run length.
+`physical_tail_compare` implements the new local comparison using an
+ordinary unary Seq helper with body A;param0. The actual H is evaluated
+in the original caller environment; after capture the helper consumes
+the remaining a-run and #, then compares the retained fragment.
+
+`physical_preflight_iff` recovers the full-word trace from the actual
+star execution and proves success equivalence of the physical Seq
+filter and the original whole replay. This theorem assumes successful
+star/H executions, an a-only captured fragment, and a remaining run
+ending in #. It is a local conditional result: failed terminal scans
+and a syntax-derived all-input condition on H have not been discharged.
+Original argument failure and undefinedness are propagated before the
+comparison, including a universally undefined empty-star H.
+
+`split_arguments` proves that three consecutive real Seq arguments
+`[a*, #;(A;&(A;G))*, H]`, on the positive first-iteration branch,
+retain exactly the original whole capture. All three evaluate in the
+unchanged caller environment. `wholeView_eval` restores that value
+throughout any first-order continuation with complete partial results.
+The three pieces represent one source capture, not independent captures.
+
+Kernel executions select a or aa inside aaa, accept and later reuse
+aa#a captured inside an aa run, and combine the earlier full-word stop
+with an independently selected final fragment. They exercise zero-word
+and empty fragments, longer traces, malformed/short copies, and show
+that the old immediate-# body rejects at this actual early endpoint.
+Both concrete grammars and the proposed entry are first-order.
+
+The proposed entry's recursive call transfer, all-input failure cases,
+and composition with the earlier recursive/mixed-body compilers remain
+unproved. General Par/Seq equality or separation remains unresolved.
