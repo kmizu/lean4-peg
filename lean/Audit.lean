@@ -16138,3 +16138,157 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.MixedAdjacentExamples.all_inputs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.MixedAdjacentExamples.all_inputs
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControl.embed_exact' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControl.embed_exact
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControl.expand_render' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControl.expand_render
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControl.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControl.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControl.prefix_syntax' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControl.prefix_syntax
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControl.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControl.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControl.source_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControl.source_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControl.core_lookup' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControl.core_lookup
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControl.core_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControl.core_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControl.codeCall_eval' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControl.codeCall_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControl.replayCall_eval' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControl.replayCall_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControl.call_plan_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControl.call_plan_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControl.coreRender_call' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControl.coreRender_call
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControl.coreRender_replay' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControl.coreRender_replay
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControl.evaluator_of_rows' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControl.evaluator_of_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControl.tables_rows' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControl.tables_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControl.evaluator_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControl.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControl.normalized_observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControl.normalized_observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControl.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControl.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControl.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControl.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginSyntax.source_syntax' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginSyntax.source_syntax
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginSyntax.source_eq_original' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginSyntax.source_eq_original
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginSyntax.original_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginSyntax.original_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginSyntax.sourceExpr_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginSyntax.sourceExpr_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginSyntax.original_observations' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginSyntax.original_observations
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginSyntax.original_language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginSyntax.original_language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControlExamples.valid' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControlExamples.valid
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControlExamples.executions' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControlExamples.executions
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControlExamples.rollback' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControlExamples.rollback
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControlExamples.failed_argument' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControlExamples.failed_argument
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControlExamples.undefined_argument' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControlExamples.undefined_argument
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControlExamples.direct_syntax' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControlExamples.direct_syntax
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControlExamples.all_inputs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControlExamples.all_inputs
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControlExamples.direct_grammar' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControlExamples.direct_grammar
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControlExamples.direct_all_inputs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControlExamples.direct_all_inputs

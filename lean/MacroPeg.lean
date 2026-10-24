@@ -530,3 +530,6 @@ import MacroPeg.CBV.AdjacentCallsiteExamples
 import MacroPeg.CBV.MixedAdjacentRecursive
 import MacroPeg.CBV.MixedAdjacentSyntax
 import MacroPeg.CBV.MixedAdjacentExamples
+import MacroPeg.CBV.MixedOriginControl
+import MacroPeg.CBV.MixedOriginSyntax
+import MacroPeg.CBV.MixedOriginControlExamples

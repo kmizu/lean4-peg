@@ -6803,3 +6803,61 @@ Par/Seq equality or separation is still unresolved: arbitrary original
 user bodies need not have either leading-replay shape, shifted arguments
 are still codeword controls, and independent multiple source captures and
 recursive headers for the parent-dependent adjacent method remain open.
+
+### Origin control over mixed replay and shifted leaves
+
+`MixedOriginControl` removes the obligatory leading replay from the
+**whole source user body** for the mixed compiler. Each body is a finite
+plan of prioritized choice, negation, and positive guards over leaves.
+A leaf still has shape `param0;tail` or `A;param0;tail`, but one codeword
+user's plan may combine both shapes. Negation can return to the original
+caller position before the actual argument's endpoint. Consuming sequence,
+star, and recursive calls remain available inside every tail and general
+replay argument, including calls whose own bodies use origin control.
+
+The translation first normalizes Par origin control into the existing
+mixed compiler's leaf rules. It preflights the actual argument and then
+expands the plan into calls to those rules, recomputing the same argument
+at the original caller position. This ordering preserves failed and
+undefined arguments even when the body is a negation. Codeword arguments
+may feed either leaf kind. General arguments may feed ordinary replay
+leaves; `Valid` checks this rule-kind condition and leaf existence only.
+All leaf bodies may mutually recurse through the original control users.
+
+An ordinary-round simultaneous induction relates each original control
+row to its plan evaluated on normalized leaf rows. The evaluator proof
+also covers calls inside arguments. Call-free argument and prefix syntax
+has grammar-independent evaluation, including retained-parameter tests.
+The resulting complete partial equality at every ordinary Par round gives
+stable equality and all finite observations. Composition with
+`MixedAdjacentRecursive` then produces a single fixed first-order Seq
+grammar preserving the unchanged original string language. No semantic
+row relation, capture decomposition, or parser equivalence is a premise
+of the final translation theorem.
+
+`MixedOriginSyntax` emits ordinary calls with explicit actual arguments.
+Its `WellTyped` condition checks callee existence and argument kind.
+`source_eq_original` proves exact equality with that original grammar;
+`original_language_translation` proves both original first-order facts
+and the fixed first-order Seq translation for all input strings.
+
+Kernel executions combine a negative test of an ordinary replay leaf,
+a shifted branch, an ordinary fallback, mutual recursion, and a shifted
+call inside a general argument. They preserve the entire captured general
+argument and outer parent after returning, reject short inner and outer
+copies, and select the ordinary fallback when its delimiter is present.
+A negative shifted user returns at the original caller position after
+capturing two codewords; a short actual argument still fails. Empty-loop
+general arguments are None under arbitrary source, normalized Par, and
+Seq tables, environments, input strings, and positions, even for a
+negative callee plan. All 34 new public theorem guards use standard axioms
+or none.
+
+This closes origin choice/predicate composition for the mixed method,
+not arbitrary source-body normalization. Plans do not support arbitrary
+consuming composition or repetition between leaves; those operations are
+inside leaf tails. Shifted arguments still have the specified `A;D`
+call-free codeword-control shape with a shared independent Pure prefix-code
+A. Recursive headers for parent-dependent adjacent comparison, independent
+multiple source captures, and general Par/Seq equality or separation
+remain unresolved.
