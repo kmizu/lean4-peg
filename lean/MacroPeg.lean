@@ -241,3 +241,4 @@ import MacroPeg.CBV.ParTableau.Recognition
 import MacroPeg.CBV.BitWordMachine
 
 import MacroPeg.CBV.SequentialCaptureMin
+import MacroPeg.CBV.SequentialArgHeadReturnMachine

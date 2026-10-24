@@ -1,4 +1,4 @@
-import Complexity.NKit
+import Complexity.NMacros
 
 /-! Destructive comparison with no increase in intermediate unary stack space.
 The first operand occupies a dedicated stack; the second may have a saved prefix. -/
@@ -23,6 +23,29 @@ theorem fits_dec {S : Lists K} (h : NFits B S) (i : Fin K) :
 
 theorem fits_pop {S : Lists K} (h : NFits B S) (i : Fin K) :
     NFits B ((NPrim.pop i).apply S) := fits_set h i _ (length_encS_dropLast_le _)
+
+/-- Dispatch a bounded tag while preserving the same intermediate space bound. -/
+theorem caseTop_exec (i : Fin K) : ∀ (ps : List (NProg K)) (q : NProg K) (v : Nat)
+    (hv : v < ps.length) (S : Lists K) (l : List Nat), S i = l ++ [v] → NFits B S →
+    ∀ (S' : Lists K) (T : Nat),
+    (∃ t, t ≤ T ∧ NExec (NFits B) ps[v] (S.set i l) t (.cont S')) →
+    ∃ t, t ≤ T + 2 * v + 2 ∧ NExec (NFits B) (caseTop i ps q) S t (.cont S')
+  | [], _, v, hv, _, _, _, _, _, _, _ => by simp at hv
+  | p :: ps, q, 0, _, S, l, hi, hS, S', T, hr => by
+    obtain ⟨t, ht, he⟩ := hr
+    have hp : (NPrim.pop i).apply S = S.set i l := by simp [NPrim.apply,hi]
+    have hx : NExec (NFits B) (.prim (.pop i)) S 1 (.cont (S.set i l)) := by
+      rw [← hp]; exact .prim hS (fits_pop hS i)
+    exact ⟨1+t+1, by omega, .iteT hS (by simp [hi,NTest.eval]) (.seqC hx he)⟩
+  | p :: ps, q, v+1, hv, S, l, hi, hS, S', T, hr => by
+    let R := S.set i (l ++ [v])
+    have hd : (NPrim.dec i).apply S = R := by simp [NPrim.apply,hi,mapTop_snoc,R]
+    have hR : NFits B R := by rw [← hd]; exact fits_dec hS i
+    have hx : NExec (NFits B) (.prim (.dec i)) S 1 (.cont R) := by
+      rw [← hd]; exact .prim hS (fits_dec hS i)
+    obtain ⟨t, ht, he⟩ := caseTop_exec i ps q v (by simpa using hv) R l (by simp [R]) hR S' T (by
+      simpa [R,Lists.set_set_u] using hr)
+    exact ⟨1+t+1, by omega, .iteF hS (by simp [hi,NTest.eval]) (.seqC hx he)⟩
 
 def body (i j : Fin K) : NProg K :=
   .ite j .pos (.seq (.prim (.dec i)) (.prim (.dec j))) (.prim (.pop i))
