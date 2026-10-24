@@ -1022,3 +1022,34 @@ Par/Seq の一致・分離は引き続き未解決である。
 原入力をこのスタックへ読み込む初期化、原子的照合と捕捉区間比較の全処理、
 既存の状態更新機械とのレジスタ統合はまだ残る。全体の Seq 空間上界と
 Par/Seq の一致・分離は引き続き未解決である。
+
+### Restoring two-cursor character comparison
+
+`Complexity.NRename` now injects numeric subprograms into a larger fixed register
+set. `NExec.rename_frame` preserves the exact step count and `NFits B` capacity
+at every intermediate state; registers outside the injection retain their
+ambient values. This lets the original-input reader coexist with capture
+cursors, counters, and a previously read character, without deriving extra
+space from the input-dependent traversal time.
+
+`SequentialInputPair` reads at two valid suffix positions of the same original
+`List Char`, retaining the two codes in distinct registers. Both traversals
+restore the original encoded input. The seven-register numeric program then
+uses the shrinking comparator; the two comparison registers are zero exactly
+when the original character codes agree. `compiled_compare` and `compare_tape`
+verify this execution through list programs and the eight-tape machine. All
+intermediate tapes have the same capacity `(2^32 + 2) * x.length + 3` as the
+single-character reader, with no captured-substring buffer. The constant is a
+coarse fixed alphabet bound, not a dependence on the grammar or input contents.
+
+`matchCount_step` connects this actual comparison result to the next-character
+guard of the existing capture matcher. For a positive remaining capture count,
+it advances both suffix positions exactly when the codes agree, and fails on a
+mismatch or target EOF. Character zero is still distinct from EOF. The theorem
+covers arbitrary original `Char` inputs and valid numeric capture positions.
+
+This is the inner comparison and its semantic bridge, not yet the full capture
+loop. The remaining-count loop, environment-span lookup, atomic-expression
+selection, original-input initialization, and whole-evaluator integration still
+need connection. It does not resolve general CBV-Par versus CBV-Seq equality
+or separation.
