@@ -304,3 +304,4 @@ import MacroPeg.CBV.ForwardQueryScan
 import MacroPeg.CBV.ForwardBooleanProgram
 import MacroPeg.CBV.ForwardBooleanSyntax
 import MacroPeg.CBV.CircuitProgram
+import MacroPeg.CBV.SequentialCaptureRegions

@@ -5749,3 +5749,47 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.CircuitProgram.input_length_bound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.CircuitProgram.input_length_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureRegions.Window.weight' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCaptureRegions.Window.weight
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureRegions.Window.valid' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCaptureRegions.Window.valid
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureRegions.Window.decoded_weight' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCaptureRegions.Window.decoded_weight
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureRegions.old_new_order' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCaptureRegions.old_new_order
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureRegions.atom_descending' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCaptureRegions.atom_descending
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureRegions.return_scoped' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCaptureRegions.return_scoped
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureRegions.step_scoped' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCaptureRegions.step_scoped
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureRegions.reachable_scoped' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCaptureRegions.reachable_scoped
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureRegions.reachable_past' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCaptureRegions.reachable_past
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureRegions.reachable_arguments' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCaptureRegions.reachable_arguments
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureRegions.reachable_decoded_arguments' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCaptureRegions.reachable_decoded_arguments

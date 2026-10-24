@@ -2168,3 +2168,42 @@ obligation follows from the existing stack interpreter. The already proved
 general equality; it is not a proof of equality or separation. This audit
 adds literature evidence and narrows the available methods, without claiming
 a new Lean theorem or a solution of the language-class question.
+
+### Capture frontiers across actual Seq continuations
+
+`SequentialCaptureRegions` adds an operational interval invariant for the
+existing `SequentialStack.step` machine. It does not change the machine or
+store additional runtime metadata. Positions are suffix lengths: after
+progress, a position becomes smaller. `Past E p` says that every captured
+interval in `E` ends before the cursor at `p` in the original input order.
+
+`Window p q W` records consecutive intervals from argument evaluation,
+with endpoints `p = j0 >= j1 >= ... >= jd = q`. Empty intervals are allowed.
+`Window.weight` telescopes their numeric lengths to `p-q`.
+`Window.decoded_weight` proves the same equality for the lengths of the
+actual captured character words, under the original-input bound. The
+representation therefore accounts for the values used by grammar semantics,
+not merely numeric spans.
+
+The `ScopedValue`, `ScopedTask`, `ScopedFrame`, and `ScopedStack` certificates
+track cursor bounds and argument windows through all transition cases.
+`return_scoped` includes sequencing, ordered-choice restoration, both predicate
+results, repetition progress and stalling, argument assembly, and call entry.
+`step_scoped` and `reachable_scoped` connect these certificates to every
+reachable state of the unmodified initialized transition machine.
+
+`reachable_past` proves that the task's captures and all captures retained in
+every continuation frame precede the current cursor. When a returned task
+contains a successful argument tuple, `reachable_arguments` proves more:
+there is one consumed window, and every fresh interval in it is after every
+older interval retained anywhere in the remaining stack. In suffix-length
+coordinates, `fresh.start <= old.end`. `reachable_decoded_arguments` packages
+this global separation with the exact consumed character count.
+
+This establishes the freshness condition needed to study total retained
+capture storage. It does not assert that two older frames have disjoint
+environments: structural continuations can retain copies of the same caller
+environment. Bounding those copies, accounting for all saved cursors and
+clocks, and implementing any proposed compressed representation remain
+additional obligations. The current deterministic space upper bound remains
+`O(n log(n+1))`; no linear-space bound or Par/Seq separation is claimed here.
