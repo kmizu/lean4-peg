@@ -6371,3 +6371,55 @@ A/G, and unary captures remain restrictions. General argument/capture
 shapes, headers or conditions depending on held values or user rows,
 multiple independent captures, and general Par/Seq equality or separation
 remain unresolved.
+
+
+### Codeword control and disjoint retained parts
+
+`CodewordControlFilter` moves beyond the designated guarded-star argument.
+Its finite `Expr` syntax permits header tokens, epsilon, arbitrary tests,
+sequence, prioritized choice, negation, and nested ordinary star. `render A d`
+is the original parser. The generated `filter A d` compares every consumed
+codeword with a retained runtime word while preserving the original parser's
+chosen branches and exact endpoint. Each node preflights its original parser;
+choice locks the original successful arm, and star checks the original stop
+condition after comparison. An unequal word cannot turn into a different arm
+or an earlier successful stop. Empty-success loops remain undefined.
+
+The local `success` theorem derives a concrete codeword list from any actual
+successful original trace; it does not take a decomposition oracle as input.
+`replay_success` then identifies the complete partial source replay with the
+filter followed by a one-word replay at the original endpoint. This uses the
+prefix-code shift lemma to reject nonuniform captures. For uniform captures,
+commuting the initial word with the consumed list gives the exact replay
+endpoint. The continuation represents the original whole capture by the
+concatenation of two disjoint retained values via `wholeView`; it can use the
+whole value repeatedly, inside tests and recursive call arguments in the
+local theorem. No header need succeed after the original argument endpoint.
+
+`CodewordControlGrammar` constructs ordinary fixed grammars for the source
+argument `B = A;render A d` and unary source body `A;param0;b`. The target's
+binary rule retains the two consecutive values from `[A,render A d]`, and
+its body is `param0;wholeView b`. A unary verifier checks `filter A d` after
+capturing A. The target entry is `&B;&Verifier(A);Body(A,render A d)`.
+The first preflight preserves undefined original arguments before any
+comparison can reject them. With a Pure prefix-code header, Pure control
+tests, and a call-free parameter-using continuation, `physical_agreement`
+proves full partial equality at every pair of positive ordinary stages.
+`observations_iff` and `language_translation` preserve the same original
+strings and all finite observations, with no assumed successful argument.
+
+`CodewordControlExamples` checks input-selected header lengths and word
+counts, the actual disjoint capture pair, reuse of the whole captured string,
+short/unequal copies, committed choice and committed star counterexamples
+to naive comparison, successful nested repetitions with multiple inner
+iterations, undefined nested repetitions for arbitrary tables and positions,
+and undefined original arguments/continuations in the actual grammars.
+
+This is a new argument-control compiler, not yet an integration with the
+previous recursive-user/recursive-header compiler. Its shared independent
+prefix-code header, leading source replay, mandatory initial header capture,
+and Pure tests/call-free continuation remain restrictions. Arbitrary source
+argument shapes, held-value-dependent control/header parsing, independent
+multiple source captures, and general Par/Seq equality or separation remain
+unresolved. Two target parts represent one original source capture; this is
+not a theorem for two independent original captures.
