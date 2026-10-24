@@ -400,4 +400,3 @@ theorem recursive_argument_undefined (x : List Char) (k : Nat) :
     RecursiveParserStability.cycle_undefined hs x .callByValueSeq k [] x.length (Nat.le_refl _),and_self]
 
 end Shallot.MacroPeg.CBV.RecursivePrefixFusion
-
