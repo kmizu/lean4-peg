@@ -7238,3 +7238,113 @@ positions in the body, multiple independent captures, and the full
 Par/Seq class comparison remain unresolved. These preview equations
 supply exact handling of zero-consuming argument conditions; they do not
 justify erasing arbitrary consuming parts of an argument.
+
+### Caller-controlled lengths of partial codeword captures
+
+`ControlledPartialCapture` replaces the fixed argument B with
+`B_G = (A;&(A;G))*;a*`, where A is still `a*;#`. G is evaluated in the
+original caller environment at the actual lookahead endpoint. It may
+read retained parameters or invoke recursive users. Changing G or the
+parent can change the successful captured value, rather than merely
+rejecting the value selected by the old B.
+
+`source_prefix_shape` derives the uniform partial-codeword shape from
+the actual B_G capture and successful A/param replay on every input.
+It does not require the later scanner to fail: G can stop earlier while
+more, possibly unequal, codewords remain. `peel` preserves all partial
+results after the first successful iteration. `split_arguments` uses
+that equality to justify the actual Seq arguments `[a*, #;B_G]`, both
+evaluated in the unchanged caller environment. Their captures concatenate
+to the exact original value at the same selected endpoint. `entry` then
+preserves arbitrary first-order continuations through the two-piece view
+after a successful first iteration and source replay. Immediate failure
+of the iteration selects the zero-iteration run; an undefined test
+remains undefined rather than choosing a shorter capture.
+
+`ControlledPartialPreflight` keeps G in the caller's traversal and checks
+each consumed A against the immediately following input with a unary Seq
+helper. A second unary helper captures the final a-run v and checks #;v.
+This final rotated comparison replaces the old maximal-run condition.
+The exact trace theorem derives the consumed codewords and final run
+from execution, with comparison premises discharged by ordinary positive
+Seq tables. `partial_decode` proves uniqueness of the complete-word and
+partial-run decomposition; `physical_sound`, `physical_complete`, and
+`physical_iff` identify filter success exactly with the actual source
+scanner/whole-capture replay. `physical_result` also preserves finite
+failure after successful capture, and `undefined` propagates argument
+undefinedness before comparisons. The filter reports the original capture
+endpoint; the subsequent replay has its separate endpoint.
+
+Kernel executions on one input capture a#a#a or a#a solely by changing
+the retained parent. On `a#a#a#aa#!?a#a`, the parent-dependent stopping
+test leaves the later unequal aa# available to the continuation. The
+original source and the candidate Seq grammar both accept and reuse a#a;
+the old maximal-run preflight rejects the valid source prefix. Short
+copies are rejected, and the candidate also handles zero full words and
+an empty final run.
+
+Scope at the local-preflight checkpoint: these all-input theorems compare the real argument
+and replay in the same grammar/strategy/table context, using physical
+Seq helper rows. The local entry theorem likewise uses one context.
+The candidate's complete call executions above are finite kernel checks,
+not a general Par/Seq translation theorem. A cross-grammar recursive row
+relation translating G, complete call transfer including the zero branch,
+and composition with the earlier compiler remain to be proved. Concrete
+A, the B_G argument shape, one capture, and the initial A/param replay
+remain restrictions. The recursive connection below closes this checkpoint's
+call-transfer and row-correspondence gaps. General Par/Seq equality or
+separation is unresolved.
+
+### Recursive caller-controlled lengths and complete call transfer
+
+`ControlledPartialEntry.transfer` now joins the physical preflight and
+both actual Seq capture branches across different grammars, strategies,
+ordinary clocks, and caller environments. The sole argument is the actual
+B_G capture. The positive branch passes `[a*, #;B_G]` to a binary row and
+restores the full captured value through `wholeView`; immediate iteration
+failure passes the actual a-run to a unary row. The callee tail receives
+exactly the original whole value at the original replay endpoint. Finite
+prefix failure, undefined stopping tests, and arbitrary continuation
+failure/undefinedness are preserved. The guarded branches cannot retry a
+different capture after a continuation fails. `preflight_zero` and `zero`
+prove the actual ordinary-clock-zero seed without supplying frozen rows.
+
+`ControlledPartialRecursive` discharges both premises of that transfer.
+It uses template `call i []` for a source call with G=eps and `call i [G]`
+for a source call with `B_render(G)`. The latter is one actual captured
+argument: G is a stopping test in the original caller environment, not an
+additional capture. G can contain retained parameters, calls to the same
+user or other users, nested controlled calls, choices, predicates, and
+stars. The source user bodies are `A;param0;render(tail)`. Target rows 0/1
+are the two unary comparison helpers; each user gets binary/unary rows at
+2i+2/2i+3.
+
+Structural recursion handles G at the current caller clock, while
+ordinary-clock induction supplies the callee continuation at the previous
+clock. `evaluator_eq` establishes complete partial-result equality at
+every ordinary stage for all caller environments and valid positions.
+`stable_eq`, `observations_iff`, and `language_translation` then preserve
+all finite observations and the language of unchanged original strings
+in one fixed first-order Seq grammar. No argument/replay/filter/recursive
+row relation remains as an extra premise in these final theorems.
+
+Kernel executions follow a real 0→1→0 chain with captures aa → a#a → aa
+and reuse both parents after returning. In another example the stopping
+test calls user 0 before the actual user-0 invocation: the first probe
+succeeds and the second fails, selecting a#a, which the actual callee
+reuses later. Parent-held two versus three codewords changes the returned
+endpoint on the same input in both generated grammars. Short parent,
+child, and grandchild copies are rejected. The recursive compiler also
+accepts zero-full-word and empty captures. An empty-star stopping test
+on two real headers remains undefined at every ordinary clock on both
+sides.
+
+The restricted recursive family is now proved, beyond the preceding
+shared-context and finite-execution results. Concrete A=a*;#, the B_G
+argument shape, one capture, and the initial A/param replay remain
+requirements. Calls with two or more template arguments render as
+failure; they do not express independent source captures. This compiler
+has not been combined with the earlier before/after-test or mixed-body
+compilers. Arbitrary consuming arguments, general initial body positions,
+independent multiple captures, and general Par/Seq equality or separation
+remain unresolved.

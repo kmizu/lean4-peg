@@ -17099,3 +17099,279 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.PartialCodewordSuffixExamples.undefined_after_capture
+
+-- Caller-controlled partial captures: actual endpoints and physical preflight.
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialCapture.argument_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialCapture.argument_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialCapture.peel' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialCapture.peel
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialCapture.zero' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialCapture.zero
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialCapture.undefined' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialCapture.undefined
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialCapture.test_none' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialCapture.test_none
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialCapture.argument_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialCapture.argument_le
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialCapture.argument_stop' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialCapture.argument_stop
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialCapture.source_prefix_shape' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialCapture.source_prefix_shape
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialCapture.split_arguments' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialCapture.split_arguments
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialCapture.entry' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialCapture.entry
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialPreflight.control_render' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialPreflight.control_render
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialPreflight.preflight_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialPreflight.preflight_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialPreflight.linked_terminal_uniform' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialPreflight.linked_terminal_uniform
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialPreflight.partial_decode' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialPreflight.partial_decode
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialPreflight.trace_replay' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialPreflight.trace_replay
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialPreflight.undefined' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialPreflight.undefined
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialPreflight.physical_tail_compare' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialPreflight.physical_tail_compare
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialPreflight.physical_trace' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialPreflight.physical_trace
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialPreflight.physical_sound' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialPreflight.physical_sound
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialPreflight.physical_complete' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialPreflight.physical_complete
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialPreflight.physical_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialPreflight.physical_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialPreflight.physical_result' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialPreflight.physical_result
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialExamples.retained_value_changes_capture' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialExamples.retained_value_changes_capture
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialExamples.maximal_checker_rejects_valid_prefix' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialExamples.maximal_checker_rejects_valid_prefix
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialExamples.controlled_entry_and_reuse' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialExamples.controlled_entry_and_reuse
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialExamples.short_copy_rejected' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialExamples.short_copy_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialExamples.zero_and_empty_capture' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialExamples.zero_and_empty_capture
+
+-- Recursive controlled partial captures: complete entry and ordinary clocks.
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialEntry.entry_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialEntry.entry_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialEntry.argument_congr' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialEntry.argument_congr
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialEntry.argument_ne_fail' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialEntry.argument_ne_fail
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialEntry.positive_state' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialEntry.positive_state
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialEntry.positive_branch' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialEntry.positive_branch
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialEntry.zero_branch' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialEntry.zero_branch
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialEntry.transfer' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialEntry.transfer
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialEntry.preflight_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialEntry.preflight_zero
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialEntry.zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialEntry.zero
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialRecursive.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialRecursive.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialRecursive.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialRecursive.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialRecursive.target_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialRecursive.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialRecursive.source_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialRecursive.source_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialRecursive.compare_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialRecursive.compare_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialRecursive.tail_compare_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialRecursive.tail_compare_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialRecursive.binary_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialRecursive.binary_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialRecursive.unary_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialRecursive.unary_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialRecursive.evaluator_of_previous' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialRecursive.evaluator_of_previous
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialRecursive.evaluator_eq' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialRecursive.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialRecursive.stable_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialRecursive.stable_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialRecursive.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialRecursive.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialRecursive.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialRecursive.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialRecursiveExamples.mutual_returns' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialRecursiveExamples.mutual_returns
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialRecursiveExamples.recursive_test_selects_length' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialRecursiveExamples.recursive_test_selects_length
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialRecursiveExamples.rejected_parent_and_child_copies' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialRecursiveExamples.rejected_parent_and_child_copies
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialRecursiveExamples.different_caller_lengths' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialRecursiveExamples.different_caller_lengths
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialRecursiveExamples.zero_and_empty_capture' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialRecursiveExamples.zero_and_empty_capture
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPartialRecursiveExamples.undefined_stopping_test' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPartialRecursiveExamples.undefined_stopping_test
