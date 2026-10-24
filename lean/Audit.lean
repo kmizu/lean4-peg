@@ -3827,3 +3827,39 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SequentialArgumentBind.bind_tape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialArgumentBind.bind_tape
+
+/-! Shrinking comparison and capture endpoint selection. -/
+
+/-- info: 'Complexity.NShrinkingCompare.exec' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.NShrinkingCompare.exec
+
+/-- info: 'Complexity.NShrinkingCompare.empty_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.NShrinkingCompare.empty_iff
+
+/-- info: 'Complexity.NShrinkingCompare.positive_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.NShrinkingCompare.positive_iff
+
+/-- info: 'Complexity.NShrinkingCompare.compiled_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.NShrinkingCompare.compiled_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureMin.exec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCaptureMin.exec
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureMin.compiled_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCaptureMin.compiled_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialNumericBlock.frame_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialNumericBlock.frame_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialNumericBlock.annotated_local_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialNumericBlock.annotated_local_runs

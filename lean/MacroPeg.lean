@@ -239,3 +239,5 @@ import MacroPeg.CBV.ParTableau.Position
 import MacroPeg.CBV.ParTableau.Sim
 import MacroPeg.CBV.ParTableau.Recognition
 import MacroPeg.CBV.BitWordMachine
+
+import MacroPeg.CBV.SequentialCaptureMin

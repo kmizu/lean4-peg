@@ -39,13 +39,15 @@ theorem compiled_runs (p : NProg 4) (input output : List Nat) {M T N B : Nat}
   obtain ⟨t', ht', he⟩ := nexec_compile (fun _ h => h) hxB
   exact ⟨t', Nat.le_trans ht' (Nat.mul_le_mul_right _ ht), he⟩
 
-theorem local_runs (p : NProg 4) (input output : List Nat) {M T N B width held : Nat} (tail : List Bool)
-    (hr : NRuns p (st input [] [] []) (st output [] [] []) T)
-    (hlen : input.length ≤ M) (hb : ∀ v ∈ input, v ≤ N) (hspace : scratchSpace M T N ≤ B)
+/-- Embed an already space-annotated run, including runs whose time depends on
+input positions, without converting their time bound into extra workspace. -/
+theorem frame_runs (p : NProg 4) (input output : List Nat) {T B width held : Nat} (tail : List Bool)
+    (hr : Complexity.Runs (LenOK B) p.compile (encL (st input [] [] []))
+      (encL (st output [] [] [])) T)
     (hR : LenOK B (SequentialFieldFetch.start width [] tail (locals input) held [])) :
     Complexity.Runs (LenOK B) (p.compile.rename reg)
       (SequentialFieldFetch.start width [] tail (locals input) held [])
-      (SequentialFieldFetch.start width [] tail (locals output) held []) (T * ncost B) := by
+      (SequentialFieldFetch.start width [] tail (locals output) held []) T := by
   let R := SequentialFieldFetch.start width [] tail (locals input) held []
   let R' := SequentialFieldFetch.start width [] tail (locals output) held []
   have hproj : ∀ i, R (reg i) = encL (st input [] [] []) i := by
@@ -53,7 +55,7 @@ theorem local_runs (p : NProg 4) (input output : List Nat) {M T N B width held :
     have hi : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 ∨ i = 4 := by omega
     rcases hi with rfl | rfl | rfl | rfl | rfl <;>
       simp [R, reg, SequentialFieldFetch.start, encL, encS, st, SequentialFrontRead.locals] <;> rfl
-  obtain ⟨t, ht, hx⟩ := compiled_runs p input output hr hlen hb hspace
+  obtain ⟨t, ht, hx⟩ := hr
   have he := hx.rename_frame reg_injective R hR
   rw [Lists.frame_eq reg_injective R _ hproj] at he
   have hout : (encL (st output [] [] [])).frame reg R = R' := by
@@ -70,5 +72,27 @@ theorem local_runs (p : NProg 4) (input output : List Nat) {M T N B width held :
   change LExec (LenOK B) (p.compile.rename reg) R t (.cont ((encL (st output [] [] [])).frame reg R)) at he
   rw [hout] at he
   exact ⟨t, ht, he⟩
+
+theorem local_runs (p : NProg 4) (input output : List Nat) {M T N B width held : Nat} (tail : List Bool)
+    (hr : NRuns p (st input [] [] []) (st output [] [] []) T)
+    (hlen : input.length ≤ M) (hb : ∀ v ∈ input, v ≤ N) (hspace : scratchSpace M T N ≤ B)
+    (hR : LenOK B (SequentialFieldFetch.start width [] tail (locals input) held [])) :
+    Complexity.Runs (LenOK B) (p.compile.rename reg)
+      (SequentialFieldFetch.start width [] tail (locals input) held [])
+      (SequentialFieldFetch.start width [] tail (locals output) held []) (T * ncost B) := by
+  exact frame_runs p input output tail (compiled_runs p input output hr hlen hb hspace) hR
+
+/-- Compile a local numeric run with its direct intermediate space invariant. -/
+theorem annotated_local_runs (p : NProg 4) (input output : List Nat)
+    {T B width held : Nat} (tail : List Bool)
+    (hr : ∃ t, t ≤ T ∧ NExec (NFits B) p (st input [] [] []) t (.cont (st output [] [] [])))
+    (hR : LenOK B (SequentialFieldFetch.start width [] tail (locals input) held [])) :
+    Complexity.Runs (LenOK B) (p.compile.rename reg)
+      (SequentialFieldFetch.start width [] tail (locals input) held [])
+      (SequentialFieldFetch.start width [] tail (locals output) held []) (T * ncost B) := by
+  apply frame_runs p input output tail _ hR
+  obtain ⟨t, ht, he⟩ := hr
+  obtain ⟨t', ht', he'⟩ := nexec_compile (fun _ h => h) he
+  exact ⟨t', Nat.le_trans ht' (Nat.mul_le_mul_right _ ht), he'⟩
 
 end Shallot.MacroPeg.CBV.SequentialNumericBlock
