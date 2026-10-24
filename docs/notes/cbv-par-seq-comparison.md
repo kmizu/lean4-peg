@@ -3191,3 +3191,67 @@ complete recognition connection also remain open. The established complete
 recognizer still has its `O(n log n)` bound. Neither a reverse same-input
 grammar translation nor a genuine Par/Seq language-class separator has been
 proved.
+
+
+### Complete repetition return and runtime selection of every active task
+
+`SequentialCursorProgressMachine` saves the first cursor block, inspects the
+actual next difference block, restores the complete original cursor stream,
+and enters the progress or nonprogress continuation. The first bit directly
+tests whether the saved position exceeds the current position. No decoded
+position or externally supplied progress flag is passed to this program.
+
+`SequentialStarPackedMachine` completes repetition return for all three actual
+expression result tags and both success-position cases. Undefined removes the
+saved position and propagates undefined. Failure returns success at the saved
+position. A consuming success removes the saved cursor and reenters the same
+star expression at the actual current position. A nonconsuming success removes
+both cursors and returns undefined. The reachable cursor chain ensures that
+nonprogress is exactly equality, rather than a backwards move. The fixed
+program selects the result tag and the cursor comparison from the actual
+source tapes. `transition_runs` and `transition_tape` construct the complete
+encoded successor, including the continuation count and task fields, while
+preserving the environment, captured words, shared clock, original input, and
+empty scratch tapes. This closes the remaining individual compressed
+repetition-return instruction.
+
+`SequentialExpressionDispatchMachine` enumerates fixed instruction programs
+for every source expression constructor. A single fixed selector reads the
+actual expression id behind the environment, stack, and task-kind headers.
+Reachable syntax-pool membership proves that the id selects the actual
+expression, including structural entries, checked calls, higher-order fallback
+forms, reading primitives, and captured parameters. Every decision restores
+the whole source state before its selected instruction begins.
+
+`SequentialArgumentsDispatchMachine` reads the actual argument-list length and
+each expression id before selecting the complete empty or nonempty argument
+start program. The length bound is the existing source-fixed program budget;
+the stored ids belong to the fixed syntax pool. All decoded list alternatives
+are branches of the finite source program. No runtime list is supplied to the
+program by its specification. This can produce large source-dependent code;
+no compact-code or efficient-time bound is asserted. The selector's workspace
+remains bounded by the original control stream.
+
+`SequentialQueryDispatchMachine` reads the actual rule id, whose source-fixed
+bound follows from the established reachable-state invariant, and invokes the
+complete query program. Its zero-clock and positive-clock behavior therefore
+remain actual tape decisions inside the selected program.
+
+`SequentialActiveDispatchMachine` reads the task-kind field and composes these
+three selectors. Its single source-fixed eight-tape program performs the
+complete original Seq step from every initialized reachable expression,
+argument-list, or query task. Selection and execution both satisfy capacity
+
+```
+(linearFactor g e + 1) * (input length + 1) + 3.
+```
+
+Fixed finite alphabets covering the original Unicode character encoding and
+33 new public theorem dependencies are audited.
+The active-task theorem explicitly excludes return values. Although individual
+return instructions now have complete templates, selection among continuation
+frames and their payloads still has to be assembled into a common program.
+Ordinary-input initialization, the complete execution loop and halt handling,
+and the recognition connection also remain open. The established complete
+recognizer bound is still `O(n log n)`. General same-input Par/Seq equality or
+separation remains unresolved.

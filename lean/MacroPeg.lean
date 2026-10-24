@@ -356,3 +356,9 @@ import MacroPeg.CBV.SequentialReadTests
 import MacroPeg.CBV.SequentialReadPackedMachine
 import MacroPeg.CBV.SequentialStaticPackedMachine
 import MacroPeg.CBV.SequentialEightTapeMachine
+import MacroPeg.CBV.SequentialCursorProgressMachine
+import MacroPeg.CBV.SequentialStarPackedMachine
+import MacroPeg.CBV.SequentialExpressionDispatchMachine
+import MacroPeg.CBV.SequentialArgumentsDispatchMachine
+import MacroPeg.CBV.SequentialQueryDispatchMachine
+import MacroPeg.CBV.SequentialActiveDispatchMachine
