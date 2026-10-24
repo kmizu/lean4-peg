@@ -2807,3 +2807,59 @@ the final cursor and control edits, ordinary-input loading, other instructions,
 and whole-machine selection remain to be composed. The complete recognizer
 still has the established `O(n log n)` bound; general Par/Seq language-class
 equality or separation remains unresolved.
+
+### Complete capture creation and all argument-head returns
+
+`MacroPeg.CBV.SequentialCaptureSpliceMachine` closes the environment-placement
+obligation left by the temporary capture buffer. `scanWord` finds each word's
+zero delimiter while moving its actual characters. `moveWord` also moves that
+delimiter, so empty words remain distinct records. `saveEnv` reads the unary
+environment-length header on the control tape: each bit transfers one complete
+word from the word tape to the reserved environment scratch tape. Neither the
+environment size nor its words are supplied as program constants.
+
+`stash` restores the environment-length header, leaving the current environment
+in scratch and the continuation's word suffix on the word tape. The existing
+fixed copier then reads `pre x p q` from the unchanged original input. Restoring
+the saved environment places the new word below it, exactly as required by
+`argHead_word_target`. `splice_runs` and `splice_tape` verify this composition
+for every environment, including empty words and an empty new capture. The
+control header, complete cursor stream, input, and scratch are restored. The
+initial and final word-tape capacities suffice for every intermediate copy,
+including the environment scratch.
+
+`MacroPeg.CBV.SequentialArgCapturePackedMachine` composes that word splice with
+the remaining successful argument-head return. It removes the saved cursor,
+retains the successful current cursor, replaces the expression-result task
+by the remaining-argument task, and replaces the argument-head frame by the
+new actual-word capture frame. The stack-length header stays unchanged because
+one frame replaces another. The program depends only on the fixed source
+syntax and compiler node list; runtime positions, environment values, and the
+captured substring are not supplied to it. `withInput_update` checks the whole
+successor representation, rather than just the changed components.
+
+`MacroPeg.CBV.SequentialArgHeadPackedMachine` adds failure and undefined
+returns and the actual runtime result-tag dispatcher. These two outcomes
+remove the saved cursor and top frame, decrement the stack-length header, and
+return the corresponding argument-result tag while preserving the environment
+and existing captured words. The single fixed `program` reads the old result
+tag from the control stream and selects all three outcomes without an external
+branch flag. `actual_step` checks the original word-machine transition, and
+`transition_runs`/`transition_tape` construct its complete encoded successor
+for every initialized reachable argument-head return.
+
+The eight-tape bounds include the unchanged original input and every
+intermediate tape state, with capacity
+
+```
+(linearFactor g e + 1) * (input length + 1) + 3.
+```
+
+All three modules verify their fixed pushed-symbol alphabet requirements.
+This completes the argument-head return subroutine, including real capture
+creation under arbitrary environments. It is still entered at a preloaded
+reachable state. The other instructions and returns, captured-word matching,
+whole-machine instruction selection, ordinary-input initialization, and the
+complete recognition connection remain open. The established complete
+recognizer bound remains `O(n log n)`, and general same-input Par/Seq equality
+or separation is unresolved.
