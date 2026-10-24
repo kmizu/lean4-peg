@@ -410,3 +410,5 @@ import MacroPeg.CBV.OriginPrefixControl
 import MacroPeg.CBV.ConsumingPrefixControl
 import MacroPeg.CBV.MappedGuardedWordSelection
 import MacroPeg.CBV.GuardedPrefixControl
+import MacroPeg.CBV.ScannerAbsorption
+import MacroPeg.CBV.ScannerPrefixFusion

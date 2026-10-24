@@ -4549,3 +4549,61 @@ finite Word-expression candidates. General body decomposition and multiple
 independent general captures also remain outside this compiler. General
 Par/Seq equality or language-class separation is not established.
 Fifty-four new public axiom guards cover this extension.
+
+
+### Fresh recursive arguments without a source-side head replay
+
+`CBV/ScannerAbsorption.lean` provides a syntactic absorption condition for
+an independent recursive argument component. `Safe n A e` allows empty
+expressions, accepted characters, accepted literal words, sequencing, choice,
+repetition, zero-argument component calls, and arbitrary negative queries.
+Negation's query need not consume only accepted characters: successful
+negation itself consumes nothing. Lexical validity is checked separately.
+
+`evaluator_safe` proves that every successful evaluation leaves the greedy
+`A` scanner's final suffix unchanged. The proof uses a table invariant for
+component calls and structural control reasoning, including decreasing
+repetition. `physical_rows_safe` establishes the invariant on actual helper
+tables at every round; `frozen_rows_safe` transfers it to physically frozen
+helpers. `scan_after_success` states the resulting absorption law for a real
+successful recursive argument. No captured-word length bound is imposed.
+
+`CBV/ScannerPrefixFusion.lean` uses this law in a whole recursive grammar.
+Each rule has a fixed independent recursive head `H`, a scanner alphabet
+`A`, and an arbitrary recursively rendered tail `B`. The actual arity-one
+source rule body is `scan(A) B`; its caller supplies argument `H`. In
+particular the source body does not begin by reparsing `H` or replaying its
+captured parameter. Under Par, the scanner begins at the caller position;
+under Seq, argument capture advances to the end of `H` before the scanner
+begins. The syntactic absorption condition makes both scanners reach the
+same final position, with exactly the same original capture in their
+environments. The recursive tails can then use that capture after further
+consumption, in repetitions, predicates, choices, and nested fresh calls.
+Different rules may use different scanner alphabets.
+
+`tables_shifted` proves the actual user-row correspondence, using helper
+stability rather than assumed argument outcomes. `observations_iff` and
+`language_translation` preserve all finite observations and recognized
+languages on the same original character strings. `same_grammar` records
+that this particular fragment even uses identical installed source and
+target syntax; the theorem quantifies over all valid components, tails,
+inputs, and finite observations, rather than comparing a few executions.
+
+`scanner_before_capture_execution` kernel-checks physical tables for
+`aabbab#aabb;aabb?ababb#ab;ab`. The first recursive argument captures `aabb`,
+then the source body consumes the longer prefix `aabbab` before the first
+capture use. The recursive call later captures `ab` and scans the longer
+prefix `ababb`. Both captures are replayed repeatedly after consumption.
+`aabbab#aabbab` is rejected: the whole scanned prefix cannot replace the
+original shorter capture. `recursive_argument_undefined` proves on every
+input and every physical round that a looping argument remains undefined;
+the scanner cannot bypass it.
+
+This removes mandatory head replay for a syntactically verified consuming
+prefix. It does not normalize arbitrary consuming body control. The argument
+component remains closed and independent, and every helper body is checked
+against the applicable scanner alphabet. This is a separate fresh/scanner
+construction; it has not yet been combined with the guarded mixed-mode
+compiler. Arbitrary capture-dependent arguments and general Par/Seq equality
+or separation remain unresolved. Twenty-three new public axiom guards cover
+this construction.
