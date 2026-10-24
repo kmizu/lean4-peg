@@ -263,3 +263,6 @@ import MacroPeg.CBV.SequentialParamResult
 import MacroPeg.CBV.SequentialReadResult
 import MacroPeg.CBV.SequentialAtomBranch
 import MacroPeg.CBV.SequentialAtomSelect
+import MacroPeg.CBV.SequentialInputHost
+import MacroPeg.CBV.SequentialInputPipeline
+import MacroPeg.CBV.SequentialAtomMachine

@@ -1297,3 +1297,46 @@ already decoded from the binary evaluator state. The binary front parser and
 writer, full transition dispatch, ordinary-input initialization, and terminal
 loop still need connection. The general Par/Seq equality-or-separation claim
 remains open.
+
+### Atomic transitions now include binary front parsing and writing
+
+`SequentialInputHost` extends the existing eleven-list binary evaluator layout
+to twenty lists. The original input encoding occupies register eleven. An
+injective placement of the sixteen compiled atom lists leaves the binary
+continuation, held value, constant two-marker, and field width untouched.
+`old_runs` embeds an existing eleven-list program while preserving the input
+register and fresh workspace; `atom_runs` embeds the unified atom program while
+preserving the binary continuation and metadata. Its local-word register is
+the same register used by the existing front parser and writer.
+
+`SequentialInputPipeline` composes the embedded front parser, a twenty-list local
+operation, and the embedded writer. Its transition theorem retains the original
+input register through all three stages. It uses the parser's verified endpoint
+space annotation and the writer's bit-capacity condition; no input-dependent
+traversal time is converted to extra space.
+
+`SequentialAtomMachine.transition_runs` now covers every reachable atomic
+expression task. It starts with the complete encoded binary evaluator state,
+parses the actual task/front, selects and evaluates the atomic source expression,
+assembles the ordinary value-task word, and writes the next binary state with
+the continuation unchanged. The separate original-input encoding survives the
+entire operation. `transition_tape` carries that complete transition through
+twenty actual tapes. The environment validity, clock, source-pool membership,
+frame-field count, and numeric field bounds are derived from the reachable
+original stack configuration.
+
+`space_eq` isolates the additional numeric/input workspace as an affine term
+in input length and the existing numeric field bound. `space_bound` then uses
+the verified linear numeric bound and binary state-storage bound to obtain
+`C * (n+1)` plus the existing `O(n log n)` state-storage term, with constants
+fixed by the grammar and root expression. The theorem bounds every intermediate
+state of this parser/atom/writer transition, rather than only its endpoints.
+
+All transition kinds now have compiled components: the other entry/return
+machines still use eleven lists and can be embedded with `old_runs` into the
+same input-preserving host. A single outer dispatcher, terminal handling,
+ordinary-input initialization, and complete evaluator loop remain to be
+connected. In particular, this atomic transition still starts with the original
+input already encoded in its separate register. The general Par/Seq
+comparison remains unresolved; this space analysis alone gives no separating
+language in P.
