@@ -9041,3 +9041,85 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.WordSelectionBoundary.scanner_observations
+
+-- Fresh parser captures with repeated-prefix body entry.
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.pure_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.pure_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.pure_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.pure_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.par_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.par_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.seq_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.seq_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.par_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.par_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.seq_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.seq_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.evaluator_of_shift' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.evaluator_of_shift
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.tables_shifted' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.tables_shifted
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.evaluator_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.decide_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.decide_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.copy_valid' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.copy_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.copy_word' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.copy_word
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.beyond_finite_word_selection' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.beyond_finite_word_selection
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.nested_valid' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.nested_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.nested_captures' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.nested_captures
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.nullable_repetition_keeps_undefined' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.nullable_repetition_keeps_undefined

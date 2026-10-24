@@ -4191,3 +4191,62 @@ required body position, a richer runtime representation, or a construction
 that preserves observations without reconstructing the capture this way.
 The general equality/separation goal remains unresolved. Root imports and
 ten standard-axiom guards cover the new boundary results.
+
+
+### Fresh parser captures by fusing a repeated body prefix
+
+`CBV/ParserPrefixFusion.lean` gives a complementary reverse compiler that
+actually introduces fresh unbounded captures, beyond the finite Word-selector
+interface. It uses a specific source body/call relationship rather than
+trying to reconstruct every possible captured word at the original position.
+
+A specification supplies one closed call-free PEG `A_i` and a tail `B_i`
+for each unary rule. Raw zero-argument calls to `i` are expanded to actual
+calls `F_i(A_i)`; all calls to a given rule use that same fixed argument
+parser. The generated Par rule is `F_i(x) <- A_i B_i`, and the Seq rule is
+`F_i(x) <- B_i`. Both actual grammars use the same expanded root expression.
+Thus Par evaluates the parser once as its argument and again as the body
+prefix, whereas Seq retains that fresh capture and enters the tail at the
+end of the first evaluation. The captured value is never inserted as a
+compile-time literal or selected from a finite family.
+
+`Pure` permits arbitrary nesting of literals, character/range/any atoms,
+sequencing, ordered choice, predicates, and consuming repetition in `A_i`.
+It excludes parameters and calls. `pure_eval` proves the **whole partial**
+parser result is independent of grammar tables, strategy, and environment;
+nullable repetitions are allowed and remain undefined. Tails and the root
+may use parameters, consuming sequence/repetition, choice/predicates, and
+recursive calls to any supplied rule, under the fixed-argument calling
+convention. Calls with arbitrary user-supplied arguments are not part of
+this raw syntax. Existing captures remain in caller environments across
+recursive calls, as usual.
+
+`tables_shifted` proves the actual physical row correspondence at **every**
+round. `evaluator_eq` discharges expression simulation from that proof, and
+`observations_iff`/`language_translation` preserve all finite success/failure
+observations and full-consumption languages on the same original strings.
+Only the syntactic `Pure` check is assumed; there is no argument oracle,
+external user-table correspondence, helper stabilization premise, or totality
+assumption.
+
+`copy_word` proves for **every** a/b word `w` that the source really captures
+`[w]` and both fixed grammars accept `w#w` at their actual physical first
+round. The tail consumes `#` **before** replaying the retained capture.
+`beyond_finite_word_selection` connects this positive construction to the
+preceding impossibility theorem: for any fixed environment and finite
+Word-expression family, these same grammars realize a capture outside that
+family and subsequently replay it. This is an unbounded theorem, not a
+bounded execution sample.
+
+`nested_captures` kernel-checks three recursive calls retaining `ab`, `ba`,
+and the empty word in one run. It accepts `ab#ba##baab` and rejects
+`ab#ba##bbab` under both actual grammars. `nullable_repetition_keeps_undefined`
+proves, for every input and physical round, that `eps*` as the argument never
+becomes failure or an empty successful capture in either grammar.
+
+The remaining restrictions matter: a call uses the callee's fixed closed
+call-free parser, and the Par body must reparse that parser as its first
+action. No normalization of arbitrary Par bodies or argument computations
+into this form is proved. This complements the selected-Word compiler; it
+does not replace the general original-string equality/separation goal.
+Root imports and nineteen new public axiom guards cover the construction.
