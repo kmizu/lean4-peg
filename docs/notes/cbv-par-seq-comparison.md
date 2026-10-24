@@ -5850,3 +5850,58 @@ replay. Arbitrary selected arguments, captures with other shapes, independent
 multiple captures, and arbitrary consuming prefixes are not covered. The
 result is an actual fixed recursive grammar translation for this family,
 not a proof of the general reverse inclusion.
+
+
+### Preserve independently selected two-codeword arguments
+
+`CBV/SelectedPrefixGrammar.lean` removes the fixed `A;A` argument of the
+preceding compiler. Each source rule has its own closed call-free argument
+parser B, allowing prioritized choice, predicates, and repetition (including
+undefined nullable repetition). Its output certificate says that every
+successful selected capture consists of two complete words of the header's
+prefix-free code. The certificate constrains the captured shape; it does
+not supply a source/target evaluator or recursive-table equivalence.
+
+Source calls are ordinary `F(B)`, with source bodies `A;param0;tail`. The
+constructed target first tests **the original B**, then captures A once and
+uses the duplicated retained value. In particular, it does not replace the
+argument by `A;A`, choose B's result again after a continuation failure, or
+ignore B's undefinedness when A could fail.
+
+The body header can now fail even after B succeeded. A finite counterexample
+in `SelectedPrefixExamples.early_head_failure` makes the resulting clock
+difference explicit: on `a#a#X`, the original physical stage-zero call is
+undefined, physical stage one fails, and the target already fails at stage
+zero while evaluating A as an argument. Ordinary stage-by-stage equality
+would be false here.
+
+The proof uses the existing `SeededClock` construction **only on the source
+side**. A failed A prefix is placed in the initial source row, justified by
+an actual finite source computation. `tables_shifted` relates these source
+rounds to ordinary target physical stages. It handles B's actual selected
+capture, obtains the first codeword from A's independent successful parse,
+and uses prefix freedom to identify that word with the first part of B's
+capture. Unequal parts cause matching replay failures; equal parts reach
+the same suffix with corresponding retained values. `stable_eq` removes
+the seeds by their proved cofinality with source physical tables.
+`observations_iff` and `language_translation` consequently concern the
+actual ordinary grammars and unchanged original inputs, including finite
+failure and preservation of undefinedness.
+
+`SelectedPrefixExamples` supplies syntax-derived code certificates for B
+with choice and tests before/after capture. A second argument has an
+unproductive empty-star fallback. A guarded `a*;#` header independently
+rejects the X case even though B succeeded. The old three-generation
+recursive good input is accepted and the short parent copy rejected; Seq
+observations follow from the unbounded translation. `a#a#Z` tests rejection
+by the original selected argument before any target header or row query.
+`undefined_argument` proves that an undefined B remains undefined before
+body entry for arbitrary tables, and `undefined_at_every_stage` checks an
+actual argument with empty-star divergence at **all** physical stages.
+
+This closes the independently selected argument and early-head-failure
+gaps within the two-codeword, closed call-free argument family. The argument
+parser still cannot depend on retained parameters or call recursive helper
+parsers, the header remains closed call-free, and other capture shapes or
+multiple independent captures are not translated. General Par/Seq equality
+or separation remains unresolved.

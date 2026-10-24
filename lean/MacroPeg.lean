@@ -483,3 +483,5 @@ import MacroPeg.CBV.PrefixCodeCapture
 import MacroPeg.CBV.PrefixCodeCaptureExamples
 import MacroPeg.CBV.RuntimePrefixGrammar
 import MacroPeg.CBV.RuntimePrefixExamples
+import MacroPeg.CBV.SelectedPrefixGrammar
+import MacroPeg.CBV.SelectedPrefixExamples
