@@ -3079,3 +3079,312 @@ matching, whole-machine instruction selection, ordinary-input initialization,
 and the complete recognition connection remain open. The established complete
 recognizer bound remains `O(n log n)`, and general same-input Par/Seq equality
 or separation is unresolved.
+
+
+### Complete parameter matching from the actual environment and original input
+
+`MacroPeg.CBV.SequentialParamPackedMachine` implements the complete `.param k`
+transition on the same original `List Char` input. The program receives only
+the source-fixed parameter index. Its environment, selected captured word,
+current position, success flag, and resulting position are read or computed
+from the actual tape streams. `actual_step` identifies the full Seq successor;
+`transition_runs` and `transition_tape` construct its complete packed encoding
+from every initialized reachable parameter task. Missing parameters, empty
+words, exhausted input, and mismatching characters are included.
+
+Seven modules supply the executable components:
+
+- `SequentialSymbolDispatchMachine` compares two actual symbols using a fixed
+  finite decision tree. Its source alphabet covers all Lean `Char` values via
+  the established positive-character encoding and bound `0x110001`. The large
+  fixed tree is a space construction; no small-code or efficient-time claim
+  is made.
+- `SequentialWordMatchMachine` compares a selected word against a prepared
+  input suffix. Every matching character moves to a restoration buffer and
+  directly decrements the difference-encoded current cursor. Its trace
+  semantics agree exactly with `stripPrefix?`.
+- `SequentialWordRestoreMachine` retains the successful cursor or removes the
+  partially advanced current cursor on failure. Both actual word and input
+  streams are restored, including any temporarily skipped environment words.
+- `SequentialWordInputMachine` locates the actual suffix by counting the
+  current unary cursor block, restores that cursor block, and composes the
+  comparison and restoration. No decoded input position or substring is
+  provided to its fixed program.
+- `SequentialCountGuardMachine` tests a unary count against a source-fixed
+  bound and restores the complete count before either branch. The runtime
+  count has no fixed upper bound.
+- `SequentialParamMatchMachine` uses that guard to check `k < environment
+  length` before skipping exactly `k` word records. Delimiters handle empty
+  words. The guard prevents a missing parameter from selecting a word owned
+  by the continuation. All skipped words are restored after matching.
+- `SequentialParamPackedMachine` reads the computed success bit and replaces
+  the old task fields with the actual expression return value. The clock,
+  current and saved environments, continuation, saved cursors, original
+  input, and empty scratch tapes agree with the complete successor encoding.
+
+Every intermediate eight-tape state satisfies capacity
+
+```
+(linearFactor g e + 1) * (input length + 1) + 3.
+```
+
+The fixed pushed-symbol alphabet and standard-axiom dependencies are audited.
+This closes the parameter lookup and captured-word matching subroutine; it
+still starts from a preloaded initialized reachable encoded state. Other
+remaining instructions, whole-machine instruction selection, ordinary-input
+initialization, and the complete recognition connection remain open. The
+established complete recognizer bound remains `O(n log n)`. General same-input
+Par/Seq equality or separation is unresolved.
+
+
+### Fixed-source reads, remaining static entries, and the common eight-tape layout
+
+`SequentialTokenMatchMachine` executes a source-fixed list of symbol guards
+against the actual input suffix. A successful guard moves one actual character
+into the restoration prefix and directly decrements the compressed cursor.
+Exhausted input or a false guard removes the current cursor. Both success and
+failure restore the complete input. `SequentialTokenInputMachine` prepares the
+suffix by reading the actual cursor, composes these tests, and returns the
+computed result bit and cursor with the original input and scratch restored.
+No literal or decoded input position is provided on a runtime buffer.
+
+`SequentialReadTests` identifies the test programs with the original semantics
+of `eps`, `any`, `chr`, `range`, `lit`, `dbg`, and directly evaluated `lam`.
+`literal_run` proves exact `stripPrefix?` agreement for every literal and input;
+`atom_result` includes empty input, empty literals, and every valid input
+position. Unicode characters and inclusive codepoint ranges are unrestricted.
+The source-fixed literal is represented by code guards, so its length does not
+add a tape-space term. `SequentialReadPackedMachine.transition_runs` and
+`transition_tape` construct the complete encoded successor for all these
+primitives from initialized reachable states.
+
+`SequentialStaticPackedMachine` supplies complete entries for sequence,
+named call, empty argument list, unresolved `callParam`, and `invoke`. The
+source grammar determines whether a named rule exists and whether its arity
+matches the source argument list. A valid call installs the actual argument
+task and its cursor-free call frame. Missing rules and arity mismatches return
+failure and remove the current cursor. Empty arguments return the actual empty
+capture environment and unchanged position. Higher-order forms keep exactly
+the original word machine's failure (`callParam`) or undefined (`invoke`)
+behavior. Sequence installs its left expression and cursor-free continuation.
+Every branch preserves the original input, captured words, shared clock, and
+unaffected continuation and environment fields.
+
+`SequentialEightTapeMachine` injectively renames the existing six-register
+programs onto the common eight-register layout. `lift_runs` preserves the
+complete endpoints and all intermediate capacity bounds while retaining the
+original-input tape and extra scratch tape. `entry_runs` covers the earlier
+choice, negation, repetition, and nonempty-argument entries; `return_runs`
+covers sequence, choice, and negation returns. These results use the same
+capacity as the new primitive and static programs:
+
+```
+(linearFactor g e + 1) * (input length + 1) + 3.
+```
+
+The pushed-symbol alphabets and 27 new public theorem dependencies are
+audited. The remaining compressed instruction gap is repetition return:
+its successful branch must inspect the actual difference between current and
+saved cursors to decide progress, then either reenter or return undefined.
+Whole-machine instruction selection, ordinary-input initialization, and the
+complete recognition connection also remain open. The established complete
+recognizer still has its `O(n log n)` bound. Neither a reverse same-input
+grammar translation nor a genuine Par/Seq language-class separator has been
+proved.
+
+
+### Complete repetition return and runtime selection of every active task
+
+`SequentialCursorProgressMachine` saves the first cursor block, inspects the
+actual next difference block, restores the complete original cursor stream,
+and enters the progress or nonprogress continuation. The first bit directly
+tests whether the saved position exceeds the current position. No decoded
+position or externally supplied progress flag is passed to this program.
+
+`SequentialStarPackedMachine` completes repetition return for all three actual
+expression result tags and both success-position cases. Undefined removes the
+saved position and propagates undefined. Failure returns success at the saved
+position. A consuming success removes the saved cursor and reenters the same
+star expression at the actual current position. A nonconsuming success removes
+both cursors and returns undefined. The reachable cursor chain ensures that
+nonprogress is exactly equality, rather than a backwards move. The fixed
+program selects the result tag and the cursor comparison from the actual
+source tapes. `transition_runs` and `transition_tape` construct the complete
+encoded successor, including the continuation count and task fields, while
+preserving the environment, captured words, shared clock, original input, and
+empty scratch tapes. This closes the remaining individual compressed
+repetition-return instruction.
+
+`SequentialExpressionDispatchMachine` enumerates fixed instruction programs
+for every source expression constructor. A single fixed selector reads the
+actual expression id behind the environment, stack, and task-kind headers.
+Reachable syntax-pool membership proves that the id selects the actual
+expression, including structural entries, checked calls, higher-order fallback
+forms, reading primitives, and captured parameters. Every decision restores
+the whole source state before its selected instruction begins.
+
+`SequentialArgumentsDispatchMachine` reads the actual argument-list length and
+each expression id before selecting the complete empty or nonempty argument
+start program. The length bound is the existing source-fixed program budget;
+the stored ids belong to the fixed syntax pool. All decoded list alternatives
+are branches of the finite source program. No runtime list is supplied to the
+program by its specification. This can produce large source-dependent code;
+no compact-code or efficient-time bound is asserted. The selector's workspace
+remains bounded by the original control stream.
+
+`SequentialQueryDispatchMachine` reads the actual rule id, whose source-fixed
+bound follows from the established reachable-state invariant, and invokes the
+complete query program. Its zero-clock and positive-clock behavior therefore
+remain actual tape decisions inside the selected program.
+
+`SequentialActiveDispatchMachine` reads the task-kind field and composes these
+three selectors. Its single source-fixed eight-tape program performs the
+complete original Seq step from every initialized reachable expression,
+argument-list, or query task. Selection and execution both satisfy capacity
+
+```
+(linearFactor g e + 1) * (input length + 1) + 3.
+```
+
+Fixed finite alphabets covering the original Unicode character encoding and
+33 new public theorem dependencies are audited.
+The active-task theorem explicitly excludes return values. Although individual
+return instructions now have complete templates, selection among continuation
+frames and their payloads still has to be assembled into a common program.
+Ordinary-input initialization, the complete execution loop and halt handling,
+and the recognition connection also remain open. The established complete
+recognizer bound is still `O(n log n)`. General same-input Par/Seq equality or
+separation remains unresolved.
+
+
+### Complete step selection and the packed evaluation loop
+
+`SequentialSyntaxListDispatchMachine` generalizes inline syntax-list selection
+to any fixed number of headers and any source-fixed continuation family. Its
+program reads the actual list length and ids, restoring the complete source
+before each subsequent selection or continuation. The previous argument-start
+dispatch now uses this same decoder. `SequentialArgHeadDispatchMachine` uses
+it below five headers to select the actual argument tail retained by a frame.
+
+`SequentialRefReturnDispatchMachine` reads saved syntax ids for sequence,
+choice, and repetition returns. Reachable pool certificates identify the exact
+saved expression, including the body of a repetition. `SequentialReturnFields`
+proves common control layouts for every expression and argument return form
+and every continuation tag.
+
+`SequentialExpressionReturnDispatchMachine` selects the actual continuation
+for expression results: sequence, choice, negation, repetition, argument-head,
+and scope returns all use their complete instruction programs. The source
+step equation rules out mismatched return/frame forms. No decoded frame is a
+program argument.
+
+`SequentialArgumentsReturnDispatchMachine` first reads the actual result tag.
+Undefined and failed argument values have four fields before the frame tag;
+successful values have five, including their actual capture count. The
+selected frame dispatcher therefore skips the correct header length, retains
+all returned words, and chooses argument-cons, named-call, or scope return.
+Call return additionally reads the actual rule id behind the frame tag; its
+fixed bound follows from the existing reachable-frame invariant.
+
+`SequentialStepDispatchMachine` combines these return selectors with the
+active-task selector. Its one source-fixed eight-tape program constructs the
+complete encoded successor for **every defined step from every initialized
+reachable state**. Task kind, result form, frame kind, rule id, and syntax
+payloads are all selected from the actual tapes.
+
+`SequentialFieldPresenceMachine` checks a unary field below a fixed header
+prefix and restores the entire control stream before either continuation.
+`SequentialRunningMachine` uses this to inspect the stack count and, when the
+stack is empty, the task kind. It appends one running flag on tape 7 while
+preserving all original fields and other scratch.
+
+`SequentialPackedLoopMachine` checks that flag, removes it before each complete
+step, and computes the next flag afterward. Consequently each instruction
+still receives precisely its established empty-scratch interface. `loop_runs`
+and `run_trace` simulate actual finite source executions without putting their
+length in the program or on a tape. `evaluate_runs` uses the existing actual
+initial-to-final execution, so the same fixed loop always terminates with the
+exact original `SequentialSpanRecompute.run` result from the preloaded packed
+initial state. `evaluate_tape` transfers the entire execution to actual tape
+programs. The temporary flag is cleared at the end; the original input and the
+complete encoded final configuration are retained.
+
+All selection, instruction, and loop intermediates satisfy capacity
+
+```
+(linearFactor g e + 1) * (input length + 1) + 3.
+```
+
+The fixed finite alphabets cover the original Unicode encoding; 43 new public
+theorem dependencies are audited against the standard axioms. Code may depend
+strongly on the fixed grammar; no efficient-time or compact-code bound is
+claimed here. Ordinary-input initialization and mapping the final encoded
+result to a standard accepting/rejecting halt still need to be connected.
+Thus this closes linear-workspace **evaluation from a preloaded packed initial
+state**, not yet the complete ordinary-input linear-space recognizer. The
+previous complete recognizer bound remains `O(n log n)`, and general same-input
+Par/Seq equality or separation is unresolved.
+
+
+### Standard-input linear-space recognition and the language-class consequence
+
+`SequentialPackedInitMachine` generates the real initial packed state from
+only the original character word on its input tape. A scan generates the
+current unary position and shared clock, installs the fixed initial control
+fields, and restores the input. Neither the input length nor a precomputed
+initial configuration is supplied. `initial_shape` identifies all eight
+streams with the established whole-state codec; `initialize_runs` bounds all
+intermediate initialization states by the packed evaluator's same capacity.
+
+`SequentialPackedHaltMachine` reads the actual final result tag and, for a
+successful result, tests the actual compressed remaining position. Only
+success at position zero accepts. `recognize_halts` composes initialization,
+the entire packed evaluation loop, and that accepting/rejecting halt for every
+original character list. `answer_iff` identifies the answer with the original
+first-order Seq observation. This interface starts with the character word on
+tape 6 and empty other lists, so a standard-input bridge is still needed for
+a conventional binary-input TM statement.
+
+`SequentialPackedBinaryLoader` supplies that bridge for ordinary a/b words.
+The standard input bit list becomes exactly one a/b character per bit, with
+all temporary buffers cleared. It does not repeat, pad, or annotate the input.
+`SequentialPackedBinaryInputMachine` composes the standard `initP` tape
+normalizer, loader, packed initialization, complete evaluation, and final halt.
+`machine` constructs a fixed **eight-tape finite-alphabet Turing machine**
+which decides the original Seq language on the ordinary a/b word. Its space
+bound covers every tape and every intermediate action, including loading and
+normalization:
+
+```
+space(g,e,n) = (linearFactor g e + 1) * (n + 1) + 3
+            <= (linearFactor g e + 4) * (n + 1).
+```
+
+Thus the prior standard-input `O(n log n)` bound is improved to `O(n)` for
+these binary word languages. The character-list initializer and evaluator
+also retain their unrestricted Unicode semantics; this standard TM theorem
+specifically uses the ordinary a/b restriction.
+
+`Complexity.SpaceLinear` records deterministic linear space with the standard
+binary input convention. `Shallot.PegSeparation.binary_seq_in_linear_space`
+connects the complete recognizer to the language class, and
+`binary_seq_in_P_and_linear_space` combines it with the established inclusion
+in Par and binary `Par = P`:
+
+```
+binary first-order CBV-Seq <= P intersect DSPACE(O(n)).
+```
+
+`binary_reverse_requires_P_linear_space` and
+`original_reverse_requires_P_linear_space` show that a reverse inclusion,
+including one on the same original character languages, would put every P
+language in deterministic linear space. The conditional theorem
+`P_outside_linear_space_separates_original` obtains a genuine original-language
+separator if a P language outside that space class is supplied. Its space
+lower-bound hypothesis remains explicit and unproved. The new recognizer
+therefore strengthens the necessary condition for equality; it does **not**
+settle equality or construct an unconditional Par/Seq separator.
+
+The root imports and 27 new public theorem axiom guards include initialization,
+all halting cases, the standard-input machine, and the class consequences.
+All audited dependencies are standard Lean axioms.

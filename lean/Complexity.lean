@@ -59,6 +59,7 @@ import Complexity.Undec.TMSR
 import Complexity.Undec.TMSRDefs
 import Complexity.Undec.TMSRSim
 import Complexity.Undec.TMSRStep
+import Complexity.SpaceLinear
 
 /-!
 # TQBF is PSPACE-complete
