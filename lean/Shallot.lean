@@ -94,3 +94,4 @@ import Shallot.Peg.Separation.CBVStrict
 import Shallot.Peg.Separation.CBVParLower
 import Shallot.Peg.Separation.CBVBinary
 import Shallot.Peg.Separation.CBVSeqSpace
+import Shallot.Peg.Separation.CBVForwardBoolean

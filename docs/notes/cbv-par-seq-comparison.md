@@ -1825,3 +1825,385 @@ body begins by replaying the head, all source rules have the common arity
 It does not yet accommodate several independent unbounded captures, arbitrary
 body placement, or a general Par normal form. Consequently it is a further
 direct reverse fragment, not a proof of general equality or separation.
+
+### Arbitrary overlapping captures: disjoint runtime values and finite body views
+
+`CommonOriginCaptures` removes the restriction to one or two unbounded values
+at the **value representation** level. Every successful `DerivesArgsPar`
+derivation produces words that are prefixes of its common caller input
+(`par_prefixes`). Sort these words by length and split adjacent prefixes at
+their boundaries. `chunks` constructs exactly as many consecutive pieces as
+there were arguments. Empty captures and repeated lengths give empty pieces;
+they require no special exclusion. The total stored character count is at
+most the caller input length (`storage_bound`).
+
+`ranks` records, in the original parameter order, how many pieces reconstruct
+each captured word. `reconstruct` proves exact recovery of the entire tuple.
+For arity `d`, all ranks lie between zero and `d`, and the rank vector belongs
+to the input-independent list `controls d d`. This list has exactly
+`(d+1)^d` entries, counting all vectors rather than only reachable ones. No
+captured word or character value belongs to a finite palette. The runtime
+pieces can have arbitrarily large lengths and arbitrary character contents.
+
+`par_representation` connects this representation to the actual argument
+semantics: the literal expressions for those pieces form a successful Seq
+argument list on the original input, producing exactly the disjoint runtime
+values and leaving the suffix after the longest capture. This literal list
+is computed from **already evaluated capture values**. The theorem therefore
+does not supply a fixed Seq parser for discovering the pieces.
+
+`CaptureViews.prefixExpr k` replays the first `k` consecutive runtime pieces.
+`prefixExpr_eval` proves that this expression has the same partial evaluator
+value as the reconstructed captured literal. The general `evV_rebind` lemma
+then extends equality of parameter views to any first-order expression,
+including ordered choice, repetition, predicates, and calls under either
+argument convention. `finite_body_choice` provides an input-independent finite
+list of first-order body variants, one of which preserves the original body's
+full three-valued evaluation with the disjoint environment. The final
+`par_body_representation` packages successful Seq value capture and this body
+view together for arbitrary successful Par argument derivations; it imposes
+no replay, literal-argument, or finite-capture restriction on the source.
+
+This is a representation and local evaluation result. Both sides of each
+body equality use the **same input position, grammar, strategy, and recursive
+table**. Calls inside a body still enter the original rules with the same
+argument values. No equivalence of a globally transformed recursive grammar
+or of different Par/Seq calling strategies follows yet. A general reverse
+translation must still discover the correct pieces and finite control from
+the source syntax at runtime, preserve argument failure/undefinedness and
+order, and reconcile the original Par body position with the later Seq body
+position. Multiple unbounded values themselves now have a verified disjoint
+representation; these operational obligations remain open, as does the
+language-class equality/separation question.
+
+### Why disjoint capture values alone cannot repair body-entry position
+
+`PartitionResidualControl` tests the preceding representation against the
+remaining entry-position obligation. The obstruction is stronger than the
+earlier single-literal residual result: even an arbitrary prefix-selected
+partition with any fixed arity bound, plus arbitrary finite prefix-selected
+body control, cannot provide a general local residual interface.
+
+For a bounded environment whose nonempty words cannot match any remaining
+suffix, `signature` records exactly which parameter slots contain the empty
+word. Empty words remain observable, while nonempty dead words and missing
+slots all fail. `agree_iff_signature` proves that this is the exact
+`EnvAgree` quotient. The signature belongs to `controls 1 arity`, a list of
+size `2^arity`, independently of the captured lengths and contents. This
+handles empty chunks explicitly; simply declaring every chunk dead would be
+incorrect.
+
+`no_finite_tuple_summary` allows any bounded runtime tuple with this property,
+not just the canonical sorted differences. It shows that no finite
+prefix-selected body state together with that tuple can recognize `n=m` on
+the remaining suffix `c^m` for all prefix counts `n`. The proof combines the
+finite body state and the empty-slot signature into one finite key. Equal
+keys give indistinguishable continuations in an arbitrary first-order target
+grammar, contradicting the infinitely many required residual behaviors.
+
+For every partition of the consumed prefix `a^n b`, all its nonempty pieces
+are dead on `c^m` (`partition_dead`). `no_partitioned_factorization` therefore
+rules out this interface for the actual balanced source grammar
+`B <- 'a' B 'c' / 'b'`, even for whole-input acceptance. The target grammar
+and its recursive bodies are arbitrary; the selected entry state and tuple
+must depend only on the consumed prefix, and the tuple length has a fixed
+bound. `CommonOriginCaptures.chunks_cover` identifies the canonical chunks
+with the whole prefix whenever the common-origin tuple contains that longest
+prefix. `no_common_origin_factorization` applies the obstruction directly to
+that representation and arbitrary finite body variants.
+
+The balanced grammar itself recognizes `a^n b c^n` under **both** CBV
+strategies, as `FiniteResidualControl.balanced_recognizes` already proves.
+This is not a separating language. The residual interface discards any
+unbounded pending caller continuation before entering the suffix; a genuine
+Seq recognizer can retain its recursive callers. Selection that has already
+inspected the suffix is also outside this interface. Thus a general reverse
+construction cannot consist solely of capturing a bounded tuple of past
+segments and selecting a finite body at the advanced position. It must
+preserve additional computation, use a different evaluation arrangement, or
+otherwise avoid these explicit hypotheses. General Par/Seq equality or
+language-class separation remains open.
+
+### Moving Seq body tests to call sites while retaining runtime consumption
+
+`SequentialCallLookahead` supplies an evaluation rearrangement that may inspect
+the suffix while holding arbitrary runtime captures. As in `CallLookahead`,
+`tested g` replaces each rule body `B` with `&B`. Here the strategy is Seq,
+so a call still consumes its actual arguments before testing that body.
+Moving the body test to a plain `&F(args)` at the caller would erase this
+argument consumption. `plain_peek_changes_result` gives an actual derivation
+counterexample: a one-argument empty rule consumes the input `a`, while the
+plain call peek leaves it untouched and fails whole-input acceptance.
+
+The corrected translation replaces a call by
+
+```
+&F(render(args)) sequenceArgs(render(args))
+```
+
+and replaces each target rule body with its recursively rendered body.
+`sequenceArgs` evaluates the argument expressions consecutively and returns
+their final position, discarding only the resulting value tuple. The call
+probe first evaluates those arguments and invokes the rule with their actual
+captured words, so its body can inspect the remaining suffix with those
+values bound. Failure or undefinedness of that call propagates before the
+second argument pass. If the probe succeeds, argument re-evaluation is
+deterministic and reproduces the same final position. The enclosing caller
+therefore advances exactly as it did with the body test in the source.
+
+`evaluator_of_peek` and `arguments_of_peek` prove this simultaneously for
+expressions and Seq argument lists under related arbitrary recursive tables.
+`tables_peeked` establishes the relation at every recursive approximation.
+Rule counts and arities stay equal, so `iterBound_eq` connects the actual
+fixed-point decision procedures. `observations_iff` preserves every finite
+observation on the original character strings, and `language_translation`
+constructs the fixed first-order Seq target grammar and root.
+
+There is no finite capture palette, bound on capture lengths, or restriction
+to a replay-first body or a fixed argument count. Recursive calls in arguments,
+repetition, predicates, failure, and undefinedness are included. Values remain
+bound inside the probed call; the construction does not export captures from
+a lookahead. The transformation concerns a **Seq source with body tests**
+and a Seq target. Inserting tests into an arbitrary source grammar is not
+claimed to preserve its original language. Nor does the result reconcile
+overlapping Par argument values or the original Par body position. It is a
+verified whole-grammar component for suffix-informed evaluation arrangements;
+the general Par-to-Seq translation and language-class comparison remain open.
+
+### A fixed Seq evaluator for forward Boolean reference programs
+
+`ForwardQueryScan` and `ForwardBooleanProgram` implement a concrete use of
+runtime captures, suffix inspection, and retained recursive callers. One
+fixed first-order Seq grammar evaluates every finite forward Boolean program
+from its serialization. There is one recursive rule of arity one; the grammar
+does not depend on the program, its labels, or its computed values.
+
+An identifier is `a^n b`, with no bound on `n`. A record is `[identifier]gate;`.
+The gate forms are `1`, `0`, `!identifier`, and `&identifier,identifier`.
+The whole input begins with the queried identifier and then the record list.
+Lookup selects the first matching later definition. Operands of that gate
+are evaluated in the strict record tail after its definition; missing
+references are false. These rules give total semantics for every finite
+record list, including repeated labels, while admitting arbitrarily large
+forward acyclic circuits with shared references.
+
+The grammar has the following shape, using Seq calls throughout:
+
+```
+Id      <- 'a'* 'b'
+Q(name) <- &((!('[' name ']') .)* '[' name ']'
+            ('1' / '!' !Q(Id) / '&' Q(Id) ',' Q(Id)))
+Start   <- Q(Id) .*
+```
+
+`Q(Id)` captures the actual reference word before its body runs. Its body
+searches later declarations while that captured value remains bound. On
+success the lookahead restores the position immediately after the reference,
+so a conjunction can then read its comma and second operand. Nested queries
+retain their callers rather than exporting values out of lookahead. The
+strict declaration-tail induction proves that every query on a serialized
+program terminates with success or finite failure. The empty program and
+missing definitions are included.
+
+`seek_header_here` and `seek_header_skip` verify the actual capture-dependent
+search. `query_observation` connects all finite programs to recursive Boolean
+evaluation, including short-circuit conjunction and negation. `table_correct`
+identifies this semantics with a right-to-left table that computes and retains
+shared gate results. `program_observation` and `table_recognizes` connect the
+fixed root to whole-input acceptance on every serialized program. For example,
+`b[b]&ab,ab;[ab]!aab;[aab]0;` evaluates the same referenced negation twice and
+accepts. `accepted_identifier_unbounded` proves that accepted inputs actually
+use captured identifiers beyond every fixed length bound.
+
+The preceding Seq lookahead relocation applies to this entire recursive
+machine. `normalized_observations` preserves all character-input observations,
+including malformed inputs, between the body-test grammar and its translated
+call-probe grammar. `normalized_program_recognizes` connects the translated
+grammar to the same Boolean table on the original serialized program strings.
+
+The program-correctness theorem is stated on serialized program inputs; it
+does not assert a syntax-validation characterization for arbitrary malformed
+strings. No polynomial-time hardness reduction or simulation of every P
+language on its unchanged original input has been established here. In
+particular, generating a circuit encoding from some other input would not
+supply the language-preserving Par-to-Seq translation required by the main
+question. This construction verifies a uniform, unrestricted-size runtime
+lookup mechanism and its recursive use; general Par/Seq equality or
+language-class separation remains open.
+
+### Exact forward-program language, including malformed inputs
+
+`ForwardBooleanSyntax` closes the preceding promised-input gap by adding a
+syntax guard to the existing fixed evaluator. It introduces no program-specific
+rules or input rewriting. The validator reads the root identifier and zero or
+more complete records, then requires end of input. Its gate parser recognizes
+exactly the four serialized gate forms and checks all operand delimiters.
+The entry is `&validator Start`, with the same one-rule Seq grammar as before.
+
+`readId_sound`, `gateSyntax_sound`, and `recordSyntax_sound` recover the
+serialized objects from arbitrary successful parses. `syntax_sound` handles
+every original character string and recovers a root identifier and complete
+program. The converse is proved by `syntax_complete`; `syntax_iff` gives exact
+syntax recognition. `syntax_total` proves finite evaluation on every input:
+identifier repetition consumes a character on each step, and every successful
+record consumes its opening marker. Thus malformed strings are covered by a
+termination proof, not merely omitted from the program specification.
+
+`ProgramLanguage x` is the explicit character-language predicate
+
+```
+exists n P, x = identifier(n) ++ encode(P)
+            and tableLookup(evaluateTable(P), n) = true.
+```
+
+`language_iff` proves acceptance equivalent to this predicate for **all**
+`List Char` inputs. `nonserialization_failure` gives actual finite failure
+for every malformed serialization. `entry_decides` strengthens acceptance
+equivalence to a finite Boolean decision on every string, ruling out both
+undefinedness and a partially consumed success. The previous semantics of
+missing references and repeated labels is retained: this layer checks syntax
+and does not silently add a unique-label or defined-reference condition.
+
+`normalized_language_iff` and `normalized_entry_decides` connect the validated
+entry to the call-probe version on the same original strings, including all
+malformed inputs. `CBVForwardBoolean.forwardBoolean_is_seq` packages the fixed
+grammar and root as actual `IsFirstOrderCBVPEL` membership, and
+`forwardBoolean_normalized_is_seq` gives the second concrete Seq witness.
+`forwardBoolean_is_par` applies the existing language-preserving Seq-to-Par
+translation to exactly the same character language.
+
+This supplies a total language recognizer and a concrete common language-class
+member, rather than only evaluator correctness on an assumed syntax domain.
+A complexity-hardness reduction and an input-preserving simulation of all Par
+grammars remain separate obligations. Neither general equality nor separation
+of Par and Seq follows from this common member.
+
+### Numbered Boolean circuits and a quadratic data encoding
+
+`Complexity.BoolCircuit` defines a separate, grammar-independent circuit
+model. Gates occur in evaluation order and are Boolean constants, negations
+of numbered wires, or conjunctions of two numbered wires. `WellFormed`
+requires each operand to refer to an earlier gate. Evaluation appends each
+computed bit to the value vector; an unavailable wire defaults to false,
+so the evaluator is also defined for ill-formed gate lists.
+
+`CircuitProgram` connects this model to the fixed forward-program Seq
+recognizer. A left fold emits gate `i` as a record with label `i`, prepending
+it to the previously emitted records. Thus circuit evaluation order becomes
+the reverse declaration order needed by forward queries. Each gate becomes
+exactly one record (`program_length`); sharing is preserved as references,
+without expanding a circuit into a formula tree.
+
+`compileFrom_correct` proves that appending a circuit bit and prepending its
+forward definition preserve the whole wire-value function. `program_correct`
+and `table_correct` connect every output index to the previously verified
+forward-query and table semantics. `recognizes` and `normalized_recognizes`
+then identify full-input acceptance by the fixed validated Seq grammars with
+the circuit's output bit. These semantic theorems cover every finite numbered
+gate list; well-formedness is needed for the size statement, not hidden as a
+semantic assumption.
+
+For `N` gates in a well-formed circuit and a root index at most `N`,
+`input_length_bound` proves that the complete character input has length at
+most `N * (3*N + 8) + N + 1`. The proof bounds emitted labels and all operands,
+then the actual unary identifier, header, gate payload, and program lengths.
+The grammar remains fixed independently of `N` and the circuit contents.
+
+`input_language_iff` states the explicit mapping into the exact
+`ProgramLanguage` predicate. This is a semantic reduction with a verified
+quadratic output-size bound. No logspace or polynomial-time Turing-machine
+implementation of the encoder, or P-hardness theorem, is asserted. The mapping
+also changes an input circuit into its character serialization: it does not
+provide the unchanged-input simulation of every P language needed to close
+the Par/Seq comparison. General equality and separation remain open.
+
+### Research audit: regex and auxiliary-pushdown comparisons
+
+The [ICALP 2024 REWBLk paper by Uezato](https://drops.dagstuhl.de/storage/00lipics/lipics-vol297-icalp2024/LIPIcs.ICALP.2024.155/LIPIcs.ICALP.2024.155.pdf)
+identifies its regex model with NLOG. Its syntax has finite capture variables
+and iteration, without recursive grammar rules. Its choice takes a union of
+possible results, and positive lookahead retains variable updates (Sections
+3.1–3.2). These hypotheses differ from Macro PEG's prioritized choice,
+callee-local captures, and recursive activations. In particular, Macro PEG's
+double-negative lookahead returns no updated caller environment. Applying the
+NLOG theorem to Seq would require a separate semantics-preserving translation;
+the similar capture and lookahead notation does not establish one.
+
+The [auxiliary-pushdown review in Allender and Lange, 2014, Section 1](https://theoryofcomputing.org/articles/v010a008/v010a008.pdf)
+also distinguishes two bounds that must not be conflated. A logspace auxiliary
+pushdown machine has a stack excluded from its work-space charge. With
+unrestricted running time the deterministic model characterizes P; imposing
+polynomial time gives Log(DCFL) for deterministic machines, and Log(CFL) for
+nondeterministic machines. Thus merely identifying logspace local storage and
+a pushdown stack would not provide a strict upper class below P.
+
+The current Lean evidence is more specific than either analogy:
+
+- `SequentialStackCodecBound.task_length` and `frame_length` bound each local
+  record by a grammar-dependent number of integer fields.
+- `SequentialStackPayload.reachable_payload_bounds` bounds the stored capture
+  endpoints, positions, and clocks at every actual reachable state.
+- `SequentialStackRank.stack_linear_bound` bounds the number of live frames
+  linearly in input length; `SequentialStackBinary.reachable_bit_bound` charges
+  the whole retained stack, not just the active environment.
+- `CBVSeqSpace.binary_seq_in_nlog_space` connects the complete initialized
+  machine to the actual binary Seq language class in deterministic
+  `O(n log(n+1))` space.
+
+These are proved interpreter bounds. No polynomial running-time bound for the
+same stack-recomputation algorithm has been proved. The separate memo-table
+P upper bound cannot be combined with a different algorithm's local memory
+bound to obtain a simultaneous time/space theorem. Likewise, the interpreter
+can store capture origins as numeric input intervals; a source grammar's
+captured value is a word, not an instruction for arbitrary coordinate access.
+A reverse simulation must implement the needed access with Seq syntax.
+
+The audit therefore changes the next proof obligation. A smaller-class upper
+bound needs one complete algorithm satisfying that class's simultaneous
+resource conditions, including all pending environments. A P lower bound via
+auxiliary pushdown machines needs an actual input-preserving Seq simulation,
+including input-head motion, stack manipulation, and capture access. Neither
+obligation follows from the existing stack interpreter. The already proved
+`original_reverse_requires_P_nlog_space` remains a necessary consequence of
+general equality; it is not a proof of equality or separation. This audit
+adds literature evidence and narrows the available methods, without claiming
+a new Lean theorem or a solution of the language-class question.
+
+### Capture frontiers across actual Seq continuations
+
+`SequentialCaptureRegions` adds an operational interval invariant for the
+existing `SequentialStack.step` machine. It does not change the machine or
+store additional runtime metadata. Positions are suffix lengths: after
+progress, a position becomes smaller. `Past E p` says that every captured
+interval in `E` ends before the cursor at `p` in the original input order.
+
+`Window p q W` records consecutive intervals from argument evaluation,
+with endpoints `p = j0 >= j1 >= ... >= jd = q`. Empty intervals are allowed.
+`Window.weight` telescopes their numeric lengths to `p-q`.
+`Window.decoded_weight` proves the same equality for the lengths of the
+actual captured character words, under the original-input bound. The
+representation therefore accounts for the values used by grammar semantics,
+not merely numeric spans.
+
+The `ScopedValue`, `ScopedTask`, `ScopedFrame`, and `ScopedStack` certificates
+track cursor bounds and argument windows through all transition cases.
+`return_scoped` includes sequencing, ordered-choice restoration, both predicate
+results, repetition progress and stalling, argument assembly, and call entry.
+`step_scoped` and `reachable_scoped` connect these certificates to every
+reachable state of the unmodified initialized transition machine.
+
+`reachable_past` proves that the task's captures and all captures retained in
+every continuation frame precede the current cursor. When a returned task
+contains a successful argument tuple, `reachable_arguments` proves more:
+there is one consumed window, and every fresh interval in it is after every
+older interval retained anywhere in the remaining stack. In suffix-length
+coordinates, `fresh.start <= old.end`. `reachable_decoded_arguments` packages
+this global separation with the exact consumed character count.
+
+This establishes the freshness condition needed to study total retained
+capture storage. It does not assert that two older frames have disjoint
+environments: structural continuations can retain copies of the same caller
+environment. Bounding those copies, accounting for all saved cursors and
+clocks, and implementing any proposed compressed representation remain
+additional obligations. The current deterministic space upper bound remains
+`O(n log(n+1))`; no linear-space bound or Par/Seq separation is claimed here.

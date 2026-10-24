@@ -296,3 +296,12 @@ import MacroPeg.CBV.SequenceSpecialization
 import MacroPeg.CBV.HybridFlags
 import MacroPeg.CBV.HybridReplayFusion
 import MacroPeg.CBV.HybridReplayCompiler
+import MacroPeg.CBV.CommonOriginCaptures
+import MacroPeg.CBV.CaptureViews
+import MacroPeg.CBV.PartitionResidualControl
+import MacroPeg.CBV.SequentialCallLookahead
+import MacroPeg.CBV.ForwardQueryScan
+import MacroPeg.CBV.ForwardBooleanProgram
+import MacroPeg.CBV.ForwardBooleanSyntax
+import MacroPeg.CBV.CircuitProgram
+import MacroPeg.CBV.SequentialCaptureRegions

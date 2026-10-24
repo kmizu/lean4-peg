@@ -4,6 +4,7 @@ import Complexity.Qbf
 import Complexity.QbfCodec
 import Complexity.Formula
 import Complexity.Circuit
+import Complexity.BoolCircuit
 import Complexity.Count
 import Complexity.CfgEnc
 import Complexity.WfSem

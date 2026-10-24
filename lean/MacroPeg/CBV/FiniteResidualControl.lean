@@ -42,6 +42,10 @@ private theorem no_embedding : ∀ K, ∀ f : Nat → Fin K,
     have := hf (a + 1) (b + 1) horig
     omega
 
+/-- There is no injection from all natural numbers into fixed finite control. -/
+theorem no_nat_embedding (K : Nat) (f : Nat → Fin K)
+    (hf : ∀ a b, f a = f b → a = b) : False := no_embedding K f hf
+
 /-- Even arbitrary finite control cannot repair the interface that enters
 the suffix with only the original opaque captured prefix. The state may be
 any function of that prefix; the theorem imposes no computability condition. -/
