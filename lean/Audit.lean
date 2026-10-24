@@ -8485,3 +8485,89 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.ReplayFallbackFusion.fallback_returns_before_capture' depends on axioms: [propext] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ReplayFallbackFusion.fallback_returns_before_capture
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayControlFusion.Plan.all_of_forall' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayControlFusion.Plan.all_of_forall
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayControlFusion.Plan.all_imp' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayControlFusion.Plan.all_imp
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayControlFusion.Plan.eval_congr' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayControlFusion.Plan.eval_congr
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayControlFusion.Plan.eval_none' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayControlFusion.Plan.eval_none
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayControlFusion.Plan.exp_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayControlFusion.Plan.exp_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayControlFusion.Plan.exp_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayControlFusion.Plan.exp_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayControlFusion.callLeaf_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayControlFusion.callLeaf_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayControlFusion.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayControlFusion.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayControlFusion.sourceLeaf_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayControlFusion.sourceLeaf_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayControlFusion.par_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayControlFusion.par_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayControlFusion.seq_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayControlFusion.seq_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayControlFusion.par_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayControlFusion.par_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayControlFusion.seq_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayControlFusion.seq_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayControlFusion.callLeaf_eval' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayControlFusion.callLeaf_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayControlFusion.evaluator_of_shift' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayControlFusion.evaluator_of_shift
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayControlFusion.tables_shifted' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayControlFusion.tables_shifted
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayControlFusion.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayControlFusion.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayControlFusion.decide_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayControlFusion.decide_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayControlFusion.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayControlFusion.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayControlFusion.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayControlFusion.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayControlFusion.capture_dependent_fallback' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayControlFusion.capture_dependent_fallback

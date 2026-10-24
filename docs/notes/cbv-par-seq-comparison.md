@@ -3862,3 +3862,56 @@ multiple independent arbitrary arguments, and a general Par normal form
 remain unresolved. This is a direct extension of the reverse compiler, not
 a proof of general equality or a language-class separator. Root imports and
 18 new public axiom guards cover the compiler and the earlier-return example.
+
+
+### Capture-dependent choice and predicates at the original body position
+
+`CBV/ReplayControlFusion.lean` generalizes caller-position fallback into a
+finite body-control tree. A fixed part table contains arbitrary first-order
+expressions. A replay part denotes `x B`, where `B` may use the unbounded
+captured word and make recursive calls. A local part is independent of the
+outer environment and may itself consume input or recurse. Each arity-one
+source rule chooses a finite `Plan` assembled from these parts by prioritized
+choice, negative predicate, and guarded sequencing `&P Q`. Guard operands
+and nested predicates may themselves contain any such control tree. All part
+references are syntactically valid; `ValidPlan` imposes no semantic oracle.
+
+Unlike the preceding two-branch compiler, a fallback may now depend on the
+captured word, and there may be any fixed number of capture-dependent branches
+and tests. For example the generated source can implement
+
+```
+F(x) <- (x fail) / (&(!(x 'z')) 'a')
+```
+
+Both alternatives inspect the capture. On a successful negative test, the
+second alternative reads `a` from the original caller position, not from the
+capture endpoint. `capture_dependent_fallback` kernel-checks the actual Par
+and Seq table evaluations: capturing `ab` on input `ab` leaves `b`, whereas
+the same capture on input `abz` makes the second branch finitely fail.
+
+The Seq grammar has one actual rule per fixed part: arity one for a replay
+tail and arity zero for a local part. Call translation checks the arbitrary
+head argument first, then executes the finite body-control tree at the caller.
+Each replay leaf performs a real Seq call with that head parser, which
+reconstructs the same deterministic runtime capture before entering its tail.
+Choice and predicates retain the original caller position and their usual
+partial-result behavior. No input-dependent grammar, capture palette, bounded
+capture length, or finite-state head assumption is used.
+
+`Plan.exp_eval` gives exact semantics for the control tree, including failure
+and undefinedness of guards and predicates. `callLeaf_eval` connects its real
+Seq calls to captured and original-position rows. `evaluator_of_shift` handles
+arbitrary recursive first-order head arguments, and `tables_shifted` proves the
+entire source-to-target table relation at every physical round. The resulting
+`observations_iff` and `language_translation` preserve every finite observation
+and the original full-consumption language with no recursive user simulation
+premise. Root imports and 21 public axiom guards cover the connection.
+
+The remaining boundary is structural: a consuming local part cannot be
+followed by a new outer-capture-dependent part at that advanced position.
+Such sequential reuse must already lie inside a replay tail. The control tree
+therefore does not cover arbitrary capture-dependent bodies or several
+independent arbitrary captures. General CBV-Par/CBV-Seq equality and separation
+remain unresolved; this is an extension toward the body-entry obligation,
+not a redefinition of that objective.
