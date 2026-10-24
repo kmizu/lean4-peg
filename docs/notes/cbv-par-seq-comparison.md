@@ -7633,8 +7633,61 @@ clock zero.
 A logical user no longer has to begin with a consuming A;param0. Its body
 may inspect the capture through several origin branches and predicates and
 return before the capture endpoint. The replay leaves still require that
-entry shape; arbitrary initial consuming sequences/stars have not been
-normalized into this new compiler. The fixed header, a-only consuming H,
+entry shape. The next extension normalizes nested consuming sequences over
+these leaves; arbitrary initial consuming expressions and general body stars
+are still outside the compiler. The fixed header, a-only consuming H,
 one source capture, and unsupported-template restrictions remain. This is
 not a complete integration of `MixedBodyCompiler` or a general Par→Seq
 translation, and no language-class equality or separation is claimed.
+
+### Nested consuming body sequences from source syntax
+
+`FragmentBodyForm.Body` represents actual nested user bodies built from
+replay leaves A;param0;b, sequence, prioritized choice, and negation. The
+suffix b is an arbitrary normal template, so it may call users recursively,
+construct new consuming fragments, reuse the held value, or contain loops.
+The body itself is not replaced by a supplied control plan.
+
+`normalize` computes a finite plan and its leaf suffixes. Composition keeps
+original leaves as queries and appends continuation copies. It uses
+`ContinuationPlan.bind`: a successful alternative is guarded before its
+continuation runs, while a negative zero-consuming output invokes the
+right body at the unchanged position. The actual copied suffix b;C is
+proved equal to sequencing the original leaf with C. `compose_eval` and
+`evaluator_eq` preserve the full partial result in arbitrary grammar/table/
+strategy/caller contexts, without a Consumer or totality condition.
+
+`FragmentBodyCompiler` gathers these generated suffixes and shifts their
+plans into one layout. Its source grammar retains each user's original
+nested Body.syntax. `normalized_bodies` and `body_results` prove equality
+with the actual generated plan bodies; `headers`, `tables_eq`, and
+`evaluator_eq` lift that equality through every recursive grammar round.
+The normalization requires no semantic table assumptions, input condition,
+or user-supplied body-equivalence proof. Appended source helper rows are
+preserved and have the same generated leaf bodies as the normalized grammar.
+
+The generated bounds prove `FragmentOriginRecursive.Valid` automatically.
+`observations_iff` composes this exact source normalization with the
+recursive consuming-fragment compiler, and `language_translation` gives
+one fixed first-order Seq grammar on unchanged strings for every source
+user list. No layout, leaf-index validity certificate, capture-shape,
+argument/continuation correspondence, or recursive row oracle is left as
+a premise of these final results.
+
+Kernel executions sequence a negative left body with a replaying right
+body, and run real 0→1→0 recursion where user 1 consumes two separate replay
+leaves before invoking user 0. The captures a → aaa#a → aa remain available
+after returns, and a short grandchild copy is rejected. A source body
+`(leaf(x) / leaf(xy));leaf(!;param0)` rejects a#axya#a!a because its x branch
+has already succeeded. The naively distributed alternative of the two full
+sequences accepts that input; the generated Seq grammar preserves the
+source rejection. A right continuation's empty-star None is also retained
+after a negative zero-consuming success.
+
+This extends finite body normalization through arbitrary nesting of sequence,
+choice, and negation for the consuming-fragment family. General stars over
+these body controls, ordinary bare-param/closed leaf kinds, arbitrary consuming
+prefixes before the first replay, unrestricted arguments, and independent
+multiple captures remain outside this construction. The fixed A=a*;# header,
+a-only consuming H, one actual capture, and per-replay-leaf A;param0 shape
+remain restrictions. General Par/Seq equality or separation is unresolved.

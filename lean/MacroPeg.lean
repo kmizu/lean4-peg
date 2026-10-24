@@ -570,3 +570,6 @@ import MacroPeg.CBV.FragmentConsumingRecursive
 import MacroPeg.CBV.FragmentConsumingRecursiveExamples
 import MacroPeg.CBV.FragmentOriginRecursive
 import MacroPeg.CBV.FragmentOriginExamples
+import MacroPeg.CBV.FragmentBodyForm
+import MacroPeg.CBV.FragmentBodyCompiler
+import MacroPeg.CBV.FragmentBodyExamples
