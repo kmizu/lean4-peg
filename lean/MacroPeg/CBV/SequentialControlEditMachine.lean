@@ -228,4 +228,67 @@ theorem replace_constOK {E : Nat} (hE : 2 ≤ E) (src tmp : Fin k) (saved erased
   intro v hv
   exact Nat.lt_of_lt_of_le (bit_symbol _ v hv) hE
 
+private theorem blocks_nil : blocks [] = [] := rfl
+
+/-- Increment the second unary header, retaining the first header on scratch.
+No header value is decoded or supplied as a runtime counter. -/
+def incrementSecond (src tmp : Fin k) : LProg k :=
+  .seq (saveMany src tmp 1) (.seq (.push src 1) (moveAll tmp src))
+
+theorem incrementSecond_runs {src tmp : Fin k} (hd : src ≠ tmp) (first second : Nat)
+    (rest : List Nat) (L : Lists k) {B : Nat}
+    (hsrc : L src = rest ++ blocks [first,second]) (htmp : L tmp = [])
+    (hL : LenOK B L) (hcap : (rest ++ blocks [first,second+1]).length+2 ≤ B) :
+    ∃ T, Runs (LenOK B) (incrementSecond src tmp) L
+      (L.set src (rest ++ blocks [first,second+1])) T := by
+  have hc : (L tmp).length+(blocks [first]).length+2 ≤ B := by
+    have hh := hL src
+    rw [hsrc] at hh
+    simp only [htmp,List.length_nil,blocks_cons,blocks_nil,List.length_append,
+      List.length_cons,List.length_nil,List.length_replicate] at hh ⊢
+    omega
+  have hs : L src = (rest ++ blocks [second]) ++ blocks [first] := by
+    rw [show blocks [first,second] = blocks [second] ++ blocks [first] from blocks_append [first] [second]] at hsrc
+    simpa only [List.append_assoc] using hsrc
+  obtain ⟨T1,hr⟩ := saveMany_runs hd [first] (rest ++ blocks [second]) L hs hL hc
+  let N := (L.set src (rest ++ blocks [second])).set tmp ((blocks [first]).reverse)
+  have hn : (L.set src (rest ++ blocks [second])).set tmp (L tmp ++ (blocks [first]).reverse) = N := by
+    simp [N,htmp]
+  rw [hn] at hr
+  have hN : LenOK B N := end_fits hr
+  have hblock : blocks [second+1] = blocks [second] ++ [1] := by
+    simp [blocks_cons,blocks_nil,List.replicate_succ']
+  have hM : LenOK B (N.set src (N src ++ [1])) := by
+    apply lenOK_set hN src
+    have hh := hcap
+    simp only [blocks_cons,blocks_nil,List.length_append,List.length_cons,
+      List.length_nil,List.length_replicate] at hh
+    simp [N,Lists.set,hd]
+    simp only [blocks_cons,blocks_nil,List.length_append,List.length_cons,
+      List.length_nil,List.length_replicate]
+    omega
+  have hp := runs_push (i := src) (e := 1) hN hM
+  let M := N.set src (N src ++ [1])
+  have hrestore : (M src).length+(M tmp).length+2 ≤ B := by
+    simp only [M,N,Lists.set_same,Lists.set_ne _ _ hd,Lists.set_ne _ _ (Ne.symm hd),List.length_append,List.length_singleton,List.length_reverse]
+    simp only [blocks_cons,blocks_nil,List.length_append,List.length_cons,
+      List.length_nil,List.length_replicate] at hcap ⊢
+    omega
+  have ht := moveAll_runs_bounded (Ne.symm hd) hM hrestore
+  have hout : (M.set src (M src ++ (M tmp).reverse)).set tmp [] =
+      L.set src (rest ++ blocks [first,second+1]) := by
+    have hsplit : blocks [first,second+1] = blocks [second+1] ++ blocks [first] := by
+      simpa using blocks_append [first] [second+1]
+    rw [hsplit,hblock]
+    funext i
+    by_cases hi : i=src <;> by_cases hj : i=tmp <;>
+      simp [M,N,Lists.set,hi,hj,hd,Ne.symm hd,htmp,List.append_assoc]
+  rw [hout] at ht
+  exact ⟨_,hr.seq (hp.seq ht)⟩
+
+theorem incrementSecond_constOK {E : Nat} (hE : 2 ≤ E) (src tmp : Fin k) :
+    (incrementSecond src tmp).ConstOK E := by
+  change (saveMany src tmp 1).ConstOK E ∧ 1 < E ∧ True ∧ True
+  exact ⟨save_constOK E src tmp 1,by omega,trivial,trivial⟩
+
 end Shallot.MacroPeg.CBV.SequentialControlEditMachine
