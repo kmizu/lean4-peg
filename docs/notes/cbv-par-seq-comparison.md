@@ -2577,3 +2577,54 @@ The current-cursor decrease needed after successful input consumption also
 remains to be implemented, as do complete dispatch, initialization, and the
 final TM recognition connection. The general Par/Seq comparison remains open,
 and the proved complete recognizer's space bound remains `O(n log n)`.
+
+### Decreasing a cursor directly after successful consumption
+
+`MacroPeg.CBV.SequentialCursorDecrease` gives the remaining local cursor
+algebra. Decreasing the current cursor by one removes one true bit from its
+head block and adds one true bit to the next difference block, if there is a
+next saved cursor. At the end of the cursor list, the obsolete bit is simply
+discarded. `lowerRest_relative` and `lower_current` prove that this direct edit
+preserves all the saved absolute positions on the increasing domain.
+
+`MacroPeg.CBV.SequentialCursorDecreaseMachine.decrement` implements that edit
+with actual list instructions. It removes the leading bit, scans the remaining
+head block into scratch, removes the delimiter, conditionally adds a bit to
+the suffix, and restores the delimiter and head block. It receives neither
+the old absolute position nor a new result position as a runtime input.
+`decrement_runs` and `decrement_current_runs` prove the encoded result, empty
+scratch restoration, preservation of unrelated tapes, and `LenOK B` for every
+instruction state using the **original capacity**.
+
+`consume` repeats this edit using a unary counter of consumed characters.
+`consume_runs` proves that consuming `used <= p` characters changes the first
+cursor from `p` to `p-used`, preserves the saved cursor list, and empties both
+the counter and scratch. `consume_tape` supplies the compiled `TFits B` tape
+execution, covering all intermediate states. The counter's production by a
+dynamic input/word matcher remains a separate obligation. For a source-fixed
+length, `consumeFixed` creates the unary counter itself with fixed push
+instructions; `consumeFixed_runs` proves the complete allocation, edit, and
+cleanup within the same capacity. This is a cursor operation, not a literal
+matching test.
+
+`MacroPeg.CBV.SequentialAnyCursorMachine` connects the operation to the actual
+`any` atom. Its program tests the last symbol of the compressed cursor stream:
+a positive cursor ends in a true bit and takes the decrement branch; zero
+ends in a delimiter and takes the existing cursor-deletion branch. Thus both
+success and empty-input failure select their cursor update from the stream
+itself, with no supplied success flag, consumed-length counter, or new result
+position. `actual_step` checks the real Seq transition; `cursor_update` and
+`cursor_update_tape` prove the corresponding cursor-component update for all
+initialized reachable `any` states with capacity
+
+```
+linearFactor g e * (input length + 1) + 2.
+```
+
+The other complete packed-state streams remain on their tapes unchanged.
+`decrement_constOK`, `consumeFixed_constOK`, and `finite_alphabet` also verify
+the fixed pushed-symbol alphabet requirements. These programs still update
+only the cursor component. Complete control/word updates, actual dynamic
+matching, dispatch, initialization, and the final TM recognition connection
+remain open, as does the general Par/Seq language-class comparison. The
+proved complete recognizer's space bound remains `O(n log n)`.

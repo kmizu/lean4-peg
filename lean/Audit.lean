@@ -6111,3 +6111,71 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialCursorEntryMachine.cursor_update_tape
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorDecrease.lowerRest_relative' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorDecrease.lowerRest_relative
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorDecrease.lower_current' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorDecrease.lower_current
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.decrement_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.decrement_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.decrement_current_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.decrement_current_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.consume_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.consume_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.consumeFixed_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.consumeFixed_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.consume_tape' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.consume_tape
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.decrement_constOK' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.decrement_constOK
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.consumeFixed_constOK' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.consumeFixed_constOK
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAnyCursorMachine.actual_step' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAnyCursorMachine.actual_step
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAnyCursorMachine.cursor_update' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAnyCursorMachine.cursor_update
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAnyCursorMachine.cursor_update_tape' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAnyCursorMachine.cursor_update_tape
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAnyCursorMachine.finite_alphabet' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAnyCursorMachine.finite_alphabet

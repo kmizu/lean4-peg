@@ -320,3 +320,6 @@ import MacroPeg.CBV.SequentialSharedStateBound
 import MacroPeg.CBV.SequentialCursorEdit
 import MacroPeg.CBV.SequentialCursorEditMachine
 import MacroPeg.CBV.SequentialCursorEntryMachine
+import MacroPeg.CBV.SequentialCursorDecrease
+import MacroPeg.CBV.SequentialCursorDecreaseMachine
+import MacroPeg.CBV.SequentialAnyCursorMachine
