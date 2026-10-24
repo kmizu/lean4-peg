@@ -6224,3 +6224,54 @@ argument B and leading shifted replay A;param0, a shared independent
 header (not a header depending on held values or user rows), and unary
 user captures. General source argument/capture shapes, multiple independent
 captures, and general class equality or separation remain unresolved.
+
+### Preserve an input-selected stop before later codewords
+
+`SelectedCodewordVerification` and `SelectedCodewordGrammar` extend the
+unbounded-count route to `S=A;&(A;G)` and `B=S*`, with an arbitrary pure
+condition G. The condition may stop B before the maximal run of A ends;
+its result is evaluated by the original argument, not selected by a new
+search or a grammar-fixed count. Each successful S consumes exactly one
+actual A codeword and guarantees another A at its endpoint. A successful
+nonempty B therefore supplies its own word trace and final header, even
+when later headers are unequal or G stops early.
+
+The Seq helper is now `V(u)=(&S;u)*;!S;u`. It shares the original step's
+stop test rather than demanding that A fail after the replay. Starting
+after the first captured A, its repetition follows the remaining original
+S trace; the final u checks the one remaining header. Prefix-freeness
+proves that it succeeds exactly when the shifted replay of the whole
+original capture succeeds. The empty-run case is selected separately.
+The generated entry is `&B; (!S / &V(A)); F(B)`, where source F has body
+`A;param0;b` and target F has body `A;b`. The original whole capture is
+retained for all later uses by b. Preflighting B before V preserves an
+undefined original stop condition, including when V could otherwise
+reject earlier on unequal headers.
+
+`physical_agreement` proves full partial equality at every pair of
+positive ordinary table stages, for every original suffix. The ordinary
+`observations_iff` and `language_translation` then preserve every finite
+observation and the same original-string language. No count, chosen
+endpoint, run witness, or verifier oracle is an input to the generated
+syntax. G may contain ordinary repetition, predicates, and choice, so
+undefined conditions and nullable loops are included in the theorem.
+
+`SelectedCodewordExamples` demonstrates the method boundary on
+`a#a#aa#?a#`, with A=`a*;#` and G=`!'?'`. B captures only the first `a#`;
+the source then matches `a#a#`, consumes the later unequal `aa#` in its
+continuation, and reuses the retained `a#` after `?`. Both new ordinary
+grammars accept, while the previous maximal-run verifier rejects the
+later unequal word. Further kernel examples check counts zero and three,
+short and unequal copies, an undefined condition after earlier unequal
+words, and an undefined continuation. An empty successful step is proved
+undefined at every table and position.
+
+This extension currently has a pure shared header and condition, with a
+call-free parameter-using continuation. The previous compiler still
+handles independent recursive headers and mutually recursive user tails
+for its designated last-preserving argument; combining that recursion
+support with the new selected-stop construction remains to be done.
+Arbitrary argument expressions, arbitrary capture shapes, dependent
+headers/conditions, multiple independent captures, and general Par/Seq
+class equality or separation remain unresolved. The verifier counterexample
+above distinguishes verification methods, not language classes.
