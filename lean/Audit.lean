@@ -3719,3 +3719,47 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialSeqReturnMachine.transition_tape
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialNumericBlock.compiled_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialNumericBlock.compiled_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialNumericBlock.local_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialNumericBlock.local_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAltReturn.resume_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAltReturn.resume_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAltReturn.numeric_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAltReturn.numeric_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAltReturn.scratchSpace_linear' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAltReturn.scratchSpace_linear
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAltReturn.local_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAltReturn.local_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAltReturn.original_step' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAltReturn.original_step
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAltReturnMachine.space_bound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAltReturnMachine.space_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAltReturnMachine.transition_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAltReturnMachine.transition_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAltReturnMachine.transition_tape' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAltReturnMachine.transition_tape
