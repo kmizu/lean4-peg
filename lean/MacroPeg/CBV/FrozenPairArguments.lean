@@ -63,7 +63,7 @@ theorem common_eval {n m : Nat} (A : Machine n) (B : Machine m) (hm : 0<m) (tail
 
 theorem arguments_eval {n m : Nat} (A : Machine n) (B : Machine m) (hm : 0<m) (tail : List MRule)
     (x : List Char) (s : Strategy) (E : List (List Char)) (a c : Fin n) (b d : Fin m)
-    (first : Bool) (p clock : Nat) (hp : p ≤ x.length) 
+    (first : Bool) (p clock : Nat) (hp : p ≤ x.length)
     (hstate : (common A B a b (sfx x p)).1.1=c ∧ (common A B a b (sfx x p)).1.2=d) :
     evSeqArgs (grammar A B hm tail) x s (frozen A B hm tail x s clock)
       E (arguments a c b d first) p = some (some
@@ -126,7 +126,7 @@ theorem independent_eval {n m : Nat} (A : Machine n) (B : Machine m) (hm : 0<m) 
 
 theorem capture_reconstruction {n m : Nat} (A : Machine n) (B : Machine m) (hm : 0<m) (tail : List MRule)
     (x : List Char) (s : Strategy) (E : List (List Char)) (a c : Fin n) (b d : Fin m)
-    (first : Bool) (p clock : Nat) (hp : p ≤ x.length) 
+    (first : Bool) (p clock : Nat) (hp : p ≤ x.length)
     (hgood : GoodCase A B a c b d first (sfx x p)) :
     evParArgs (grammar A B hm tail) x s (frozen A B hm tail x s clock) E
       [leftEntry (m := m) a,rightEntry (n := n) b] p = some (some
@@ -157,7 +157,7 @@ theorem dispatch_eval {n m : Nat} (A : Machine n) (B : Machine m) (hm : 0<m) (ta
     (x : List Char) (E : List (List Char)) (a : Fin n) (b : Fin m)
     (dest : Control n m → Nat) (cases : List (Control n m))
     (valid : ∀ control ∈ cases, ∃ r, ruleAtM (grammar A B hm tail).rules (dest control) = some r ∧ r.arity=2)
-    (p clock : Nat) (hp : p ≤ x.length) 
+    (p clock : Nat) (hp : p ≤ x.length)
     (hmem : actual A B a b (sfx x p) ∈ cases) :
     evV (grammar A B hm tail) x .callByValueSeq (frozen A B hm tail x .callByValueSeq clock)
       E (dispatch A a b dest cases) p =
