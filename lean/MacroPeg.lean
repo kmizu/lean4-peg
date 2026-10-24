@@ -399,3 +399,5 @@ import MacroPeg.CBV.WordControlFusion
 import MacroPeg.CBV.MixedControlFusion
 import MacroPeg.CBV.SymbolicWordSelection
 import MacroPeg.CBV.SelectedControlFusion
+import MacroPeg.CBV.GuardedWordSelection
+import MacroPeg.CBV.GuardedControlFusion

@@ -4090,3 +4090,57 @@ The unary source restriction and replay/local body factorization also remain.
 General Par/Seq equality or a language-class separator is still unresolved.
 Root imports and 28 new public axiom guards cover the selector and its complete
 recursive compiler application.
+
+
+### Recursive predicates within consuming-call arguments
+
+`CBV/GuardedWordSelection.lean` extends syntax-selected arguments with negative
+predicates. A successful predicate contributes the empty word; its failure and
+undefinedness are retained distinctly. Its body may be any supported
+first-order computation, including repetition and recursive queries obeying
+the same call discipline. Positive lookahead follows from double negation.
+Literals, current parameters, concatenation, and prioritized choice remain
+available around these tests, with no finite capture palette.
+
+`argRender` translates predicate bodies. `Checks` records the subexpressions
+whose query semantics must correspond. `arg_eval` and `probe_eval` evaluate
+the translated predicates at the actual current argument position, after the
+already selected prefix. `selectAt_eval` then selects the complete captured
+word expression without letting a failed continuation retry an argument choice.
+For a successful predicate it passes `lit []` to the continuation. Its generic
+predicate correspondence premise is explicit at this interface layer.
+
+`CBV/GuardedControlFusion.lean` discharges that premise for the actual recursive
+compiler. `render`, `scanArg`, and `chooseAt` are mutually defined on decreasing
+source syntax, so predicate translation and selector construction produce one
+fixed finite grammar. `scanArg_eq` and `chooseAt_eq` connect that code to the
+generic selector. Target first-order syntax is proved mutually with the
+first-order property of translated predicate subexpressions.
+
+Crucially, `evaluator_of_shift` is proved mutually with `predicate_checks`.
+The expression proof supplies recursive predicate correspondence, and the
+selector uses it at each actual argument position. `tables_shifted` closes
+the recursive user-table relation at every physical round. Consequently
+`observations_iff` and `language_translation` retain no external hypothesis
+that predicates, gates, arguments, or recursive user rules simulate correctly.
+They preserve every finite success/failure and the original full-consumption
+language, including empty captures and predicate queries with no finite result.
+`selected_fragment_supported` embeds the preceding composite-argument fragment.
+
+`predicate_at_argument_position` checks a query after an initial captured `a`.
+The query tests for `z`; the root succeeds on `aaa` and finitely fails on `aza`
+under both actual grammars. Testing at the original position instead would
+miss the `z`, and the body's consuming fallback would incorrectly accept.
+`undefined_predicate_stays_undefined` proves, for **every** physical table stage,
+that a self-recursive query in a negated argument leaves both complete calls
+undefined. It never becomes finite failure and cannot select the next argument
+alternative. This result is by induction and recursive compiler correspondence,
+not just a finite execution sample.
+
+The remaining argument restriction concerns forms producing captured characters:
+consuming repetition and direct recursive calls are still outside consuming-call
+argument selection. Such computations are allowed inside predicates and at
+origin-control callees. Unary source rules and replay/local body factorization
+also remain. Thus the general CBV-Par/CBV-Seq equality or separation is still
+unresolved. Root imports and 34 new public axiom guards cover the selector,
+mutual recursive compiler, shifted-position example, and unbounded unknown case.
