@@ -557,4 +557,5 @@ import MacroPeg.CBV.ControlledPartialExamples
 import MacroPeg.CBV.ControlledPartialRecursive
 import MacroPeg.CBV.ControlledPartialRecursiveExamples
 import MacroPeg.CBV.ControlledFragmentReplay
+import MacroPeg.CBV.ControlledFragmentPreflight
 import MacroPeg.CBV.ControlledFragmentExamples

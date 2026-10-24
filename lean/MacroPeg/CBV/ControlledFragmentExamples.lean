@@ -1,4 +1,4 @@
-import MacroPeg.CBV.ControlledFragmentReplay
+import MacroPeg.CBV.ControlledFragmentPreflight
 
 /-! Physical executions with a caller-selected, nongreedy final fragment.
 These examples exercise the proposed entry, not a general compiler theorem. -/
@@ -118,5 +118,48 @@ theorem firstOrder_grammars_and_entry : source.FirstOrder ∧ target.FirstOrder 
     ControlledPartialPreflight.control,AdjacentCodewordControl.filter,
     CodewordControlFilter.render,NestedScannerArguments.scan,NestedScannerArguments.choice,
     MExp.FirstOrder,MExp.FirstOrderArgs,MExp.failAlways,MExp.andP,eof]
+
+/-- A parser, rather than a promised capture value, selects the fragment
+using the caller's retained word. Empty and shorter retained words choose
+strictly different stopping points inside the same aaa run. -/
+theorem syntactic_fragment_selects_and_reuses :
+    let J := MExp.notP (.seq (.param 0) (.lit ['#']))
+    let H := ControlledFragmentPreflight.fragment J
+    ∀ xp ∈ [("aaa#aaa#aX!aaa#a".toList,['a']),
+      ("aaa#aaa#aaX!aaa#aa".toList,[]),
+      ("aaa#aaa#X!aaa#".toList,['a','a']),
+      ("aaa#aX!a".toList,['a'])],
+    let x := xp.1
+    let E := [xp.2]
+    evV source x .callByValuePar (tblV source x .callByValuePar 1) E
+      (.call 0 [argument (.lit []) H]) x.length=some (some 0) ∧
+    evV target x .callByValueSeq (tblV target x .callByValueSeq 1) E
+      (entry (.lit []) H) x.length=some (some 0) := by
+  decide +kernel
+
+/-- These inputs have no valid terminal word. Preflight is finite failure,
+including when the fragment itself successfully consumes the entire input. -/
+theorem missing_terminal_delimiter :
+    let J := MExp.notP (.seq (.param 0) (.lit ['#']))
+    let H := ControlledFragmentPreflight.fragment J
+    ∀ x ∈ ["".toList,"a".toList,"aaa".toList,"aaZ#".toList,"b#".toList],
+    evV target x .callByValueSeq (tblV target x .callByValueSeq 1) [['a']]
+      (preflight (.lit []) H) x.length=some none ∧
+    evV source x .callByValuePar (tblV source x .callByValuePar 1) [['a']]
+      (.call 0 [argument (.lit []) H]) x.length=some none := by
+  decide +kernel
+
+/-- Undefined caller tests inside the consuming fragment take precedence
+on an input whose scanner comparison would otherwise fail. -/
+theorem undefined_fragment_probe :
+    let x := "aaZ".toList
+    let H := ControlledFragmentPreflight.fragment (.star .eps)
+    evV source x .callByValuePar (tblV source x .callByValuePar 1) []
+      (.call 0 [argument (.lit []) H]) x.length=none ∧
+    evV target x .callByValueSeq (tblV target x .callByValueSeq 1) []
+      (preflight (.lit []) H) x.length=none ∧
+    evV target x .callByValueSeq (tblV target x .callByValueSeq 1) []
+      (entry (.lit []) H) x.length=none := by
+  decide +kernel
 
 end Shallot.MacroPeg.CBV.ControlledFragmentExamples

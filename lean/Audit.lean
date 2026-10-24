@@ -17461,3 +17461,73 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentExamples.firstOrder_grammars_and_entry' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ControlledFragmentExamples.firstOrder_grammars_and_entry
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentPreflight.fragment_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentPreflight.fragment_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentPreflight.fragment_shape' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentPreflight.fragment_shape
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentPreflight.block_prefix_after_fragment' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentPreflight.block_prefix_after_fragment
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentPreflight.terminal_of_replay' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentPreflight.terminal_of_replay
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentPreflight.star_trace' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentPreflight.star_trace
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentPreflight.tail_result' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentPreflight.tail_result
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentPreflight.physical_trace' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentPreflight.physical_trace
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentPreflight.physical_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentPreflight.physical_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentPreflight.physical_range' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentPreflight.physical_range
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentPreflight.physical_result' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentPreflight.physical_result
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentExamples.syntactic_fragment_selects_and_reuses' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentExamples.syntactic_fragment_selects_and_reuses
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentExamples.missing_terminal_delimiter' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentExamples.missing_terminal_delimiter
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentExamples.undefined_fragment_probe' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentExamples.undefined_fragment_probe

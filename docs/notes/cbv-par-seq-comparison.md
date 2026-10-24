@@ -7392,3 +7392,44 @@ Both concrete grammars and the proposed entry are first-order.
 The proposed entry's recursive call transfer, all-input failure cases,
 and composition with the earlier recursive/mixed-body compilers remain
 unproved. General Par/Seq equality or separation remains unresolved.
+
+### All-input preflight for a syntax-selected final fragment
+
+`ControlledFragmentPreflight` discharges the preceding local capture and
+delimiter premises for H_J=(a;&J)*. J is a caller-side test, including
+parent-dependent or recursive first-order expressions. Successful
+iterations consume exactly one a; failing tests stop before consuming
+that iteration's a. `fragment_shape` derives the actual a-only capture
+from this syntax for arbitrary tables, without a capture-value oracle.
+
+`block_prefix_after_fragment` and `terminal_of_replay` recover the
+remaining a-run and # from an actual successful source replay. The
+latter does not assume that the complete-word trace or the fragment was
+maximal. Conversely `tail_result` and `physical_trace` recover the exact
+physical helper result even when the terminal scanner fails. On a
+successful original argument, `physical_range` excludes undefined or
+shifted preflight results: only the actual capture endpoint or finite
+comparison failure can result.
+
+`physical_iff` now holds on every input after an actual argument success,
+with no successful-star, a-only-value, delimiter, trace, or word-count
+premise. `physical_result` includes every argument outcome. Original
+argument None/failure is propagated first; after a successful capture,
+preflight returns its endpoint exactly when the original A/whole-value
+replay succeeds, and otherwise returns the same finite failure. This is
+an exact caller-position result with ordinary Seq tables and the two
+actual comparison rules, not a semantic helper-row assumption.
+
+Kernel executions select a, aa, or empty inside aaa by changing only
+the caller's retained word, and reuse the whole value afterward. Inputs
+without a valid terminal word, including empty input and a fragment
+consuming the entire input, fail finitely. An empty-star J on aaZ stays
+undefined before the scanner's finite failure can replace it.
+
+This closes the earlier local preflight premises for this H syntax.
+The mandatory source body entry A;param0, one source capture, fixed
+A=a*;#, and the specified full-word/fragment argument shape still limit
+the construction. Transfer across source/target recursive user tables,
+clock-zero seeds, complete call transfer, and a final fixed recursive
+grammar language theorem for the new fragment family remain unproved.
+General Par/Seq equality or separation remains unresolved.
