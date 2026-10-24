@@ -497,3 +497,5 @@ import MacroPeg.CBV.LastCodewordCandidate
 import MacroPeg.CBV.LastCodewordVerification
 import MacroPeg.CBV.LastCodewordGrammar
 import MacroPeg.CBV.LastCodewordExamples
+import MacroPeg.CBV.LastCodewordRecursive
+import MacroPeg.CBV.LastCodewordRecursiveExamples

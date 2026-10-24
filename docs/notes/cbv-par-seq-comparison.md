@@ -6087,9 +6087,9 @@ later undefinedness. The actual ordinary Seq candidate without `&B` thus
 fails, whereas the guarded entry remains undefined. This guard-order
 counterexample is kernel-checked.
 
-The all-input gap for this candidate is closed below. Integration of this
-last-header route with arbitrary recursive user tails remains unproved;
-the preceding fixed-count recursive compiler is separate. General Par/Seq
+The all-input gap for this candidate is closed below, followed by a
+recursive integration for the same designated argument family. The
+preceding fixed-count recursive compiler is separate. General Par/Seq
 class equality or separation is still unresolved.
 
 ### Last-header verification on every original input
@@ -6128,7 +6128,51 @@ The final theorem contains no supplied table correspondence or filter oracle.
 `LastCodewordExamples.all_inputs` specializes this theorem to the exact
 previous candidate with A=a*;'#' and b='!';param0. Unequal headers, short
 retained copies, zero captures, and undefined continuations are also checked
-in ordinary physical tables. Arbitrary recursive user tails, recursive
-headers for this new route, more general capture shapes, and independent
-multiple captures remain unresolved, along with general class equality
-or separation.
+in ordinary physical tables. Recursive continuations for this argument
+family are integrated below. Recursive headers for this new route, more
+general capture shapes, and independent multiple captures remain
+unresolved, along with general class equality or separation.
+
+
+### Unbounded last-header captures through mutual recursion
+
+`LastCodewordRecursive` removes the call-free-tail restriction for this
+route. A fixed finite set of unary user rows shares a pure prefix-code
+header A and the argument B=(A;&A)*. Each source user body is
+`(A;param0);render(source,tail)`; each target body is
+`A;render(target,tail)`. Calls in arbitrary finite sequence, choice,
+predicate, and repetition syntax may call any user row, recapture B at the
+new position, and return to the unchanged whole parent capture. Both
+renderings use exactly the same retained environment, without a repeated
+word view or a grammar-fixed count. The ordinary target installs a single
+unary verifier V(u)=(&A;u)*;!A and renders each call as
+`&B; &V(A); F(B)`.
+
+The verifier's entire physical row stabilizes after one ordinary round,
+including every retained value and every physical suffix. Freezing this
+proved row separates its initialization from recursive user depth. The
+source's actual failed `(A;param0)` prefixes are seeded before user
+iteration. `seed_entry` proves that this seed exactly matches the Seq
+verifier's early rejection on every successful B. It uses the proved local
+entry equation with an undefined continuation, and cannot seed a negative
+answer for an undefined argument. The seed is bracketed by ordinary frozen
+rounds; existing cofinality transports the full recursive table induction
+to actual ordinary grammar observations. No stable row, periodicity test,
+recursive equivalence, or selected capture is an external oracle in the
+final `observations_iff` / `language_translation` theorem.
+
+`LastCodewordRecursiveExamples` checks an actual mutual 0→1→0 call chain:
+parent capture `(a#)^3`, child `aa#`, grandchild `#^2`, followed by return
+and reuse of the whole child and parent strings. The actual arguments
+therefore change counts 3→1→2 and header lengths 2→3→1 at runtime. Both
+ordinary strategies accept the complete input and reject short parent or
+child copies and unequal child headers. A separate source continuation
+with an empty literal loop is undefined at every ordinary stage and has
+no finite observations on either generated grammar.
+
+The source family still requires the designated last-preserving argument
+and leading shifted replay, a shared pure header, and one retained capture
+per user row. This is not a transformation of arbitrary first-order Par
+grammars. Recursive header components, general argument/capture shapes,
+multiple independent captures, and general Par/Seq equality or separation
+remain unresolved.
