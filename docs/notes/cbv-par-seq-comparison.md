@@ -6171,8 +6171,56 @@ with an empty literal loop is undefined at every ordinary stage and has
 no finite observations on either generated grammar.
 
 The source family still requires the designated last-preserving argument
-and leading shifted replay, a shared pure header, and one retained capture
-per user row. This is not a transformation of arbitrary first-order Par
-grammars. Recursive header components, general argument/capture shapes,
-multiple independent captures, and general Par/Seq equality or separation
-remain unresolved.
+and leading shifted replay, a shared header, and one retained capture per
+user row. The independent recursive header extension follows below. This
+is not a transformation of arbitrary first-order Par grammars; general
+argument/capture shapes, multiple independent captures, and general
+Par/Seq equality or separation remain unresolved.
+
+
+### Independent recursive headers with unbounded capture counts
+
+`LastCodewordHelpers` and `LastCodewordHelperGrammar` remove the shared
+header's call-free restriction. The existing `RecursiveCodeGrammar.Header`
+provides a valid independent nullary helper component and a prefix-code
+certificate for the header's actual stabilized evaluation. The new
+compiler installs these helpers, the unary verifier V, and all recursive
+user rows. Neither header lengths nor the number of words captured by
+B=(A;&A)* are fixed by the grammar or bounded by the theorem.
+
+`lexical_environment` proves that a nullary lexical expression ignores its
+caller's retained environment even before stabilization and at arbitrary
+query positions. The existing actual helper floor initializes the nullary
+component; `stable` proves that one further ordinary round stabilizes the
+whole parameterized verifier row for every held string. The combined
+frozen selection includes both the nullary helpers and this unary row;
+it does not incorrectly treat V as an independent nullary helper.
+`lexical_table` and `syntax_eval` identify actual header, argument, and
+verifier evaluations with the standalone component's physical table.
+Nonproductive helper recursion is included, not replaced with failure.
+
+The previous successful-capture local entry equation works for any sound
+table and environment-independent header, so it applies directly to these
+actual helper computations. Prefix-failure seeds and recursive row
+induction then preserve the same full retained strings through arbitrary
+user sequence, choice, predicates, repetition, and mutual user calls.
+`stable_eq`, `observations_iff`, and `language_translation` remove the
+intermediate clocks and give ordinary fixed-grammar preservation on every
+unchanged original input. No helper agreement, recursion equivalence,
+periodicity test, or capture value is supplied by the user in the final
+theorem beyond the independent component and its code certificate.
+
+`LastCodewordHelperExamples` uses the actual recursive header
+`R <- 'a' R 'b' / eps; A <- R '#'` alongside a nonproductive helper cycle.
+Ordinary evaluations verify captures `(aabb#)^3`→`ab#`→`#^2`, mutual calls,
+return and reuse of the entire parent/child strings, rejection of short
+copies and unequal child headers. Choosing the nonproductive helper as
+the header makes the original argument undefined at every physical source
+stage and leaves the generated Seq grammar without a finite observation
+on every input.
+
+The remaining source restrictions are the designated last-preserving
+argument B and leading shifted replay A;param0, a shared independent
+header (not a header depending on held values or user rows), and unary
+user captures. General source argument/capture shapes, multiple independent
+captures, and general class equality or separation remain unresolved.
