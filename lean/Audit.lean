@@ -18753,3 +18753,47 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.FragmentMixedExamples.mixed_nullable_control
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.replayOnly_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.replayOnly_sound
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.direct_source_syntax' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.direct_source_syntax
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.direct_call_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.direct_call_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentDirectExamples.generated_argument_kinds' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentDirectExamples.generated_argument_kinds
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentDirectExamples.original_actual_argument' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentDirectExamples.original_actual_argument
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentDirectExamples.general_fragment_mutual_returns' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentDirectExamples.general_fragment_mutual_returns
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentDirectExamples.short_general_grandchild_rejected' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentDirectExamples.short_general_grandchild_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentDirectExamples.general_argument_preview_and_rollback' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentDirectExamples.general_argument_preview_and_rollback
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentDirectExamples.selected_general_argument' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentDirectExamples.selected_general_argument

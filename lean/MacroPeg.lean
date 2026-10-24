@@ -586,3 +586,5 @@ import MacroPeg.CBV.FragmentMixedRecursive
 import MacroPeg.CBV.FragmentMixedForm
 import MacroPeg.CBV.FragmentMixedCompiler
 import MacroPeg.CBV.FragmentMixedExamples
+
+import MacroPeg.CBV.FragmentDirectExamples

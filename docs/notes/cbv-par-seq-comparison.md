@@ -7838,3 +7838,49 @@ prefixes before replay are not covered: appending a capture-dependent
 continuation to a closed branch requires retaining the capture through that
 branch. The fixed A=a*;# header, a-only consuming H, and one source capture
 remain restrictions. General Par/Seq equality or separation remains unresolved.
+
+### General actual arguments routed to replay-only users
+
+`FragmentMixedRecursive.replayOnly` checks every query and output leaf in a
+logical body's generated finite plan. It accepts only bare replay entries
+and the distinguished capture-independent stuck leaf. `replayOnly_sound`
+turns that Boolean check into the corresponding finite structural property;
+no semantic equivalence, termination, or input-shape condition is checked.
+
+For a single-argument template call into such a user, `render` now passes
+the rendered argument itself to the actual unary source rule.
+`direct_source_syntax` proves this exact syntax equality. It no longer wraps
+that argument as the G test of `(A;&(A;G))*;eps`. The target previews the same
+actual parser and distributes its ordinary unary Seq calls across the body
+plan. The original two-template calls still construct consuming-fragment
+arguments, and users with shifted queries keep their fragment entry path.
+Zero-template calls retain their earlier default fragment interpretation.
+
+`direct_call_eq` uses the actual argument result and the existing generic
+`bare_transfer` entry theorem to preserve success, complete captured values,
+finite failure, undefinedness, and clock zero. The eligibility proof rules
+out shifted leaf rows on this path, and the stuck leaf retains argument
+preview before divergence. Current-clock structural induction handles the
+arbitrary rendered argument parser, including old parameters, fresh literal
+stars, and recursive calls to both user kinds. Previous-clock induction
+handles each callee continuation. Existing generated-layout normalization,
+all-clock source/core table equality, and final observation/language theorems
+apply unchanged, without a new user-supplied eligibility premise.
+
+Kernel examples route an actual literal ab into an ordinary user, then pass
+through a fragment user holding aaa#a. That child constructs a fresh general
+argument from its whole held value, ':', fresh b*, and an actual fragment-user
+call consuming a#aY. The new captured value aaa#a:bbba#aY is replayed and
+reused after '!', then both parent values return. A short grandchild copy is
+rejected. A negative ordinary body returns at the original position even
+though its actual ab argument advanced, while argument failure at clock zero
+and an undefined empty star precede that body. A selected aa/a general
+argument remains committed when its later copy is too short.
+
+General arguments are now integrated for replay-only callees, in the same
+recursive compiler as consuming-fragment calls. This does not yet provide
+arbitrary arguments to a callee whose body queries shifted replay leaves.
+Capture-independent consuming prefixes, unrestricted shifted captures, and
+independent multiple source captures remain outside the construction. The
+shifted branch still uses fixed A=a*;# and a-only consuming H. General
+Par/Seq equality or separation remains unresolved.

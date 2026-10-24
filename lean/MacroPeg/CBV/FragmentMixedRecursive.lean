@@ -41,12 +41,60 @@ def call (kinds : List Bool) (n : Nat) (plans : List Plan) (par : Bool) (i : Nat
     else .seq (PartialCodewordCapture.look (argument G H))
       (P.exp (fun j => entry kinds n j G H))
 
+/-- Direct argument fusion is available only when every source body query
+and output uses ordinary replay or the capture-independent stuck leaf. -/
+def replayOnly (kinds : List Bool) (n : Nat) : Plan → Bool
+  | .leaf j => (j==n) || !(kinds[j]?.getD true)
+  | .alt a b | .guard a b => replayOnly kinds n a && replayOnly kinds n b
+  | .notP a => replayOnly kinds n a
+
+def eligible (kinds : List Bool) (n : Nat) (plans : List Plan) (i : Nat) : Bool :=
+  match plans[i]? with | none => false | some P => replayOnly kinds n P
+
+theorem replayOnly_sound (kinds : List Bool) (n : Nat) : ∀ P,
+    replayOnly kinds n P=true → P.All (fun j => j=n ∨ kinds[j]?=some false)
+  | .leaf j, h => by
+    change j=n ∨ kinds[j]?=some false
+    by_cases he : j=n
+    · exact Or.inl he
+    · right
+      cases hk : kinds[j]? with
+      | none => simp [replayOnly,he,hk] at h
+      | some v => cases v with
+        | false => rfl
+        | true => simp [replayOnly,he,hk] at h
+  | .alt a b, h | .guard a b, h =>
+    ⟨replayOnly_sound kinds n a (Bool.and_eq_true_iff.mp h).1,
+      replayOnly_sound kinds n b (Bool.and_eq_true_iff.mp h).2⟩
+  | .notP a, h => replayOnly_sound kinds n a h
+
+def directEntry (n j : Nat) (a : MExp) : MExp :=
+  if j=n then .seq (.andP a) stuck else .call (2*j+3) [a]
+def directCall (n : Nat) (plans : List Plan) (par : Bool) (i : Nat) (a : MExp) : MExp :=
+  match plans[i]? with
+  | none => MExp.failAlways
+  | some P => if par then .call i [a] else .seq (.andP a) (P.exp (fun j => directEntry n j a))
+
+private theorem direct_firstOrder (n : Nat) (plans : List Plan) (par : Bool) (i : Nat)
+    (a : MExp) (ha : a.FirstOrder) : (directCall n plans par i a).FirstOrder := by
+  unfold directCall
+  cases plans[i]? with
+  | none => trivial
+  | some P =>
+    cases par
+    · refine ⟨ha,Plan.exp_firstOrder ?_ P⟩
+      intro j; unfold directEntry; split
+      · exact ⟨ha,True.intro⟩
+      · exact ⟨ha,True.intro⟩
+    · exact ⟨ha,True.intro⟩
+
 /-- In fragment mode only a-consuming syntax is generated. Tests switch
 back to normal mode so they may inspect parents or invoke recursive users.
 The second template of a normal call describes H itself, not its star test. -/
 def render (kinds : List Bool) (n : Nat) (plans : List Plan) (par : Bool) : Bool → MExp → MExp
   | false,.call i [] => call kinds n plans par i .eps .eps
-  | false,.call i [G] => call kinds n plans par i (render kinds n plans par false G) .eps
+  | false,.call i [G] => if eligible kinds n plans i then directCall n plans par i (render kinds n plans par false G)
+    else call kinds n plans par i (render kinds n plans par false G) .eps
   | false,.call i [G,H] => call kinds n plans par i (render kinds n plans par false G) (render kinds n plans par true H)
   | f,.seq a b => .seq (render kinds n plans par f a) (render kinds n plans par f b)
   | f,.alt a b => .alt (render kinds n plans par f a) (render kinds n plans par f b)
@@ -73,7 +121,10 @@ private theorem call_firstOrder (kinds : List Bool) (n : Nat) (plans : List Plan
 
 theorem render_firstOrder (kinds : List Bool) (n : Nat) (plans : List Plan) (par : Bool) : ∀ f e, (render kinds n plans par f e).FirstOrder
   | false,.call i [] => call_firstOrder kinds n plans par i .eps .eps True.intro True.intro
-  | false,.call i [G] => call_firstOrder kinds n plans par i _ .eps (render_firstOrder kinds n plans par false G) True.intro
+  | false,.call i [G] => by
+      simp only [render]; split
+      · exact direct_firstOrder n plans par i _ (render_firstOrder kinds n plans par false G)
+      · exact call_firstOrder kinds n plans par i _ .eps (render_firstOrder kinds n plans par false G) True.intro
   | false,.call i [G,H] => call_firstOrder kinds n plans par i _ _
       (render_firstOrder kinds n plans par false G) (render_firstOrder kinds n plans par true H)
   | f,.seq a b | f,.alt a b => by
@@ -94,6 +145,16 @@ theorem render_firstOrder (kinds : List Bool) (n : Nat) (plans : List Plan) (par
   | true,.param _ | true,.any | true,.range _ _ | true,.call _ _
   | false,.call _ (_::_::_::_) => trivial
   | f,.dbg _ | f,.lam _ _ | f,.callParam _ _ | f,.invoke _ _ _ => by cases f <;> trivial
+
+/-- The single argument of a replay-only source call is the actual parser
+argument itself, rather than the G test of a fragment-capture template. -/
+theorem direct_source_syntax (kinds : List Bool) (n : Nat) (plans : List Plan) (i : Nat) (a : MExp)
+    (he : eligible kinds n plans i=true) :
+    render kinds n plans true false (.call i [a])=.call i [render kinds n plans true false a] := by
+  simp only [render,he,ite_true,directCall]
+  cases hr : plans[i]? with
+  | none => simp [eligible,hr] at he
+  | some P => rfl
 
 theorem render_fragment_syntax (kinds : List Bool) (n : Nat) (plans : List Plan) (par : Bool) :
     ∀ e, FragmentConsumingSyntax.Syntax (render kinds n plans par true e)
@@ -348,6 +409,68 @@ theorem bare_transfer (g h : MGrammar) (hg : g.FirstOrder) (x : List Char)
         rw [evV_seq_ok hvp]
         exact hc k rfl _ q hq
 
+private theorem all_pair {A B : Nat → Prop} : ∀ (P : Plan), P.All A → P.All B → P.All (fun i => A i ∧ B i)
+  | .leaf _, ha, hb => ⟨ha,hb⟩
+  | .alt a b, ha, hb | .guard a b, ha, hb => ⟨all_pair a ha.1 hb.1,all_pair b ha.2 hb.2⟩
+  | .notP a, ha, hb => all_pair a ha hb
+
+theorem direct_call_eq (plans : List Plan) (tails : List Part) (hValid : Valid plans tails)
+    (x : List Char) (m i p : Nat) (E : List (List Char)) (a a' : MExp) (ha : a.FirstOrder)
+    (hp : p≤x.length) (hEligible : eligible (tails.map Prod.fst) tails.length plans i=true)
+    (harg : evV (source plans tails) x .callByValuePar (tblV (source plans tails) x .callByValuePar m) E a p=
+      evV (target plans tails) x .callByValueSeq (tblV (target plans tails) x .callByValueSeq m) E a' p)
+    (hprev : ∀ k, m=k+1 → ∀ e E p, p≤x.length →
+      evV (source plans tails) x .callByValuePar (tblV (source plans tails) x .callByValuePar k) E
+        (render (tails.map Prod.fst) tails.length plans true false e) p=
+      evV (target plans tails) x .callByValueSeq (tblV (target plans tails) x .callByValueSeq k) E
+        (render (tails.map Prod.fst) tails.length plans false false e) p) :
+    evV (source plans tails) x .callByValuePar (tblV (source plans tails) x .callByValuePar m) E
+      (directCall tails.length plans true i a) p=
+    evV (target plans tails) x .callByValueSeq (tblV (target plans tails) x .callByValueSeq m) E
+      (directCall tails.length plans false i a') p := by
+  cases hr : plans[i]? with
+  | none => simp [eligible,hr] at hEligible
+  | some P =>
+    have hOrd := replayOnly_sound (tails.map Prod.fst) tails.length P
+      (by simpa only [eligible,hr] using hEligible)
+    have hb := all_pair P (hValid P (List.mem_of_getElem? hr)) hOrd
+    simp only [directCall,hr,Bool.false_eq_true,ite_false,ite_true]
+    rw [source_call plans tails hValid x m i p P hr E a hp]
+    have hleaves : P.All (fun j =>
+        evV (source plans tails) x .callByValuePar (tblV (source plans tails) x .callByValuePar m) E
+          (.call (plans.length+j) [a]) p=
+        evV (target plans tails) x .callByValueSeq (tblV (target plans tails) x .callByValueSeq m) E
+          (directEntry tails.length j a') p) := by
+      apply Plan.all_imp (t:=P) _ hb
+      intro j hj
+      rcases hj with ⟨hj,hkind⟩
+      by_cases he : j=tails.length
+      · subst j
+        rw [stuck_call plans tails x m p hp E a]
+        simp only [directEntry,ite_true]
+        exact ArgumentGuard.look_sequence_congr _ _ x .callByValuePar .callByValueSeq _ _ E E
+          _ _ _ _ p harg ((stuck_eval _ _ _ _ _ _).trans (stuck_eval _ _ _ _ _ _).symm)
+      have hj : j<tails.length := by omega
+      have hj' := List.getElem?_eq_getElem hj
+      have hsplit : tails[j].1=false := by
+        have hk := hkind.resolve_left he
+        simpa only [List.getElem?_map,hj',Option.map_some,Option.some.injEq] using hk
+      simp only [directEntry,he,ite_false]
+      apply bare_transfer _ _ (source_firstOrder plans tails) x m (plans.length+j) (2*j+3) p E a a'
+        (render (tails.map Prod.fst) tails.length plans true false tails[j].2)
+        (render (tails.map Prod.fst) tails.length plans false false tails[j].2) ha
+        (by simpa only [head,hsplit,Bool.false_eq_true,ite_false] using leaf_rule plans tails j tails[j] hj')
+        (by simpa only [single,hsplit,Bool.false_eq_true,ite_false] using unary_rule plans tails j tails[j] hj') hp harg
+      intro k hkm w q hq; exact hprev k hkm tails[j].2 [w] q hq
+    have hplans : evV (source plans tails) x .callByValuePar (tblV (source plans tails) x .callByValuePar m) E
+        (P.exp (fun j => .call (plans.length+j) [a])) p=
+      evV (target plans tails) x .callByValueSeq (tblV (target plans tails) x .callByValueSeq m) E
+        (P.exp (fun j => directEntry tails.length j a')) p := by
+      rw [Plan.exp_eval,Plan.exp_eval]
+      exact Plan.eval_congr P hleaves
+    exact ArgumentGuard.look_sequence_congr _ _ x .callByValuePar .callByValueSeq _ _ E E
+      _ _ _ _ p harg hplans
+
 private theorem call_eq (plans : List Plan) (tails : List Part) (hValid : Valid plans tails)
     (x : List Char) (m i p : Nat) (E : List (List Char))
     (G G' H H' : MExp) (hH' : FragmentConsumingSyntax.Syntax H') (hp : p≤x.length)
@@ -451,8 +574,15 @@ theorem evaluator_of_previous (plans : List Plan) (tails : List Part) (hValid : 
       evV (target plans tails) x .callByValueSeq (tblV (target plans tails) x .callByValueSeq m) E (render (tails.map Prod.fst) tails.length plans false f e) p
   | false,.call i [], E, p, hp => call_eq plans tails hValid x m i p E .eps .eps .eps .eps .eps hp True.intro True.intro
       (by intro q hq; rfl) (by intro q hq; rfl) hprev
-  | false,.call i [G], E, p, hp => call_eq plans tails hValid x m i p E _ _ .eps .eps .eps hp (render_firstOrder _ _ _ true false G) True.intro
-      (fun q hq => evaluator_of_previous plans tails hValid x m hprev false G E q hq) (by intro q hq; rfl) hprev
+  | false,.call i [G], E, p, hp => by
+      simp only [render]
+      split
+      · rename_i helig
+        exact direct_call_eq plans tails hValid x m i p E _ _
+          (render_firstOrder _ _ _ true false G) hp helig
+          (evaluator_of_previous plans tails hValid x m hprev false G E p hp) hprev
+      · exact call_eq plans tails hValid x m i p E _ _ .eps .eps .eps hp (render_firstOrder _ _ _ true false G) True.intro
+          (fun q hq => evaluator_of_previous plans tails hValid x m hprev false G E q hq) (by intro q hq; rfl) hprev
   | false,.call i [G,H], E, p, hp => call_eq plans tails hValid x m i p E _ _ _ _ (render_fragment_syntax (tails.map Prod.fst) tails.length plans false H) hp
       (render_firstOrder _ _ _ true false G) (render_firstOrder _ _ _ true true H)
       (fun q hq => evaluator_of_previous plans tails hValid x m hprev false G E q hq)
