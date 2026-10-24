@@ -1771,3 +1771,57 @@ ordered choice. Character/range atoms, argument repetition and recursion,
 and general unbounded captures remain outside this compiler. General Par/Seq
 equality or separation remains open; the finite-domain construction does not
 replace the required unbounded representation or a genuine separating witness.
+
+
+### One unbounded runtime capture with finitely many auxiliary values
+
+`HybridReplayFusion` combines the unbounded-capture replay transformation with
+finite static specialization. For a fixed number `d` of auxiliary parameters,
+each source rule has arity `d+1` and body `head tail`, where `head` replays
+parameter zero. The first actual argument may be an arbitrary supported
+recursive first-order expression, including repetition and reuse or duplication
+of the runtime head. The remaining actual arguments are literal words or
+positive-index parameter forwards, whose values remain in a finite palette.
+They are all evaluated against the same original Par caller input.
+
+The target enumerates only rule/auxiliary-value-vector specializations. Each
+generated Seq rule retains arity **one** (`target_arity_one`): the head word
+remains a real runtime capture, with no global length bound and no membership
+requirement in the finite palette. Positive parameters in the source body are
+replaced by their specialized literals; parameter zero remains a parameter.
+The source's leading head replay is omitted in the target because the Seq
+argument evaluation already consumes that same prefix.
+
+Argument evaluation order is essential. The compiled call first checks the
+translated head argument under lookahead, then checks the finite auxiliary
+arguments at the unchanged caller position, then invokes the specialized Seq
+rule with the translated head argument. The preliminary head check prevents
+an undefined first argument from being hidden by a later failing or unresolved
+auxiliary argument. The actual Seq call evaluates the head again; determinism
+makes its captured value and remainder agree with the preliminary check.
+The proof covers undefinedness, finite head failure, failed auxiliary matches,
+unresolved forwards, and successful entry to the body.
+
+`evaluator_of_shift` preserves this calling convention for arbitrary supported
+bodies. `tables_shifted` connects all recursive table approximations while
+retaining the unbounded head as a runtime value. `limit_eq` handles different
+fixed-point bounds of the source and specialized target. `observations_iff`
+and `language_translation` preserve every finite observation and the same
+original character language, without assuming totality.
+
+`HybridReplayCompiler` collects only the literal auxiliary values from all
+source tails and the root, proving the required palette property automatically.
+The head expression is traversed for nested calls, but its captured word is not
+placed in that palette. It therefore builds a fixed first-order Seq grammar
+and root from the source syntax alone. `duplication_shape` verifies that
+`param(0) param(0)` is permitted as a head argument: the finite-domain
+obstruction proved for specializing *all* values does not apply to this runtime
+head representation.
+
+This construction keeps one unbounded value and specializes any fixed number
+of finite auxiliary values. Its restrictions remain explicit: every source
+body begins by replaying the head, all source rules have the common arity
+`d+1`, and auxiliary arguments are literals or non-head parameter forwards.
+It does not yet accommodate several independent unbounded captures, arbitrary
+body placement, or a general Par normal form. Consequently it is a further
+direct reverse fragment, not a proof of general equality or separation.

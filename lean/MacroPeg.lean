@@ -293,3 +293,6 @@ import MacroPeg.CBV.ChoiceSpecializationCompiler
 import MacroPeg.CBV.SequenceArguments
 import MacroPeg.CBV.SequenceArgumentDomain
 import MacroPeg.CBV.SequenceSpecialization
+import MacroPeg.CBV.HybridFlags
+import MacroPeg.CBV.HybridReplayFusion
+import MacroPeg.CBV.HybridReplayCompiler

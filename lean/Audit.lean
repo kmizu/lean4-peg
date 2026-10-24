@@ -5365,3 +5365,59 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequenceSpecialization.checked_language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.HybridFlags.args_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.HybridFlags.args_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.HybridFlags.resolve_bounds' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.HybridFlags.resolve_bounds
+
+/-- info: 'Shallot.MacroPeg.CBV.HybridReplayFusion.target_arity_one' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.HybridReplayFusion.target_arity_one
+
+/-- info: 'Shallot.MacroPeg.CBV.HybridReplayFusion.evaluator_of_shift' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.HybridReplayFusion.evaluator_of_shift
+
+/-- info: 'Shallot.MacroPeg.CBV.HybridReplayFusion.tables_shifted' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.HybridReplayFusion.tables_shifted
+
+/-- info: 'Shallot.MacroPeg.CBV.HybridReplayFusion.limit_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.HybridReplayFusion.limit_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.HybridReplayFusion.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.HybridReplayFusion.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.HybridReplayFusion.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.HybridReplayFusion.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.HybridReplayCompiler.supported_of_shape' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.HybridReplayCompiler.supported_of_shape
+
+/-- info: 'Shallot.MacroPeg.CBV.HybridReplayCompiler.tails_supported' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.HybridReplayCompiler.tails_supported
+
+/-- info: 'Shallot.MacroPeg.CBV.HybridReplayCompiler.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.HybridReplayCompiler.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.HybridReplayCompiler.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.HybridReplayCompiler.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.HybridReplayCompiler.duplication_shape' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.HybridReplayCompiler.duplication_shape
