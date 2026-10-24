@@ -256,3 +256,5 @@ import MacroPeg.CBV.SequentialParamMachine
 import MacroPeg.CBV.SequentialCodeTest
 import MacroPeg.CBV.SequentialCharacterMachine
 import MacroPeg.CBV.SequentialLiteralRead
+import MacroPeg.CBV.SequentialAtomCodec
+import MacroPeg.CBV.SequentialSimpleAtom

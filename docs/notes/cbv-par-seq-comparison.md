@@ -1161,3 +1161,45 @@ around these atom machines, together with the trivial non-reading atoms,
 ordinary-input initialization, and the complete transition/terminal loop.
 These components start with the original input already encoded. They do not
 yet decide the general CBV-Par versus CBV-Seq equality-or-separation question.
+
+### Source-ID dispatch and atom result encoding
+
+`SequentialAtomCodec.prepare` reads the existing expression-task prefix and
+separates the source expression ID, saved input position, and reversed runtime
+environment plus following frame fields. It drops the unused clock for an
+atomic step. `prepare_runs` proves the transformation from the ordinary
+`inputFields` encoding, rather than assuming a separately supplied operator.
+
+`select` combines that normalization with a fixed branch table generated from
+`exprPool ns`. `selected_runs` proves that the runtime ID selects the matching
+source expression branch. It allows a branch to use additional ambient numeric
+registers, including a preserved original-input register outside the injective
+normalization map. All intermediate states retain the same `NFits B` bound;
+branch correctness is an explicit premise of this generic composition theorem.
+The input-reading atom adapters still need to discharge that premise in one
+unified layout.
+
+`SequentialAtomCodec.finish` consumes the runtime result tag and position and
+writes `[3,0] ++ writeRes result ++ [frameCount] ++ frameFields`, clearing its
+work registers. The three tags represent undefined, failure, and success.
+`finish_runs` handles every `Res`, and `input_prefix` / `output_prefix` identify
+both formats with the evaluator's actual `prefixCode`. `original_step` links
+these endpoints to the original stack transition for atomic expressions.
+Normalization and assembly take time bounded by the local environment/frame
+field counts, so their time-to-space conversion is linear in the numeric field
+bound for a fixed grammar and local front.
+
+`SequentialSimpleAtom` supplies complete source-selected branches for atoms
+that do not read input: `eps`, `dbg`, and `lam` succeed without consumption;
+`callParam` fails and `invoke` returns undefined, as in the existing semantics.
+The branch consumes only the header-counted environment and retains all
+following frame fields. `numeric_runs` starts from the encoded expression task,
+selects by its actual source ID, executes the branch, and returns the encoded
+value task. `numeric_tape` carries this entire path through six actual tapes,
+with exact agreement with `SequentialStack.atom`. Its `space_linear` theorem
+makes the numeric-field dependence explicit.
+
+The separate parameter, character, and literal machines still require layout
+adapters and result-tag conversion to use this common dispatch and assembly.
+The ordinary-input loader and complete evaluator loop also remain unconnected.
+No general Par/Seq equality or separation follows yet.
