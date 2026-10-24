@@ -3259,3 +3259,181 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialStackCodecBound.reachable_numbers
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialStackBinary.unpack_pack' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialStackBinary.unpack_pack
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialStackBinary.reachable_roundtrip' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialStackBinary.reachable_roundtrip
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialStackBinary.numberBound_linear' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialStackBinary.numberBound_linear
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialStackBinary.reachable_bit_bound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialStackBinary.reachable_bit_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialStackBinary.stepBits_correct' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialStackBinary.stepBits_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialStackBinary.stepBits_bound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialStackBinary.stepBits_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixCounters.succClock_spec' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixCounters.succClock_spec
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixCounters.pred_succClock' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixCounters.pred_succClock
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixCounters.successorBody_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixCounters.successorBody_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixCounters.successor_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixCounters.successor_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixCounters.tupleAny_true_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixCounters.tupleAny_true_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixCounters.tupleRules_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixCounters.tupleRules_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixCounters.tupleRules_rules' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixCounters.tupleRules_rules
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixCounters.tupleBlock_test' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixCounters.tupleBlock_test
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixCounters.tupleSearch_predicate' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixCounters.tupleSearch_predicate
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixCounters.digitsOf_value' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixCounters.digitsOf_value
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixCounters.clockValue_lt' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixCounters.clockValue_lt
+
+/-- info: 'Shallot.MacroPeg.CBV.ParTableau.compile_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParTableau.compile_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ParTableau.start_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParTableau.start_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ParTableau.compile_at' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParTableau.compile_at
+
+/-- info: 'Shallot.MacroPeg.CBV.ParTableau.timed_call_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParTableau.timed_call_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ParTableau.stateNext_test' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParTableau.stateNext_test
+
+/-- info: 'Shallot.MacroPeg.CBV.ParTableau.headNext_test' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParTableau.headNext_test
+
+/-- info: 'Shallot.MacroPeg.CBV.ParTableau.cellNext_test' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParTableau.cellNext_test
+
+/-- info: 'Shallot.MacroPeg.CBV.ParTableau.compiled_read_test' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParTableau.compiled_read_test
+
+/-- info: 'Shallot.MacroPeg.CBV.ParTableau.initialCell_test' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParTableau.initialCell_test
+
+/-- info: 'Shallot.MacroPeg.CBV.ParTableau.zeroBody_test' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParTableau.zeroBody_test
+
+/-- info: 'Shallot.MacroPeg.CBV.ParTableau.incHead_test' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParTableau.incHead_test
+
+/-- info: 'Shallot.MacroPeg.CBV.ParTableau.decHead_test' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParTableau.decHead_test
+
+/-- info: 'Shallot.MacroPeg.CBV.ParTableau.movedHead_test' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParTableau.movedHead_test
+
+/-- info: 'Shallot.MacroPeg.CBV.ParTableau.tableau_sim' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParTableau.tableau_sim
+
+/-- info: 'Shallot.MacroPeg.CBV.ParTableau.read_sim' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParTableau.read_sim
+
+/-- info: 'Shallot.MacroPeg.CBV.ParTableau.start_recognizes' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParTableau.start_recognizes
+
+/-- info: 'Shallot.MacroPeg.CBV.ParTableau.polynomial_recognizes' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParTableau.polynomial_recognizes
+
+/-- info: 'Shallot.PegSeparation.firstOrder_par_contains_P_projection' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.firstOrder_par_contains_P_projection
+
+/-- info: 'Shallot.PegSeparation.firstOrder_par_contains_P' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.firstOrder_par_contains_P
+
+/-- info: 'Shallot.PegSeparation.readLetter_spec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.readLetter_spec
+
+/-- info: 'Shallot.PegSeparation.nruns_loadLetters' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.nruns_loadLetters
+
+/-- info: 'Shallot.MacroPeg.CBV.bitWordProgram_halts' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.bitWordProgram_halts
+
+/-- info: 'Shallot.MacroPeg.CBV.bitWordLanguage_in_P' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.bitWordLanguage_in_P
+
+/-- info: 'Shallot.PegSeparation.binary_par_iff_P' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.binary_par_iff_P
+
+/-- info: 'Shallot.PegSeparation.binary_reverse_iff_seq_covers_P' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.binary_reverse_iff_seq_covers_P
+
+/-- info: 'Shallot.PegSeparation.original_reverse_requires_seq_P' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.original_reverse_requires_seq_P
+
+/-- info: 'Shallot.PegSeparation.binary_P_witness_separates_original' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.binary_P_witness_separates_original
