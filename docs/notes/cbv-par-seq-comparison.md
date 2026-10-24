@@ -4430,3 +4430,65 @@ of user rules and captures, whereas unrestricted dependent arguments enter
 through replay rules. General body decomposition, multiple independent
 general captures, and general Par/Seq equality or separation remain
 unresolved. Twenty-eight new public axiom guards cover this construction.
+
+
+### Consuming control and fresh origin captures in one recursive grammar
+
+`CBV/ConsumingPrefixControl.lean` combines the fresh recursive-parser
+construction with consuming body control, using one installed source/target
+grammar pair. Its `WordControlFusion.Plan` permits arbitrary consuming
+sequence and repetition, as well as choice and predicates, between parts.
+The old caller-position plan embeds through `originPlan`: restoring guards
+become double-negated left sides of sequencing. `originPlan_atOrigin` and
+`originPlan_exp` verify the control discipline and exact expression equality.
+
+Calling conventions can change within recursive computation. A fixed-parser
+rule obtains a fresh unbounded capture from the independent recursive PEG
+component and uses caller-position control. A replay rule may consume between
+capture uses if its actual argument is a position-independent Word expression
+(literals, existing parameters, and concatenation). These Word values may be
+arbitrarily long and may duplicate existing captures. If the replay callee
+uses caller-position control, its argument may instead be any supported
+recursive computation. Thus new captures can be passed as retained values
+into consuming rules, and those rules can recursively re-enter fixed-parser
+rules for further fresh captures. This does not require a finite value palette.
+
+`enter_word` preserves the argument's value at every later body position;
+`enter_origin` permits arbitrary parsers when all capture-sensitive entries
+stay at the call origin. The `Supported` check chooses one of those two
+conditions per call. Fixed-parser heads themselves must use `AtOrigin`
+control. This restriction is explicit: directly using an arbitrary fresh
+parser as the argument of a consuming-control rule remains outside the proof.
+Composite choices or predicates inside consuming-call arguments are not
+Word expressions in this combined compiler; the earlier guarded-selector
+compiler still handles its own separate fragment.
+
+A fixed zero-argument entry rule retains the physical user-round boundary,
+including stage zero. `leaf_step` connects actual source entries to target
+part rows. The source/target plan proof uses all-position congruence for
+replay-headed consuming rules and origin-only congruence for fresh-parser
+rules. `tables_shifted` closes that mixed correspondence at every frozen
+user round. Actual helper stabilization and physical/frozen cofinality then
+yield `observations_iff` and `language_translation` on the same original
+strings. No capture, recursive-call, continuation, or lexical oracle remains
+in the final result.
+
+`fresh_capture_consuming_execution` kernel-checks a real physical-table run.
+The recursive parser first captures `ab`; the consuming rule reads a local
+`ab!` prefix before repeatedly replaying the held `ab` and consuming `;`.
+It then recursively captures `aabb` and enters consuming control again.
+Both strategies accept `ab#ab!ab;ab;?aabb#aabb!aabb;` and finitely reject
+`ab#ab!ab;ab;?aabb#aabb!ab;`, where the later replay is shorter than the
+held capture. The theorem is checked against actual physical tables, not
+frozen helper values. General language/observation preservation is the
+unbounded theorem; this example exercises both mode changes and the loop.
+
+The central remaining gap is arbitrary argument evaluation at advanced
+capture-sensitive body positions. General consuming-call argument capture,
+general body decomposition, multiple independent general arguments, and
+general Par/Seq equality or separation remain unresolved. The existing
+`original_reverse_requires_P_linear_space` bridge was also rechecked in
+`Shallot/Peg/Separation/CBVSeqLinearSpace.lean`; its conditional separator
+still requires an unproved P language outside linear space. No new class
+conclusion is drawn here. Thirty-eight new public axiom guards cover the
+combined consuming-control compiler.
