@@ -1381,3 +1381,40 @@ acceptance, repeated evaluation, and loading ordinary input into the initial
 binary/original-input state remain to be connected. The general Par/Seq
 comparison remains unresolved; no class separation follows from this upper
 bound alone.
+
+
+### Terminal acceptance and the complete initialized evaluator
+
+`SequentialTerminalTest` reads the numeric terminal value word and accepts
+exactly `some (some 0)`. Missing results, failures, and successful matches with
+unconsumed input all produce a false answer. `compiled_runs` proves the actual
+numeric-to-list compilation, with a linear bound on workspace.
+
+`SequentialTerminalMachine` connects this check to the binary front parser and
+the seven-way dispatcher. Its handler consumes the whole terminal configuration,
+leaving the binary-state register empty and storing an acceptance marker in
+register 17. The original input encoding remains in register 11. The parser's
+remaining scratch value is harmless and stays within the verified capacity.
+
+`SequentialEvaluationMachine.loop_of_runs` follows a finite `SequentialStack.Runs`
+trace by induction, running the actual dispatcher once per nonterminal step and
+once more for the terminal check. Every encoded configuration has a nonempty
+binary-state register, while the terminal handler empties it. Consequently the
+actual compiled loop terminates without an externally supplied iteration count.
+`initialized_halts` includes the final acceptance-marker branch;
+`initialized_tape` transfers the entire execution to twenty actual tapes.
+`answer_iff` identifies its computed answer with full-consumption sequential CBV
+observation for first-order grammars and root expressions.
+
+The loop uses one capacity for the whole run: `reachable_space` chooses the
+previous grammar-dependent linear plus `O(n log n)` upper bound uniformly over
+all reachable configurations. Thus the proof bounds every intermediate scan,
+copy, terminal check, loop test, and final branch; it does not merely bound
+configuration endpoints. This is a space bound, with no new running-time bound.
+
+The initial tapes in these theorems already represent the binary initial stack
+configuration and the separately encoded original input. A loader from ordinary
+input still needs to compute the input length, initialization clock, numeric
+field width, and initial binary fields. The general Par/Seq equality or
+separation remains open. The initialized evaluator and its space bound alone do
+not establish a language-class separation from P.

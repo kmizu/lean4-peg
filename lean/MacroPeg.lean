@@ -270,3 +270,7 @@ import MacroPeg.CBV.SequentialStepScan
 import MacroPeg.CBV.SequentialInputScan
 import MacroPeg.CBV.SequentialStepScanMachine
 import MacroPeg.CBV.SequentialStepMachine
+
+import MacroPeg.CBV.SequentialTerminalTest
+import MacroPeg.CBV.SequentialTerminalMachine
+import MacroPeg.CBV.SequentialEvaluationMachine

@@ -4857,3 +4857,61 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SequentialStepMachine.space_bound' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialStepMachine.space_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialTerminalTest.numeric_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialTerminalTest.numeric_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialTerminalTest.compiled_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialTerminalTest.compiled_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialTerminalTest.space_linear' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialTerminalTest.space_linear
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialTerminalMachine.handler_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialTerminalMachine.handler_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialTerminalMachine.terminal_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialTerminalMachine.terminal_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialTerminalMachine.space_bound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialTerminalMachine.space_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialEvaluationMachine.state_test' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialEvaluationMachine.state_test
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialEvaluationMachine.reachable_space' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialEvaluationMachine.reachable_space
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialEvaluationMachine.loop_of_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialEvaluationMachine.loop_of_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialEvaluationMachine.initialized_halts' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialEvaluationMachine.initialized_halts
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialEvaluationMachine.initialized_tape' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialEvaluationMachine.initialized_tape
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialEvaluationMachine.answer_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialEvaluationMachine.answer_iff
