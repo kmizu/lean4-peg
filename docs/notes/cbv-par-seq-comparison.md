@@ -7433,3 +7433,60 @@ the construction. Transfer across source/target recursive user tables,
 clock-zero seeds, complete call transfer, and a final fixed recursive
 grammar language theorem for the new fragment family remain unproved.
 General Par/Seq equality or separation remains unresolved.
+
+### Recursive grammar preservation for both stopping controls
+
+`ControlledFragmentEntry` connects the all-input filter to complete
+calls. `star_congr`, `fragment_congr`, and `argument_congr` preserve
+actual argument results across different grammars, strategies, clocks,
+and caller environments when G and J correspond at the current caller
+clock. `endpoint_state` derives the actual residual a-run, delimiter,
+and retained final fragment at the original replay endpoint; the old
+greedy boundary assumption is not needed.
+
+The positive branch performs three actual captures, and its body
+A;param2;wholeView(b) reconstructs the whole original value. The zero
+full-word branch captures H alone and uses A;param0;b. `branches_eq`
+preserves the complete partial result of the real continuation, with
+first-iteration guards preventing a failed callee from selecting a
+different capture. `transfer` places the continuation correspondence at
+the previous callee clock, while both tests remain at the current clock.
+`preflight_zero` and `zero` supply the real physical-clock-zero seed
+using actual unavailable helper rows, including partial tests.
+
+`ControlledFragmentRecursive` renders template calls with two arguments
+G and J into a unary source call whose sole argument is
+B_(G,J)=(A;&(A;G))*;(a;&J)*. A singleton template supplies G with J=eps;
+an empty template supplies both eps. The generated Seq grammar installs
+the actual two comparison helpers and a ternary/unary pair for each user.
+The two templates are stopping tests, not independent source captures.
+
+Structural induction treats both rendered tests at the current clock,
+including parent parameters, calls to the same user, mutual recursion,
+and nested controls. Ordinary-clock induction handles the previous-clock
+callee continuation. `evaluator_eq` establishes every partial result at
+every ordinary stage for all retained environments and valid positions.
+`stable_eq`, `observations_iff`, and `language_translation` preserve all
+finite observations and the language of unchanged original strings in
+one fixed first-order Seq grammar. No capture-shape, delimiter, input
+condition, semantic helper-row, or recursive continuation oracle remains
+in these final theorems.
+
+Kernel executions follow real 0→1→0 calls capturing a → aaa#a → aa,
+with a recursive user-2 test selecting the middle fragment and both
+parents reused after return. A same-user probe fails with a fresh aa
+capture but succeeds with a fresh a, stopping the actual call's fragment
+before its greedy endpoint. Other examples exercise recursive G probes,
+both controls selecting one capture, parent-selected a/aa/empty fragments,
+zero-full-word calls, and short parent/child/grandchild rejection.
+An empty-star J on aaZ is undefined at every ordinary source/target clock,
+before a scanner's finite failure could replace it.
+
+This closes recursive grammar preservation for the specified fragment
+family. Fixed A=a*;#, one source capture, B_(G,J)'s argument shape, and
+the mandatory A;param0 body entry remain restrictions. Three or more
+template arguments render as failure. This construction has not been
+combined with earlier mixed-body or independent-header compilers.
+Arbitrary consuming arguments, arbitrary initial body positions,
+independent multiple captures, and general Par/Seq equality or separation
+remain unresolved.

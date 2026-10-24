@@ -17531,3 +17531,149 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ControlledFragmentExamples.undefined_fragment_probe
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentEntry.star_congr' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentEntry.star_congr
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentEntry.fragment_congr' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentEntry.fragment_congr
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentEntry.argument_congr' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentEntry.argument_congr
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentEntry.argument_ne_fail' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentEntry.argument_ne_fail
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentEntry.endpoint_state' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentEntry.endpoint_state
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentEntry.positive_state' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentEntry.positive_state
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentEntry.branches_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentEntry.branches_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentEntry.entry_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentEntry.entry_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentEntry.transfer' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentEntry.transfer
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentEntry.preflight_zero' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentEntry.preflight_zero
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentEntry.zero' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentEntry.zero
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentRecursive.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentRecursive.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentRecursive.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentRecursive.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentRecursive.target_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentRecursive.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentRecursive.source_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentRecursive.source_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentRecursive.compare_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentRecursive.compare_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentRecursive.tail_compare_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentRecursive.tail_compare_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentRecursive.ternary_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentRecursive.ternary_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentRecursive.unary_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentRecursive.unary_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentRecursive.evaluator_of_previous' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentRecursive.evaluator_of_previous
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentRecursive.evaluator_eq' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentRecursive.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentRecursive.stable_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentRecursive.stable_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentRecursive.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentRecursive.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentRecursive.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentRecursive.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentRecursiveExamples.mutual_returns' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentRecursiveExamples.mutual_returns
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentRecursiveExamples.same_user_probe_selects_fragment' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentRecursiveExamples.same_user_probe_selects_fragment
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentRecursiveExamples.caller_selected_fragments' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentRecursiveExamples.caller_selected_fragments
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentRecursiveExamples.short_parent_child_grandchild_rejected' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentRecursiveExamples.short_parent_child_grandchild_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentRecursiveExamples.both_controls_select_capture' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentRecursiveExamples.both_controls_select_capture
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentRecursiveExamples.recursive_word_count_probe' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentRecursiveExamples.recursive_word_count_probe
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentRecursiveExamples.undefined_fragment_probe' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentRecursiveExamples.undefined_fragment_probe
