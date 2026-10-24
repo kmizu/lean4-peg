@@ -380,3 +380,4 @@ import MacroPeg.CBV.PrefixFamilyFusion
 import MacroPeg.CBV.PrefixFamilyTestFusion
 import MacroPeg.CBV.NestedScannerArguments
 import MacroPeg.CBV.NestedScannerFusion
+import MacroPeg.CBV.ScannerFrontier

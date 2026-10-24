@@ -7861,3 +7861,67 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.NestedScannerFusion.Test.language_translation
+
+-- Runtime endpoint ordering for independent, non-nested scanner pairs.
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontier.accepts_intersection' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontier.accepts_intersection
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontier.first_remainder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontier.first_remainder
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontier.guard_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontier.guard_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontier.final_resume' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontier.final_resume
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontier.pre_concat' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontier.pre_concat
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontier.sequential_arguments' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontier.sequential_arguments
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontier.parallel_arguments' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontier.parallel_arguments
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontier.dispatch_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontier.dispatch_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontier.branch_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontier.branch_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontier.dispatch_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontier.dispatch_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontier.call_of_body_relation' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontier.call_of_body_relation
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontier.body_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontier.body_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontier.body_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontier.body_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontier.dispatch_body_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontier.dispatch_body_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontier.stopping_order_switches' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontier.stopping_order_switches

@@ -3504,3 +3504,51 @@ the leading replay (or replay test). These remain mathematical obligations;
 the general Par/Seq language-class question is unresolved. Root imports and
 20 new public theorem axiom guards cover the operational factorization and
 both language-preserving compiler connections.
+
+### Runtime stopping-order selection for arbitrary pairs of greedy scanners
+
+`ScannerFrontier` removes the inclusion-order premise at the operational
+argument interface for two independent scanners `scan A` and `scan B`.
+Their static character sets may overlap without either containing the other.
+First scan their intersection. At its stopping point, test whether `A` can
+continue. If it cannot, `A` is the shorter capture (ties take this branch);
+otherwise `B` is the shorter one. `guard` implements this as an actual
+positive lookahead over the common scan and a negative character test.
+`guard_eval` proves its exact Boolean result on every original input and
+valid position, including EOF and coincident endpoints.
+
+`sequential_arguments` proves that consecutive scans of the intersection
+and the remaining longer scanner produce the actual disjoint runtime chunks
+`u,v`. `parallel_arguments` proves that the original independent Par capture
+values are `[u,u++v]` or `[u++v,u]` according to the computed stopping order.
+The proof imposes no bound on capture lengths and supplies no previously
+evaluated capture values or endpoint advice to the generated syntax.
+
+`dispatch A B left right` is a fixed first-order Seq expression which runs
+that guard and selects one of two fixed rule slots. Both selected calls
+capture the chunks using their ordinary argument expressions. The negative
+guard on the second branch prevents failure of the chosen call from falling
+through. `dispatch_eval` proves the complete partial result for arbitrary
+recursive tables: success, finite failure, and undefinedness all propagate.
+`stopping_order_switches` gives one fixed non-nested pair with both stopping
+orders after arbitrarily long shared `a` prefixes, so the bit is genuinely
+input-dependent rather than a static inclusion choice.
+
+`body true e` and `body false e` are two input-independent body variants
+using cumulative parameter views in the original order. `body_eval` preserves
+all first-order uses of both values at the advanced position, through the
+same grammar, strategy, and recursive table. `dispatch_body_eval` connects
+the actual guard, capture, query entry, and installed variants to arbitrary
+first-order body evaluation at every table clock.
+
+This closes runtime discovery and finite-control selection for a non-nested
+scanner pair. It is **not** yet a whole recursive Par-to-Seq compiler:
+`call_of_body_relation` retains an explicit source/target body-table relation,
+and `body_eval` itself does not change the strategy or recursive call targets.
+A generated grammar must install and route the two rule variants, prove their
+recursive table relation, and reconcile the source body entry position.
+Arbitrary argument parsers, arbitrary numbers of unordered endpoints, and
+source bodies without a suitable replay remain further obligations. General
+same-original-language equality or separation is still unresolved. Root
+imports and 15 new public axiom guards include the runtime selector, actual
+query entry, and the explicit conditional call bridge.
