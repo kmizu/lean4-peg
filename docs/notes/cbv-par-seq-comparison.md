@@ -7931,3 +7931,60 @@ It does not resolve capture-dependent processing after an arbitrary consuming
 prefix or arbitrary consuming shifted arguments. A remains a*;#, H remains
 a-only consuming syntax, and logical users still have one source capture.
 General Par/Seq equality or separation remains unresolved.
+
+### Retaining captures through a stateful consuming prefix
+
+`LoopCaptureSafety` replaces a character-set condition on captured words
+with a finite-state loop condition. For a fixed partial deterministic scanner
+M and initial state q, an admitted literal word must return M from q to q.
+Arguments may combine these literals, old retained parameters, sequence,
+prioritized choice, arbitrary nested star, and negative queries. Queries can
+contain supported recursive user calls. The caller environment contains loop
+words; this invariant is established again by actual successful argument
+evaluation at each recursive call. `suffix_shape` and `capture_loop` derive
+the captured word and exact scanner resumption equality, without a supplied
+successful-capture or suffix-shape oracle. No consuming user call is admitted
+outside queries in this argument syntax.
+
+`StatefulLoopFusion` installs the actual compiled finite-state scanner rows
+before the unary user rows. Each user body is `scan(M,q); tail`, so the first
+use of the held value may occur after an unbounded, genuinely consuming
+closed prefix. Tails have arbitrary sequence, choice, predicates, nested
+star, parameter use, and recursive unary user calls with checked arguments.
+All users share M and q. `Supported` reserves the helper addresses and checks
+the finite literal-loop and argument-syntax conditions. No syntax conversion
+or new input encoding is used: the very same generated grammar and start
+expression work under both CBV strategies for this family.
+
+The scanner rows stabilize at input length plus one independently of user
+rows and captured environments. Their physical evaluation is frozen only
+for analysis; `helpers_stable` discharges the actual installed-row condition.
+Structural evaluator induction and user-clock induction preserve complete
+partial results of the frozen tables, including clock-zero user rows.
+Physical/frozen cofinality then gives `observations_iff` and
+`language_translation` for every unchanged original string and arbitrary
+success/failure observation. An empty-success loop remains undefined.
+
+The two-state example alternates a/b transitions, also permits c loops, and
+stops at the actual missing-transition boundary. Captures c → cab → cabab
+are retained through consuming prefixes, including extra a characters beyond
+the capture.
+A child argument reads its old c value, runs a fresh `(ab/c)*`, and uses a
+negative recursive user probe; the grandchild and both parents reuse their
+complete values after returning. `StatefulScannerFastTable.eq_frozen` proves
+an executable run-based helper table equal to the actual frozen table;
+`physical` transfers its checked results to ordinary physical clocks. Kernel
+examples use that equality rather than repeatedly unfolding scanner rounds.
+The concrete grammar has an all-input language correspondence theorem, as
+well as kernel executions rejecting
+short parent/child/grandchild copies. A plain {a,b} scanner consumes past the
+real stateful boundary and changes acceptance. A non-loop capture a gives a
+Par/Seq difference for this unchanged grammar, showing why the loop check
+cannot just be dropped; it is not a class-separation witness.
+
+This supplies a further consuming-prefix family rather than an unrestricted
+prefix construction. It is a separate compiler theorem from the mixed
+fragment family. General state-changing captures would require carrying the
+reached scanner state into the residual prefix; arbitrary PEG consuming
+prefixes, general shifted arguments, independent multiple captures, and the
+general Par/Seq equality/separation question remain unresolved.

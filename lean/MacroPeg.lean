@@ -590,3 +590,8 @@ import MacroPeg.CBV.FragmentMixedExamples
 import MacroPeg.CBV.FragmentDirectExamples
 
 import MacroPeg.CBV.FragmentWindowExamples
+
+import MacroPeg.CBV.LoopCaptureSafety
+import MacroPeg.CBV.StatefulScannerFastTable
+import MacroPeg.CBV.StatefulLoopFusion
+import MacroPeg.CBV.StatefulLoopExamples
