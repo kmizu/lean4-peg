@@ -8368,3 +8368,74 @@ plain/product compiler and row proof for this family. That integration,
 general PEG prefixes, mixed-fragment integration, independent multiple
 captures in the translation, and unrestricted first-order Par/Seq class
 equality or separation remain unresolved.
+
+
+### Recursive Seq observer products and capture-first scanner fusion
+
+`SequentialRecursiveObserver` closes the recursive row premise of the local
+Seq call observer for a finite unary Seq grammar with literal/parameter,
+sequence, prioritized choice, negation and ordinary star bodies. Actual
+arguments are structurally nested expressions of the same syntax, so they
+may themselves call any mutually recursive user and contain arbitrary
+control and stars. A fixed generated grammar keeps the original user rules
+and adds one unary product row for each user, retained-word profile and
+observer entry/exit state. The actual retained word remains unchanged.
+
+The structural evaluator proof advances the observer across each actual
+argument before entering its callee, then observes the callee body using
+the previous physical-stage row relation. Induction over physical clocks
+proves all recursive product rows at once. There is no successful argument,
+termination, product-row or metadata oracle in `filter_correct`,
+`source_filter_correct` or `select_result`: their checks are finite call
+bounds on actual source syntax. The observer is any total finite machine;
+no scanner safety condition is needed for this observation construction.
+The plain original rows are proved equal to the separate original Seq
+grammar at every physical clock. Product rules do not change its partial
+results. The same row proof supports installation in a larger first-order
+grammar, with actual original and product rule lookups discharged by the
+generated prefix.
+
+`SequentialRecursiveScanner` installs those original users and recursive
+observer products before actual relocated scanner/observer blocks. Its
+`fusion_correct` composes the recursive observer proof, the finite
+parameterized capture-safety check and actual scanner dispatch. On every
+input it replaces an argument preflight followed by scanning from the
+original position with profile selection, consumption of that same actual
+argument, and scanning from its endpoint with both states advanced. The
+full partial result is preserved, including argument failure/undefinedness,
+continuation failure and continuation undefinedness. The continuation and
+caller environment are kept. No successful-capture assumption or recursive
+row oracle is supplied; the actual source argument result determines which
+case applies. Physical scanner availability still requires clock >= p+1.
+
+Actual ordinary source tables execute users 0 → 1 → 0 with retained values
+a → ab → abb and both parent returns, then a third user captures the entire
+inner call w and reuses it after !, before the original parent a is reused.
+The generated physical observer table gives the correct full-call profile;
+using only the initial argument a's profile rejects. Additional examples
+observe successive calls inside a star with different actual arguments b
+and bb, retain the greedy stopping point, and preserve the successful long
+branch of an argument choice when its later continuation fails. Explicitly
+selecting the short branch is separately checked to succeed. Empty-success
+stars inside recursive arguments are undefined on every input at every
+physical clock.
+
+In the combined scanner grammar, the whole recursive w captures an odd
+number of b's and changes both resumption states. The original scanner
+consumes w!w, then ? and the parent's a are consumed. The capture-first
+expression reaches the same physical acceptance. An all-input theorem also
+keeps a nullable recursive argument undefined before scanning, at every
+clock where scanner rows are available.
+
+This closes the full recursive **Seq observer** construction and its local
+capture-first scanner fusion. It does not yet close Par-to-Seq translation
+for the scanner-prefix user family: that compiler must generate mutually
+dependent translated plain rows and their observer products while relating
+source Par entries at the original position to target Seq entries at actual
+capture endpoints. The Seq observer construction starts from unary source
+rules in the stated syntax; the fusion additionally needs checked consuming
+paths in that source grammar and safe incoming retained values. It does not
+show that arbitrary scanner-prefix user bodies satisfy those checks.
+General PEG prefixes, mixed-fragment integration, independent multiple
+captures in the translation, and unrestricted first-order Par/Seq class
+equality or separation remain unresolved.

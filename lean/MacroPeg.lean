@@ -630,3 +630,7 @@ import MacroPeg.CBV.ObservedScannerExamples
 import MacroPeg.CBV.SequentialCaptureObserverExamples
 import MacroPeg.CBV.ParameterizedCaptureSafety
 import MacroPeg.CBV.ParameterizedCaptureSafetyExamples
+import MacroPeg.CBV.SequentialRecursiveObserver
+import MacroPeg.CBV.SequentialRecursiveObserverExamples
+import MacroPeg.CBV.SequentialRecursiveScanner
+import MacroPeg.CBV.SequentialRecursiveScannerExamples
