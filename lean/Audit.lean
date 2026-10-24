@@ -3633,3 +3633,43 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SequentialFrontRoundtrip.write_attach' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialFrontRoundtrip.write_attach
+
+/-- info: 'Complexity.LExec.rename_frame' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.LExec.rename_frame
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialNotReturn.numeric_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialNotReturn.numeric_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialNotReturn.scratchSpace_linear' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialNotReturn.scratchSpace_linear
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialNotReturn.compiled_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialNotReturn.compiled_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialNotReturn.local_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialNotReturn.local_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialNotReturn.original_step' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialNotReturn.original_step
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialNotReturnMachine.space_bound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialNotReturnMachine.space_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialNotReturnMachine.transition_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialNotReturnMachine.transition_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialNotReturnMachine.transition_tape' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialNotReturnMachine.transition_tape
