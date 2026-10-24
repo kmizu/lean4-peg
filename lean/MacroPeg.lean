@@ -549,3 +549,4 @@ import MacroPeg.CBV.PartialCodewordRecursive
 import MacroPeg.CBV.PartialCodewordRecursiveExamples
 import MacroPeg.CBV.ArgumentGuard
 import MacroPeg.CBV.PartialCodewordGuardExamples
+import MacroPeg.CBV.PartialCodewordSuffixExamples

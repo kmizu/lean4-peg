@@ -16869,7 +16869,7 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.PartialCodewordPreflight.undefined_continuation
 
--- Partial-codeword recursive compiler and caller-dependent argument tests.
+-- Partial-codeword recursive compiler and before/after argument tests.
 /-- info: 'Shallot.MacroPeg.CBV.PartialCodewordTotality.literal_total' depends on axioms: [propext] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.PartialCodewordTotality.literal_total
@@ -16943,6 +16943,14 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.ArgumentGuard.call_eq' depends on axioms: [propext] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ArgumentGuard.call_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ArgumentGuard.suffix_call_eq' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ArgumentGuard.suffix_call_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ArgumentGuard.look_sequence_congr' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ArgumentGuard.look_sequence_congr
 
 /-- info: 'Shallot.MacroPeg.CBV.PartialCodewordRecursive.entry_firstOrder' depends on axioms: [propext] -/
 #guard_msgs in
@@ -17061,3 +17069,33 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.PartialCodewordGuardExamples.undefined_test' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.PartialCodewordGuardExamples.undefined_test
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordSuffixExamples.endpoint_parent_returns' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordSuffixExamples.endpoint_parent_returns
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordSuffixExamples.endpoint_selects' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordSuffixExamples.endpoint_selects
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordSuffixExamples.recursive_endpoint_test' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordSuffixExamples.recursive_endpoint_test
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordSuffixExamples.rejected_endpoint_copy' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordSuffixExamples.rejected_endpoint_copy
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordSuffixExamples.undefined_after_capture' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordSuffixExamples.undefined_after_capture
