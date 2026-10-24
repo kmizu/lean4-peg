@@ -15529,3 +15529,47 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.AdjacentCodewordExamples.preflight_preserves_undefined
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCodewordCalls.physical_agreement' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCodewordCalls.physical_agreement
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCodewordCalls.stable_result_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCodewordCalls.stable_result_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCodewordExamples.source_firstOrder' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCodewordExamples.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCodewordExamples.target_firstOrder' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCodewordExamples.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCodewordExamples.child_agreement' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCodewordExamples.child_agreement
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCodewordExamples.root_agreement' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCodewordExamples.root_agreement
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCodewordExamples.all_inputs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCodewordExamples.all_inputs
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCodewordExamples.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCodewordExamples.language_translation
