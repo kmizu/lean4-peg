@@ -5220,3 +5220,65 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.LiteralSpecializationCompiler.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.ChoiceArguments.branch_eval' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChoiceArguments.branch_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.ChoiceArguments.select_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChoiceArguments.select_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.ChoiceArguments.selectArgs_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChoiceArguments.selectArgs_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.ChoiceArguments.arguments_bounds' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChoiceArguments.arguments_bounds
+
+/-- info: 'Shallot.MacroPeg.CBV.ChoiceArguments.plain_distribution_changes_result' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChoiceArguments.plain_distribution_changes_result
+
+/-- info: 'Shallot.MacroPeg.CBV.ChoiceSpecialization.target_zero_arity' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChoiceSpecialization.target_zero_arity
+
+/-- info: 'Shallot.MacroPeg.CBV.ChoiceSpecialization.evaluator_of_related' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChoiceSpecialization.evaluator_of_related
+
+/-- info: 'Shallot.MacroPeg.CBV.ChoiceSpecialization.tables_related' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChoiceSpecialization.tables_related
+
+/-- info: 'Shallot.MacroPeg.CBV.ChoiceSpecialization.limit_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChoiceSpecialization.limit_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ChoiceSpecialization.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChoiceSpecialization.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ChoiceSpecializationCompiler.collectArg_supported' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChoiceSpecializationCompiler.collectArg_supported
+
+/-- info: 'Shallot.MacroPeg.CBV.ChoiceSpecializationCompiler.grammar_supported' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChoiceSpecializationCompiler.grammar_supported
+
+/-- info: 'Shallot.MacroPeg.CBV.ChoiceSpecializationCompiler.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChoiceSpecializationCompiler.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ChoiceSpecializationCompiler.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChoiceSpecializationCompiler.language_translation

@@ -1683,3 +1683,43 @@ unbounded dynamically captured strings. Those require additional value-selection
 or residual parsing machinery. This gives a direct reverse compiler for a
 new source fragment with unrestricted body placement, but does not establish
 the general Par-to-Seq inclusion or a language-class separation.
+
+
+### Input-dependent finite choices and committed continuation failure
+
+`ChoiceArguments` extends the finite-value argument interface to nested ordered
+choices of literals and forwarded parameters. The captured word can now depend
+on which alternative matches the original input. The selector's continuation
+runs at the unchanged caller position after that value has been chosen.
+
+Plain distribution across the continuation would be incorrect: if `A` matches
+but its specialized callee fails, a naive alternative may retry `B` and accept
+with a different captured value. `plain_distribution_changes_result` gives a
+concrete formal counterexample on the same input `ab`: committed selection
+fails, while naive distribution accepts the entire word. `branch_eval` and
+`select_eval` prove the required commitment, including a continuation with no
+finite result. The implementation tests the first argument alternative with
+positive lookahead and protects the other branch with its negative guard.
+`selectArgs_eval` composes these selectors in the original argument order;
+all argument alternatives are checked against the same caller input.
+
+`ChoiceSpecialization` connects these selectors to the actual finite
+rule/value-vector enumeration from `LiteralSpecialization`. Every successful
+selected value stays in the palette (`arguments_bounds`), every generated rule
+has arity zero, and the selected specialization's result agrees with the source
+Par table. `tables_related`, `limit_eq`, and `observations_iff` preserve every
+finite observation through recursive source bodies. The proof uses the two
+grammars' separate stability bounds, rather than assuming equal-sized grammars.
+
+`ChoiceSpecializationCompiler` recursively collects literals from the ordered
+argument choices in all rules and the root. `language_translation` constructs
+one fixed first-order Seq grammar and root from this source syntax, preserving
+full-consumption recognition of exactly the same original character strings.
+There is no leading-replay restriction on source bodies.
+
+The argument grammar proved here is precisely `literal | parameter | argument /
+argument`. Arbitrary nesting and forwarding are covered. Character/range
+captures, concatenation of argument parsers, arbitrary finite-valued recursive
+argument parsers, and unbounded dynamically captured strings are not yet
+covered. This extends the reverse compiler to a concrete input-dependent
+finite-value fragment; general Par/Seq equality or separation remains open.

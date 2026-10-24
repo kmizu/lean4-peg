@@ -287,3 +287,6 @@ import MacroPeg.CBV.PrefixPairTestFusion
 import MacroPeg.CBV.LiteralArguments
 import MacroPeg.CBV.LiteralSpecialization
 import MacroPeg.CBV.LiteralSpecializationCompiler
+import MacroPeg.CBV.ChoiceArguments
+import MacroPeg.CBV.ChoiceSpecialization
+import MacroPeg.CBV.ChoiceSpecializationCompiler
