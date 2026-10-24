@@ -5663,3 +5663,18 @@ The normalization theorem preserves the full partial evaluator at every valid ph
 This closes recursive normalization for the stated syntax with readiness/generated-validity checks. Arbitrary original bodies, consuming closed prefixes followed by retained-dependent work, unrestricted star operands, and multiple independent general captures remain open. General Par/Seq equality or class separation is still unresolved.
 
 Validation: full `lake build` passed (875 jobs), including Audit. All 69 public PR theorem dependencies were rechecked and all guards passed; this extension adds 31 guards. The nine added modules compile without warnings/placeholders; source and whitespace audits passed.
+
+
+### Plain stars with predicate outputs
+
+`NullableStarControl` removes the operand Consumer requirement for a new ordinary `Body.star` constructor. A negative predicate selected as an output succeeds at the origin, so its enclosing star immediately becomes undefined. The finite `freeze` transformation replaces only such output paths by an explicitly divergent guarded branch. Original leaves and guard queries keep their partial behavior. `eval_change` proves that the transformed result either equals the original result or replaces an original empty success by undefinedness; `star_change` proves that star cannot distinguish these cases.
+
+The divergent leaf is closed and appears only as a guard query. A separate replay leaf supplies the syntactic output of that unreachable branch. Selective continuation copies therefore never append capture-dependent continuations to the divergent closed leaf. The final zero-iteration result is represented by a predicate plan, rather than by a closed epsilon output leaf; this also allows enclosing stars to freeze that empty result. Consumer here remains a syntactic output-path condition and does not assert positive consumption by all replay leaves.
+
+The normalizer feeds the transformed operand through the existing guarded repetition factorization with positive epsilon as B and a predicate epsilon as C. `repeat_eval` proves full partial-evaluator preservation, without an operand Consumer, nonempty capture, or non-nullability premise. `BodySyntaxNormalization.evaluator_eq` includes ordinary star by recursively normalizing its operand and applying this theorem. The physical-table and fixed Seq observation/language results follow through the existing body grammar compiler.
+
+`NullableStarExamples` proves that its operand is not Consumer, checks generated syntactic validity, accepts `ab!ab!#ab` while retaining `ab` across iterations and after stopping, rejects a short final copy, and preserves undefinedness when a predicate succeeds without consuming. A nested star example remains undefined. The general `nested_star_none` theorem and the actual source-body theorem establish that nested-star undefinedness holds for every position and table, including all physical approximation rounds. The accepted Seq observation follows from the unbounded translation theorem.
+
+Ordinary star no longer introduces a Consumer readiness condition. The older specialized starThen constructor retains its check, and generated-family validity/closedness still restricts the supported bodies. Consuming closed prefixes followed by retained-dependent work, full coverage of arbitrary original grammars, and multiple independent general captures remain unresolved. General Par/Seq equality or class separation is still not established.
+
+Validation: full `lake build` passed (877 jobs), including Audit. All 87 public PR theorem dependencies were rechecked and guards passed; 18 guards are new. The two new modules and extended body normalizer compile without warnings or placeholders; source and whitespace audits passed.

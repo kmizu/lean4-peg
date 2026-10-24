@@ -1,4 +1,4 @@
-import MacroPeg.CBV.BodyNormalForm
+import MacroPeg.CBV.NullableStarControl
 
 namespace Shallot.MacroPeg.CBV.BodySyntaxNormalization
 open OriginControlNormalization (Leaf render)
@@ -15,6 +15,7 @@ inductive Body where
   | notP : Body → Body
   | seq : Body → Body → Body
   | starThen : Body → Arg → Body → Body
+  | star : Body → Body
 
 def Body.expression : Body → Arg
   | .leaf r => LeafContinuation.raw r
@@ -22,6 +23,7 @@ def Body.expression : Body → Arg
   | .notP a => .notP a.expression
   | .seq a b => .seq a.expression b.expression
   | .starThen a B c => .seq (.star (.seq a.expression B)) c.expression
+  | .star a => .star a.expression
 
 def normalize : Body → Form
   | .leaf r => BodyNormalForm.atom r
@@ -29,13 +31,14 @@ def normalize : Body → Form
   | .notP a => BodyNormalForm.neg (normalize a)
   | .seq a b => BodyNormalForm.compose (normalize a) (normalize b)
   | .starThen a B c => BodyNormalForm.repeatThen (normalize a) B (normalize c)
+  | .star a => NullableStarControl.iterate (normalize a)
 
 /-- This is a check on generated finite syntax. It does not assert any
 semantic equivalence or success of a replacement parser. -/
 def Ready : Body → Prop
   | .leaf _ => True
   | .alt a b | .seq a b => Ready a ∧ Ready b
-  | .notP a => Ready a
+  | .notP a | .star a => Ready a
   | .starThen a _ c => Ready a ∧ Ready c ∧ LeafContinuation.Consumer (normalize a).plan
 
 /-- Rewriting a bounded parser on the left of a sequence requires agreement
@@ -96,5 +99,11 @@ theorem evaluator_eq (nodes : List Node) (ambient : List Leaf) (ps : List Replay
       (evaluator_eq nodes ambient ps g x s hs T hT E c hr.2.1)
       (GreedyRotation.evaluator_decreasing g x s hs T hT E _
         (OriginControlNormalization.render_firstOrder nodes ambient ps (.star (.seq (normalize a).syntax B)))) p hp
+
+  | .star a, hr, p, hp => by
+    rw [normalize,←NullableStarControl.repeat_eval nodes ambient ps _ g x s hs T hT E p hp]
+    apply evStar_congr p
+    intro q hq
+    exact evaluator_eq nodes ambient ps g x s hs T hT E a hr q (by omega)
 
 end Shallot.MacroPeg.CBV.BodySyntaxNormalization

@@ -470,3 +470,5 @@ import MacroPeg.CBV.BodyNormalForm
 import MacroPeg.CBV.BodySyntaxNormalization
 import MacroPeg.CBV.BodySyntaxCompiler
 import MacroPeg.CBV.BodySyntaxExamples
+import MacroPeg.CBV.NullableStarControl
+import MacroPeg.CBV.NullableStarExamples

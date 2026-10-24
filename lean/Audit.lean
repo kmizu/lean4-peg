@@ -12839,3 +12839,77 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.BodySyntaxExamples.translated_nested' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.BodySyntaxExamples.translated_nested
+
+-- Predicate-output stars preserve empty-loop undefinedness.
+
+/-- info: 'Shallot.MacroPeg.CBV.NullableStarControl.consumer' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NullableStarControl.consumer
+
+/-- info: 'Shallot.MacroPeg.CBV.NullableStarControl.bounded' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NullableStarControl.bounded
+
+/-- info: 'Shallot.MacroPeg.CBV.NullableStarControl.eval_change' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NullableStarControl.eval_change
+
+/-- info: 'Shallot.MacroPeg.CBV.NullableStarControl.star_change' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NullableStarControl.star_change
+
+/-- info: 'Shallot.MacroPeg.CBV.NullableStarControl.never_fail_star_none' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NullableStarControl.never_fail_star_none
+
+/-- info: 'Shallot.MacroPeg.CBV.NullableStarControl.nested_star_none' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NullableStarControl.nested_star_none
+
+/-- info: 'Shallot.MacroPeg.CBV.NullableStarControl.identity_eval' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NullableStarControl.identity_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.NullableStarControl.diverge_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NullableStarControl.diverge_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.NullableStarControl.strict_change' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NullableStarControl.strict_change
+
+/-- info: 'Shallot.MacroPeg.CBV.NullableStarControl.sequence_identity' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NullableStarControl.sequence_identity
+
+/-- info: 'Shallot.MacroPeg.CBV.NullableStarControl.repeat_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NullableStarControl.repeat_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.NullableStarExamples.predicate_output' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NullableStarExamples.predicate_output
+
+/-- info: 'Shallot.MacroPeg.CBV.NullableStarExamples.valid' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NullableStarExamples.valid
+
+/-- info: 'Shallot.MacroPeg.CBV.NullableStarExamples.entry_valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NullableStarExamples.entry_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.NullableStarExamples.observations' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NullableStarExamples.observations
+
+/-- info: 'Shallot.MacroPeg.CBV.NullableStarExamples.source_execution' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NullableStarExamples.source_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.NullableStarExamples.translated_accept' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NullableStarExamples.translated_accept
+
+/-- info: 'Shallot.MacroPeg.CBV.NullableStarExamples.nested_body_undefined' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NullableStarExamples.nested_body_undefined
