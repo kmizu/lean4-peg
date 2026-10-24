@@ -5597,3 +5597,19 @@ The generated global leaf list concatenates per-user groups. Users with a contin
 The remaining general question is unchanged: these are unary families whose capture-dependent consuming paths first reach a fixed-shift replay leaf. General consuming-entry stars before that replay, arbitrary original-body normalization, and multiple independent general captures are not covered. No general Par/Seq equality or class separation is claimed.
 
 Validation: full `lake build` passed (862 jobs), including Audit. All 56 public PR theorem guards passed; 25 were added with this family composition. Dependencies are standard Lean axioms or none. The six added modules compile without warnings or placeholders; source and whitespace audits passed.
+
+### Leading replay repetitions with their greedy stopping test
+
+`GreedyRotation` proves the complete partial-parser identity `(A B)* A = A (B A)* !B` for decreasing deterministic parsers. It includes failure, undefined recursive queries, and zero-consumption loops. The proof uses strong induction on the actual remaining input position, without requiring that A or B consume a nonempty word. For actual first-order CBV expressions, decreasingness follows from a sound table's physical-prefix property. This local soundness premise is discharged by `tblV_sound` when transporting recursive grammars.
+
+The final `!B` is necessary. On `ab#`, `(a b)* a` fails after greedily consuming `ab`; `a (b a)*` instead succeeds after the first `a`. Its missing stopping test would manufacture an early endpoint. The guarded rotated expression fails correctly. Empty capture with a consuming B progresses normally, whereas empty capture and empty B remain undefined.
+
+`LeadingReplayStar` adds source users with bodies `(R B)* R tail`, where R is a fixed literal shift followed by parameter replay. The shift may be empty; captured values are not bounded or enumerated. B and the tail may use the retained capture, independent recursive helpers, and arbitrary valid recursive user arguments, including fresh captures. The source is normalized to the ordinary replay leaf `R ((B R)* !B) tail`, then translated by `ContinuationFamily`. Existing control-only and consuming-control users remain available in the same mutually recursive family.
+
+Ordinary physical source and normalized tables agree at every round. The final observation and language theorems preserve original strings and require only syntactic family/entry validity and independent-helper validity. They retain no partial-row, capture-profile, non-nullability, or replacement-source premise. The grammar is generated once independently of runtime captures and input length.
+
+Kernel examples use an outer two-character capture, a six-character capture replayed inside the leading star with a one-character shift, and a fresh twelve-character child capture inside each loop body. One and two iterations succeed and preserve parent reuse after child return. Short child/parent copies are rejected. Seq observations follow from the unbounded translation theorem, not a bounded run of the generated profile grammar.
+
+This closes a leading-star case that has a final replay and a replay at the start of each iteration. Arbitrary leading consumption before the first replay, repetitions without that structure, multiple independent general captures, and arbitrary original-grammar normalization remain open. General Par/Seq equality or class separation is still not established.
+
+Validation: full `lake build` passed (865 jobs), including Audit. All 77 public PR theorem guards passed; 21 are new for this extension. All dependencies are standard Lean axioms or none. The nine added modules compile without warnings or placeholders; source and whitespace audits passed.

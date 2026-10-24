@@ -457,3 +457,6 @@ import MacroPeg.CBV.ContinuationGrammar
 import MacroPeg.CBV.ContinuationExamples
 import MacroPeg.CBV.ContinuationFamily
 import MacroPeg.CBV.ContinuationFamilyExamples
+import MacroPeg.CBV.GreedyRotation
+import MacroPeg.CBV.LeadingReplayStar
+import MacroPeg.CBV.LeadingReplayStarExamples

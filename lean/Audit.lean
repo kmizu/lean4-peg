@@ -12375,3 +12375,120 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ContinuationFamilyExamples.translated_execution
+
+
+/-- info: 'Shallot.MacroPeg.CBV.GreedyRotation.rotate' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.GreedyRotation.rotate
+
+
+/-- info: 'Shallot.MacroPeg.CBV.GreedyRotation.evaluator_decreasing' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.GreedyRotation.evaluator_decreasing
+
+
+/-- info: 'Shallot.MacroPeg.CBV.GreedyRotation.expression_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.GreedyRotation.expression_eq
+
+
+/-- info: 'Shallot.MacroPeg.CBV.LeadingReplayStar.sequence_assoc' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LeadingReplayStar.sequence_assoc
+
+
+/-- info: 'Shallot.MacroPeg.CBV.LeadingReplayStar.body_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LeadingReplayStar.body_eq
+
+
+/-- info: 'Shallot.MacroPeg.CBV.LeadingReplayStar.headers' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LeadingReplayStar.headers
+
+
+/-- info: 'Shallot.MacroPeg.CBV.LeadingReplayStar.body_results' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LeadingReplayStar.body_results
+
+
+/-- info: 'Shallot.MacroPeg.CBV.LeadingReplayStar.tables_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LeadingReplayStar.tables_eq
+
+
+/-- info: 'Shallot.MacroPeg.CBV.LeadingReplayStar.evaluator_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LeadingReplayStar.evaluator_eq
+
+
+/-- info: 'Shallot.MacroPeg.CBV.LeadingReplayStar.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LeadingReplayStar.source_firstOrder
+
+
+/-- info: 'Shallot.MacroPeg.CBV.LeadingReplayStar.normalized_observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LeadingReplayStar.normalized_observations_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.LeadingReplayStar.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LeadingReplayStar.observations_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.LeadingReplayStar.language_translation' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LeadingReplayStar.language_translation
+
+
+/-- info: 'Shallot.MacroPeg.CBV.LeadingReplayStarExamples.valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LeadingReplayStarExamples.valid
+
+
+/-- info: 'Shallot.MacroPeg.CBV.LeadingReplayStarExamples.entry_valid' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LeadingReplayStarExamples.entry_valid
+
+
+/-- info: 'Shallot.MacroPeg.CBV.LeadingReplayStarExamples.source_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LeadingReplayStarExamples.source_execution
+
+
+/-- info: 'Shallot.MacroPeg.CBV.LeadingReplayStarExamples.translated_observations' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LeadingReplayStarExamples.translated_observations
+
+
+/-- info: 'Shallot.MacroPeg.CBV.LeadingReplayStarExamples.stop_required' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LeadingReplayStarExamples.stop_required
+
+
+/-- info: 'Shallot.MacroPeg.CBV.LeadingReplayStarExamples.empty_loop' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LeadingReplayStarExamples.empty_loop
+
+
+/-- info: 'Shallot.MacroPeg.CBV.LeadingReplayStarExamples.empty_capture_progress' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LeadingReplayStarExamples.empty_capture_progress
+
+
+/-- info: 'Shallot.MacroPeg.CBV.LeadingReplayStarExamples.translated_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LeadingReplayStarExamples.translated_execution
