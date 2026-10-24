@@ -312,3 +312,5 @@ import MacroPeg.CBV.SequentialSharedRank
 import MacroPeg.CBV.SequentialSharedPayload
 import MacroPeg.CBV.SequentialSharedWords
 import MacroPeg.CBV.SequentialSharedWordSpace
+import MacroPeg.CBV.SequentialCursorChain
+import MacroPeg.CBV.SequentialSharedCursors

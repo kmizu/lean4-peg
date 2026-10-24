@@ -5943,3 +5943,39 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SequentialSharedWordSpace.capture_stream_linear' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialSharedWordSpace.capture_stream_linear
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorChain.Chain.restore' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorChain.Chain.restore
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorChain.Chain.delta_sum' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorChain.Chain.delta_sum
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorChain.decodeDeltas_encodeDeltas' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorChain.decodeDeltas_encodeDeltas
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorChain.Chain.decode_encode' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorChain.Chain.decode_encode
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorChain.Chain.encode_injective' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorChain.Chain.encode_injective
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedCursors.reachable_chain' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedCursors.reachable_chain
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedCursors.cursor_stream_correct' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedCursors.cursor_stream_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedCursors.reachable_cursor_bits' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedCursors.reachable_cursor_bits
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedCursors.cursor_bits_linear' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedCursors.cursor_bits_linear

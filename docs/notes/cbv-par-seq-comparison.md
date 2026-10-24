@@ -2401,3 +2401,55 @@ implementations of the operations are missing. In particular, this does not
 yet establish a linear-space TM simulation, a general Par-to-Seq grammar
 translation, or a language-class separation. The proved complete TM bound
 remains `O(n log n)`.
+
+### Monotone saved cursors and a linear binary position stream
+
+`MacroPeg.CBV.SequentialSharedCursors` extracts the current cursor, when
+present, followed by the saved cursors in stack order. It includes expression,
+argument, and query tasks, successful returned-value cursors, and positions
+stored in choice, negation, repetition, and argument-head frames. It omits
+failed or undefined result cursors, since those results store no position.
+These are all the word machine's input-position fields: captured words and
+scope environments no longer retain origin endpoints.
+
+`reachable_chain` proves that this complete position list is nondecreasing
+from the top towards the bottom of the stack, starting above zero and bounded
+by the original input length, at **every reachable word-machine state**.
+This includes intermediate argument evaluation and failed or undefined
+results, not just successful terminal runs. The proof extracts position
+bounds from the shared-machine scope certificates: each saved cursor is the
+bound of its incoming continuation kind, and those bounds never decrease
+along the stack. The initialized span/word execution correspondence transfers
+the certificate to the actual word machine.
+
+`MacroPeg.CBV.SequentialCursorChain` implements difference encoding and its
+inverse. For a cursor list `p1 <= ... <= pk`, it stores the differences
+`p1, p2-p1, ..., pk-p(k-1)`. Each difference is written as that many `true`
+bits followed by one `false` delimiter. Zero differences require only their
+delimiter. `Chain.restore`, `decodeDeltas_encodeDeltas`, and
+`Chain.decode_encode` prove exact recovery on the increasing domain;
+`Chain.encode_injective` proves that distinct valid position lists cannot
+collapse under saturating subtraction.
+
+The sum of differences is at most input length, so the entire position stream
+uses at most `input length + number of stored positions` bits. There are at
+most `number of frames + 1` stored positions. `cursor_stream_correct` verifies
+the codec on every reachable state, and `reachable_cursor_bits` consequently
+bounds the stream length by
+
+```
+input length + number of frames + 1.
+```
+
+`cursor_bits_linear` substitutes the fixed-program linear frame bound. This
+removes the logarithmic factor from the **stored position stream** without
+assuming that many equal or nearby saved cursors cost a binary integer each.
+
+The capture-word stream and the position stream are still separate partial
+encodings. They have not been assembled with syntax references, environment
+grouping, frame tags, and the shared clock into a complete verified state
+codec. In particular, the executable inverse returns cursor values; no proof
+yet shows that all operations on the compressed streams run in linear TM
+space. The established complete TM upper bound remains `O(n log n)`, and
+neither a general reverse translation nor a Par/Seq language-class separation
+has been proved.
