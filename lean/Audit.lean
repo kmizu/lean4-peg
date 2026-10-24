@@ -16776,3 +16776,95 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.PartialCodewordClassification.language_eq
+
+-- Marker-free preflight from actual partial-codeword captures.
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordPreflight.stopped_overlap_tail' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordPreflight.stopped_overlap_tail
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordPreflight.check_inverse' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordPreflight.check_inverse
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordPreflight.scanner_context' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordPreflight.scanner_context
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordPreflight.argument_at' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordPreflight.argument_at
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordPreflight.check_at' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordPreflight.check_at
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordPreflight.word_boundary' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordPreflight.word_boundary
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordPreflight.split_arguments' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordPreflight.split_arguments
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordPreflight.bodies_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordPreflight.bodies_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordPreflight.rotated' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordPreflight.rotated
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordPreflight.preflight_at' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordPreflight.preflight_at
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordPreflight.source_prefix_shape' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordPreflight.source_prefix_shape
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordPreflight.source_to_preflight' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordPreflight.source_to_preflight
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordPreflight.preflight_inverse' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordPreflight.preflight_inverse
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordPreflight.preflight_to_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordPreflight.preflight_to_source
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordPreflight.preflight_iff_source_prefix' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordPreflight.preflight_iff_source_prefix
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordPreflight.firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordPreflight.firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordPreflight.marker_free_executions' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordPreflight.marker_free_executions
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordPreflight.undefined_continuation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordPreflight.undefined_continuation
