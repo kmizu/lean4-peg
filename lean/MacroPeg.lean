@@ -541,3 +541,5 @@ import MacroPeg.CBV.MixedBodyCompiler
 import MacroPeg.CBV.MixedBodyExamples
 import MacroPeg.CBV.PartialCodewordCapture
 import MacroPeg.CBV.PartialCodewordExecution
+import MacroPeg.CBV.PartialCodewordClassification
+import MacroPeg.CBV.PartialCodewordPreflight

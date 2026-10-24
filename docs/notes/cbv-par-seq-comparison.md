@@ -7018,3 +7018,82 @@ and copies. The present positive family and local body bridge do not
 establish this. Full finite-failure/undefinedness correspondence,
 arbitrary caller continuations through preflight, recursive integration,
 general inverse translation, and class separation remain open.
+
+### All-input language equality for the partial-codeword pair
+
+`PartialCodewordClassification` closes both converses on arbitrary original
+strings, with no supplied word length, word count, alphabet restriction,
+or well-formed-input premise. Both `source_language` and `target_language`
+are equivalent to `exists k n, x = input k n`, where `u=a^k#`,
+`w=u^n a^k`, and `input k n = u w ! w`. Thus `language_eq` proves exact
+accepted-language equality for these two fixed grammars. Malformed runs,
+delimiters, and final copies cannot produce a complete successful parse.
+
+On the Seq side, `check_inverse` extracts the count and marker endpoint
+from the actual greedy checker trace. `run_shape` derives k from the real
+first argument; the unary/binary body inverses validate the entire final
+copy and EOF. `target_inverse` joins those facts through the actual calls,
+including the guarded zero-word branch.
+
+On the Par side, `source_body_inverse` derives the input equation from
+actual scanner/replay/EOF success. The actual argument supplies its
+captured prefix and, via `argument_stop`, a suffix that cannot begin with
+another a. `stopped_overlap` applies the existing general periodic-overlap
+theorem and proves that this greedy stop forces the final partial-codeword
+phase to have length k. It therefore derives the same w and n without
+assuming an intended argument shape or uniform codeword trace.
+
+This settles accepted-language equality for this candidate, not full
+finite-failure/undefinedness correspondence or arbitrary continuations.
+The preflight still uses a concrete ! marker; the converse is not a
+recursive row relation or a general inverse compiler. Removing that
+marker dependence and composing real partial captures with recursive
+user continuations remain central obligations for the original general
+Par/Seq equality-or-separation goal. All 19 new public theorem guards
+use only standard axioms (or a subset thereof).
+
+### Marker-free preflight from actual source captures
+
+`PartialCodewordPreflight` replaces the final `&!` comparison test with
+`!A` before the final held a-run. The checker body is now
+`('#';param0;&'#')*; '#';!A;param0`, with the same `A=a*;#`.
+It tests the actual end of the maximal scanner run, independently of the
+syntax of the continuation. In particular the continuation may start
+with more a characters: those are allowed when the next scanner still
+fails, and must not be excluded by a final `!a` test.
+
+`source_prefix_shape` derives the uniform prefix, actual captured value,
+and terminal scanner failure from the real original argument and initial
+replay on any input and valid position. General periodic overlap and the
+argument's greedy a-run stop yield the uniform shape; the last-preserving
+capture endpoint yields the scanner failure. Neither fact is an input
+assumption. `source_to_preflight` then proves the real stage-m+1 Seq call
+succeeds to exactly the same endpoint, even in an unrelated grammar and
+clock with the generated checker rule.
+
+`check_inverse`, `preflight_inverse`, and `preflight_to_source` derive
+the reverse direction. `preflight_iff_source_prefix` proves all-input,
+same-endpoint equivalence between this physical Seq preflight and the
+original Par capture followed by its initial scanner/replay. It includes
+zero complete words and empty values. No alphabet restriction, uniform
+input assumption, or semantic row oracle is supplied by the caller.
+
+`argument_at`, `split_arguments`, and `bodies_eq` now work with an
+arbitrary following suffix and actual terminal scanner failure. Both
+sequential arguments still use the unchanged caller environment. The
+body bridge preserves complete partial continuation results for every
+first-order continuation under the same grammar, strategy, and table.
+Kernel examples exercise a-leading continuations with whole-capture
+reuse and undefined empty-star continuations; malformed prefixes fail
+before the undefined continuation is reached. A finite differential
+experiment compares five continuations on all 9,841 strings of length
+at most 8 over {a,#,!}, for 49,205 complete-result comparisons.
+
+This closes the concrete marker dependence of the entry verifier, but
+is not yet an all-input recursive source/target user-row simulation.
+The whole generated grammar family with arbitrary recursive
+continuations still needs its ordinary-clock relation and both entry
+branches integrated, including failures/undefinedness before the
+continuation. The general inverse compiler and Par/Seq class
+comparison remain unresolved. All 18 new public theorem guards use
+only standard axioms or none.
