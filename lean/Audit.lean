@@ -8667,3 +8667,65 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.WordControlFusion.consuming_prefix_and_repetition' depends on axioms: [propext] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.WordControlFusion.consuming_prefix_and_repetition
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedControlFusion.origin_congr' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedControlFusion.origin_congr
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedControlFusion.supported_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedControlFusion.supported_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedControlFusion.word_supported' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedControlFusion.word_supported
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedControlFusion.word_fragment_supported' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedControlFusion.word_fragment_supported
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedControlFusion.par_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedControlFusion.par_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedControlFusion.physical_gate_ok' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedControlFusion.physical_gate_ok
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedControlFusion.callLeaf_congr' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedControlFusion.callLeaf_congr
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedControlFusion.enter_origin' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedControlFusion.enter_origin
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedControlFusion.evaluator_of_shift' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedControlFusion.evaluator_of_shift
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedControlFusion.tables_shifted' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedControlFusion.tables_shifted
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedControlFusion.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedControlFusion.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedControlFusion.decide_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedControlFusion.decide_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedControlFusion.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedControlFusion.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedControlFusion.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedControlFusion.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedControlFusion.fresh_parser_then_consuming_call' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedControlFusion.fresh_parser_then_consuming_call

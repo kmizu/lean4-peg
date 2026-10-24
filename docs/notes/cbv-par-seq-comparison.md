@@ -3973,3 +3973,60 @@ for arbitrary source bodies, cover independently evaluated arbitrary argument
 parsers, or prove general Par/Seq equality or separation. The complete original
 objective remains open. Root imports and 24 new public axiom guards cover the
 word-value foundation and its full recursive compiler application.
+
+
+### Mixing arbitrary parsers and consuming word control in one recursive grammar
+
+`CBV/MixedControlFusion.lean` connects the preceding complementary fragments
+inside the **same actual generated grammars**, using the existing `parGrammar`,
+`seqGrammar`, and `render` from `WordControlFusion`. No additional grammar or
+input-dependent mode selection is introduced.
+
+`AtOrigin` certifies control trees built from leaves, prioritized choice,
+negative predicates, and guarded sequencing `&P Q` whose leaves all execute
+from the original caller position. `origin_congr` proves that agreeing leaf
+results at that single position suffice for their complete evaluation. At a
+call to such a rule, an arbitrary supported first-order argument parser can
+be evaluated again at that original position and recapture its same word.
+For a call into general consuming control, the argument must instead be a
+word expression (literal, parameter, or concatenation), so its captured value
+remains position-independent throughout later sequence and repetition.
+
+`Supported` expresses these alternatives **per call**. Argument expressions
+are recursively checked, so fresh parsers may themselves call either kind
+of rule according to the same discipline. Replay and local part bodies may
+likewise cross between kinds recursively. `word_fragment_supported` embeds
+the prior word-only fragment into this predicate. The restriction to unary
+source rules and replay/local body parts is retained.
+
+`GateOK` is established directly for every physical target table by
+`physical_gate_ok`; it says that the installed entry rule's successes restore
+the original position. `callLeaf_congr` and `enter_origin` require equal
+argument results only where origin control will actually run them. The
+arbitrary-parser case obtains this equality and the captured word from real
+source semantics, not a global position-independence premise. The word case
+uses the earlier `enter_word` theorem. These cases close
+`evaluator_of_shift`, and `tables_shifted` proves the entire mixed recursive
+user-table correspondence at every physical round. `observations_iff` and
+`language_translation` preserve all finite observations and the original
+full-consumption language. No gate correctness, user simulation, or semantic
+argument oracle remains as an external premise of those final theorems.
+
+The kernel-checked `fresh_parser_then_consuming_call` example combines
+
+```
+F(x) <- x G(x)
+G(x) <- 'a' x !F('')
+```
+
+It calls `F` with a fresh two-character parser, passes its captured `aa` to
+consuming `G`, and calls back into `F` under negation. Both actual grammars
+consume five `a` characters after four table rounds. The example also checks
+the mixed syntax conditions for its root and every part.
+
+This removes the need to select one argument/control convention for the
+whole source grammar. It does not allow an arbitrary position-dependent
+parser at a consuming-control call, normalize all capture-dependent bodies
+into these parts, or handle multiple independent general arguments. The
+unrestricted equality/separation objective remains unresolved. Root imports
+and 15 new public axiom guards cover the mixed connection.
