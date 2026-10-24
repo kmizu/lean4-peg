@@ -326,3 +326,5 @@ import MacroPeg.CBV.SequentialAnyCursorMachine
 import MacroPeg.CBV.SequentialControlEditMachine
 import MacroPeg.CBV.SequentialAnyPackedMachine
 import MacroPeg.CBV.SequentialEntryPackedMachine
+import MacroPeg.CBV.SequentialReturnControlMachine
+import MacroPeg.CBV.SequentialReturnPackedMachine

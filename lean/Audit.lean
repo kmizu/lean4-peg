@@ -6275,3 +6275,63 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SequentialEntryPackedMachine.finite_alphabet' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialEntryPackedMachine.finite_alphabet
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialReturnControlMachine.decrementSecond_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialReturnControlMachine.decrementSecond_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialReturnControlMachine.decrementSecond_constOK' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialReturnControlMachine.decrementSecond_constOK
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialReturnControlMachine.dispatch_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialReturnControlMachine.dispatch_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialReturnControlMachine.dispatch_constOK' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialReturnControlMachine.dispatch_constOK
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialReturnPackedMachine.actual_step' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialReturnPackedMachine.actual_step
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialReturnPackedMachine.before_control' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialReturnPackedMachine.before_control
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialReturnPackedMachine.after_control' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialReturnPackedMachine.after_control
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialReturnPackedMachine.after_layout' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialReturnPackedMachine.after_layout
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialReturnPackedMachine.cursor_update' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialReturnPackedMachine.cursor_update
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialReturnPackedMachine.control_update' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialReturnPackedMachine.control_update
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialReturnPackedMachine.transition_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialReturnPackedMachine.transition_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialReturnPackedMachine.transition_tape' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialReturnPackedMachine.transition_tape
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialReturnPackedMachine.finite_alphabet' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialReturnPackedMachine.finite_alphabet

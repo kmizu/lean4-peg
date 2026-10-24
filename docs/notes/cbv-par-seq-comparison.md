@@ -2711,3 +2711,49 @@ ordinary-input initialization, and complete recognition connection are open.
 The established complete recognizer bound remains `O(n log n)`. General
 Par/Seq equality or separation remains unresolved; even a completed linear
 space upper bound would require a separate argument to settle that comparison.
+
+### Complete compressed sequence, choice, and negation returns
+
+`MacroPeg.CBV.SequentialReturnControlMachine` implements the inverse header
+edit: `decrementSecond` saves the environment-length field, removes one unary
+bit from the positive stack-length field, and restores the environment header.
+`decrementSecond_runs` preserves the suffix and all other tapes, clears scratch,
+and bounds every intermediate state by the initial capacity.
+
+Its `dispatch` subroutine saves a fixed number of header fields and inspects
+the result tag directly. Unary tags 0, 1, and 2 select undefined, failure, and
+success continuations. The first positive bit is temporarily transferred
+before the second test. Every branch restores the complete original source
+and clears scratch before entering its continuation. `dispatch_runs` verifies
+this behavior and composes arbitrary bounded continuation runs. Neither a
+decoded tag nor a branch flag is supplied at runtime. `dispatch_constOK` also
+checks the fixed pushed-symbol alphabet requirement.
+
+`MacroPeg.CBV.SequentialReturnPackedMachine` composes that dispatcher with
+complete returns from sequence, ordered choice, and negation frames. All nine
+frame/result combinations are covered. Sequence retains a successful result
+cursor when it starts the right expression. Choice retains the current result
+cursor and removes the saved one after success, restarts the right expression
+at the saved cursor after failure, and removes the saved cursor on undefined.
+Negation removes both current and saved cursors after success, reuses the saved
+cursor as its successful result after failure, and removes the saved cursor on
+undefined. These are operations on the difference-encoded cursor stream;
+absolute positions and the other saved positions are never decoded.
+
+For each case, the control edit first decrements the stack-length header and
+then replaces the task and top frame by the actual successor task. The
+remaining continuation stack, environment, clock, and captured words survive.
+`actual_step` checks the source machine transition, `after_layout` identifies
+all successor streams, and `transition_runs`/`transition_tape` construct the
+complete successor from every initialized reachable source state. Capacity
+`linearFactor g e * (input length + 1) + 2` covers every intermediate tape
+position and write. `finite_alphabet` checks the compiled return programs.
+The programs depend on the source continuation syntax, not on its saved
+position or its runtime result.
+
+This supplies runtime **result-tag** dispatch within these return subroutines.
+Whole-machine instruction selection, the other returns (including capture
+creation), dynamic matching, ordinary-input initialization, and the complete
+recognition connection remain open. The complete recognizer's established
+bound remains `O(n log n)`, and the general same-input Par/Seq language-class
+comparison remains unresolved.
