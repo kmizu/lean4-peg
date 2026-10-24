@@ -3388,3 +3388,58 @@ settle equality or construct an unconditional Par/Seq separator.
 The root imports and 27 new public theorem axiom guards include initialization,
 all halting cases, the standard-input machine, and the class consequences.
 All audited dependencies are standard Lean axioms.
+
+### Recursive reverse compilation with any number of unbounded prefix captures
+
+`PrefixFamilyFusion` removes the two-argument and common-arity restrictions of
+`PrefixPairFusion`. Its templates are arbitrary finite rule lists, with a
+separate arity for each rule. For a call with chunk parsers `A0,...,Ad-1`,
+the generated Par arguments are the cumulative parsers
+
+```
+F(A0, A0 A1, ..., A0 ... Ad-1).
+```
+
+The Seq target instead calls `F(A0,...,Ad-1)` consecutively. In a source
+rule of arity `d>0`, the body begins by replaying parameter `d-1`; in the
+Seq target this replay disappears. Each later source parameter `k` is
+reconstructed by the target expression `y0 ... yk`. Zero-argument rules
+use an empty replay. Nested calls in arguments and bodies undergo the same
+transformation. The number of rules and each rule's arity are preserved.
+
+`words` and `parsers` implement the cumulative value and syntax operations.
+`arguments_factor` proves that the actual Par evaluation of the cumulative
+parsers returns the cumulative words of the actual consecutive argument
+run. This covers the first finite failure and undefined evaluation, as well
+as successful empty chunks. `arguments_prefix` identifies the concatenation
+of the chunks with exactly the consumed original input. `parameters_eq`
+proves that all original captured values remain available through their
+views, without a finite value palette or a capture-length bound.
+
+`tables_shifted` connects every recursive table approximation at the source
+and target body positions. `evaluator_eq`, `decide_eq`, and `observations_iff`
+then preserve the complete partial semantics, including finite failure and
+absence of a finite result. `language_translation` constructs a fixed
+first-order Seq grammar and root for the same original character language.
+No input encoding, repetition, padding, or input-length restriction occurs.
+Missing rules, mismatched call arities, empty input, predicates, and
+repetition are included in the evaluator proof.
+
+`PrefixFamilyTestFusion` also extends the replay-test construction to this
+whole variable-arity family. Its source bodies test the longest-prefix
+replay followed by their tails. The target moves tests to call sites,
+captures all adjacent chunks, and restores the caller's original position
+after the test. `render_commute` proves that call-site test movement and
+the prefix compiler commute; `observations_iff` and `language_translation`
+connect the actual fixed grammars, including recursive calls.
+
+These are reverse translations for **generated prefix-factored source
+grammars**. They do not transform arbitrary independent Par argument
+expressions into parsers for their successive prefix differences, reorder
+arbitrary captures, or normalize arbitrary bodies to a longest-prefix replay.
+The earlier value-level representation theorem for arbitrary overlapping
+captures does not supply those operational transformations. Thus every
+capture in this fragment can now be unbounded, and rule arities can vary,
+while general same-original-language Par/Seq equality or separation remains
+unresolved. The root imports and 22 new public axiom guards cover both
+compilers and their semantic connections.

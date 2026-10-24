@@ -7671,3 +7671,99 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.PegSeparation.binary_seq_in_P_and_linear_space' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.PegSeparation.binary_seq_in_P_and_linear_space
+
+-- Arbitrary-arity cumulative-prefix reverse compilation.
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixFamilyFusion.words_get' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixFamilyFusion.words_get
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixFamilyFusion.parsers_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixFamilyFusion.parsers_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixFamilyFusion.par_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixFamilyFusion.par_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixFamilyFusion.seq_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixFamilyFusion.seq_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixFamilyFusion.parameters_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixFamilyFusion.parameters_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixFamilyFusion.par_prepend' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixFamilyFusion.par_prepend
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixFamilyFusion.arguments_factor' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixFamilyFusion.arguments_factor
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixFamilyFusion.arguments_prefix' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixFamilyFusion.arguments_prefix
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixFamilyFusion.replay_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixFamilyFusion.replay_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixFamilyFusion.evaluator_of_shift' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixFamilyFusion.evaluator_of_shift
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixFamilyFusion.arguments_of_shift' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixFamilyFusion.arguments_of_shift
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixFamilyFusion.tables_shifted' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixFamilyFusion.tables_shifted
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixFamilyFusion.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixFamilyFusion.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixFamilyFusion.iterBound_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixFamilyFusion.iterBound_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixFamilyFusion.decide_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixFamilyFusion.decide_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixFamilyFusion.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixFamilyFusion.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixFamilyFusion.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixFamilyFusion.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixFamilyTestFusion.render_commute' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixFamilyTestFusion.render_commute
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixFamilyTestFusion.parsers_render' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixFamilyTestFusion.parsers_render
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixFamilyTestFusion.wrapped_family' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixFamilyTestFusion.wrapped_family
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixFamilyTestFusion.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixFamilyTestFusion.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixFamilyTestFusion.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixFamilyTestFusion.language_translation
