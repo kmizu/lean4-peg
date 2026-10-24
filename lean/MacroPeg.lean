@@ -417,3 +417,4 @@ import MacroPeg.CBV.CaptureCommutation
 import MacroPeg.CBV.UnaryOverlapFusion
 import MacroPeg.CBV.BlockCapture
 import MacroPeg.CBV.PeriodicOverlapFusion
+import MacroPeg.CBV.OverlapNecessity

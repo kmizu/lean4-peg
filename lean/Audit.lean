@@ -10235,3 +10235,59 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.PeriodicOverlapFusion.rotated_overlap_execution' depends on axioms: [propext] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.PeriodicOverlapFusion.rotated_overlap_execution
+
+-- Necessary periodicity for arbitrary actual captures and finite rotations.
+
+/-- info: 'Shallot.MacroPeg.CBV.OverlapNecessity.prefix_periodic' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OverlapNecessity.prefix_periodic
+
+/-- info: 'Shallot.MacroPeg.CBV.OverlapNecessity.rotations_length' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OverlapNecessity.rotations_length
+
+/-- info: 'Shallot.MacroPeg.CBV.OverlapNecessity.prefix_has_rotation' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OverlapNecessity.prefix_has_rotation
+
+/-- info: 'Shallot.MacroPeg.CBV.OverlapNecessity.prefix_iff_rotation' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OverlapNecessity.prefix_iff_rotation
+
+/-- info: 'Shallot.MacroPeg.CBV.OverlapNecessity.common_input_rotation' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OverlapNecessity.common_input_rotation
+
+/-- info: 'Shallot.MacroPeg.CBV.OverlapNecessity.actual_capture_rotation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OverlapNecessity.actual_capture_rotation
+
+/-- info: 'Shallot.MacroPeg.CBV.OverlapNecessity.rotation_unique' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OverlapNecessity.rotation_unique
+
+/-- info: 'Shallot.MacroPeg.CBV.OverlapNecessity.rotation_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OverlapNecessity.rotation_length
+
+/-- info: 'Shallot.MacroPeg.CBV.OverlapNecessity.actual_capture_periodic' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OverlapNecessity.actual_capture_periodic
+
+/-- info: 'Shallot.MacroPeg.CBV.OverlapNecessity.rotated_execution' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OverlapNecessity.rotated_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.OverlapNecessity.chooseRotations_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OverlapNecessity.chooseRotations_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.OverlapNecessity.rotation_choice_false_positive' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OverlapNecessity.rotation_choice_false_positive

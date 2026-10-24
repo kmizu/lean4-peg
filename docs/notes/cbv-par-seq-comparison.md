@@ -4767,3 +4767,55 @@ captures, and full Par/Seq equality or separation remain unresolved. This is
 an additional restricted compiler, not yet a unification with the guarded
 body-plan and absorbing-scanner compilers. Twenty-six new public axiom guards
 cover the construction.
+
+
+### Successful shifted replay forces periodicity of arbitrary captures
+
+`CBV/OverlapNecessity.lean` moves periodicity from a syntactic head condition
+to a necessary consequence of successful replay. `prefix_periodic` proves
+for every nonempty word `u` and every word `w` that if `w` is a prefix of
+`u ++ w`, then `u = left ++ right` and `w = u^n ++ left`, with a proper phase
+prefix `left`. The proof peels whole copies of `u` until the remaining word
+is shorter than `u`; it does not restrict the parser that produced `w`.
+
+`rotations u` enumerates `drop i u ++ take i u` for `i = 0..length u`.
+The final candidate duplicates the initial one for nonempty words and also
+handles the empty shift uniformly. `prefix_iff_rotation` gives the exact
+word-level equivalence between `w` being a prefix of `u ++ w` and existence
+of a candidate `v` satisfying `u ++ w = w ++ v`. `rotation_unique` proves
+uniqueness of the residual word, even when several candidate indices coincide;
+`rotation_length` fixes its length to the shift length.
+
+`actual_capture_rotation` connects that result to actual first-order Par
+evaluation. An arbitrary first-order argument `a` successfully captures
+`w = pre x p q`; if the source expression `lit(u) param(0)` succeeds from
+the original position `p`, then the residual belongs to `rotations u`.
+The argument may be capture-dependent, recursive, and part of the user
+grammar: no closedness, independent-component, singleton-alphabet, or
+block-safety condition is assumed. Actual sound-table semantics supplies
+the two prefixes of the same input; length comparability derives the word
+premise. `actual_capture_periodic` obtains the complete periodic normal form
+for every nonempty shift. `rotated_execution` proves that some such residual
+literal succeeds after capture at exactly the original replay's final
+position, in any target grammar/table.
+
+This corrects the direction of the remaining fixed-literal overlap problem:
+for this body shape, a nonperiodic captured word cannot be part of a successful
+shifted replay. The missing step is an effective grammar construction that
+filters the *actual selected capture* by its periodic phase, while preserving
+source priority, failure, and undefined recursion. The finite candidates and
+post-capture literal success alone do not supply that filter.
+
+`rotation_choice_false_positive` proves the failure of that tempting shortcut
+with actual physical tables. The argument captures `abac` on `abacab`; an
+origin lookahead first verifies `ab`. The original Par body `ab param(0) !.`
+finitely fails. A Seq replacement trying the rotation literals after capture
+accepts the whole input, since the remaining `ab` matches a candidate.
+The theorem also verifies that `abac` lacks the necessary periodic-prefix
+property. This is a counterexample to that local compiler, not a language-class
+separation.
+
+No new unrestricted translation is claimed. A general phase filter and the
+arbitrary consuming-body/multiple-capture cases remain open, as does the full
+Par/Seq language-class comparison. Twelve new public axiom guards cover the
+normal form, operational consequences, and counterexample.
