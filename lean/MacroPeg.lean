@@ -408,3 +408,14 @@ import MacroPeg.CBV.RecursivePrefixFusion
 import MacroPeg.CBV.MixedPrefixFusion
 import MacroPeg.CBV.OriginPrefixControl
 import MacroPeg.CBV.ConsumingPrefixControl
+import MacroPeg.CBV.MappedGuardedWordSelection
+import MacroPeg.CBV.GuardedPrefixControl
+import MacroPeg.CBV.ScannerAbsorption
+import MacroPeg.CBV.ScannerPrefixFusion
+import MacroPeg.CBV.MixedScannerPrefixFusion
+import MacroPeg.CBV.CaptureCommutation
+import MacroPeg.CBV.UnaryOverlapFusion
+import MacroPeg.CBV.BlockCapture
+import MacroPeg.CBV.PeriodicOverlapFusion
+import MacroPeg.CBV.OverlapNecessity
+import MacroPeg.CBV.RegularCaptureProduct

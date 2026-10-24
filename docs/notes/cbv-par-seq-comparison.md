@@ -4492,3 +4492,396 @@ general Par/Seq equality or separation remain unresolved. The existing
 still requires an unproved P language outside linear space. No new class
 conclusion is drawn here. Thirty-eight new public axiom guards cover the
 combined consuming-control compiler.
+
+
+### Guarded selection in the fresh/consuming recursive compiler
+
+`CBV/GuardedPrefixControl.lean` closes the previously separate guarded-argument
+and fresh-capture/consuming-control constructions. Replay calls may now use
+arguments built from literals, parameters, concatenation, prioritized choice,
+and negation. Predicate bodies may contain arbitrary supported recursive
+calls, including fresh-parser rules and consuming rules. If the callee uses
+caller-position control, arbitrary supported arguments remain permitted.
+Independent recursive-parser heads still require caller-position control.
+
+The source-side predicate calls have already been rewritten to installed
+user addresses; they are not the raw predicate syntax. The new
+`CBV/MappedGuardedWordSelection.lean` proves selection with two independently
+transformed predicate bodies. `Agrees` compares the actual source rendering
+with the actual target rendering at every valid argument position.
+`selectAt_eval` preserves undefined results, finite failure, captured words,
+and continuation results through sequential argument components. Successful
+negation contributes the empty Word expression. The continuation is invoked
+at the original caller position, with the selected Word expression fixed.
+Later consuming failure cannot change that selection.
+
+The compiler uses mutual `render`/`scanArg`/`chooseAt` definitions. Its semantic
+proof mutually establishes evaluator correspondence and predicate agreement;
+no recursive predicate oracle is assumed by the final theorem. A target gate
+preserves the user-round boundary, and the existing physically stabilized
+helper component connects all frozen rounds to actual observations.
+`observations_iff` covers every finite success/failure observation on the same
+original character strings. `language_translation` supplies one fixed Seq
+grammar and start expression.
+
+This is an extension of the actual prior source, not a different source
+execution convention. `Spec` is the previous spec type; `source_render_eq`
+and `source_grammar_eq` prove exact equality with the previously installed
+Par expressions and grammar. `consuming_supported` and `consuming_valid`
+embed the previous Word fragment. `original_observations_iff` and
+`original_language_translation` state the preservation theorem directly for
+that prior source grammar, with the enlarged syntactic support condition.
+
+`fresh_selected_consuming_execution` kernel-checks physical tables for three
+inputs. Both strategies accept
+`ab#abab!abab;?aabb#aabbaabb!aabbaabb;`: a fresh `ab` is duplicated by a selected
+argument after a recursive negative query; consuming control replays `abab`,
+then recursion obtains fresh `aabb` and replays its selected duplication.
+Both also accept `ab#ab!ab;`, where the doubled argument fails before entry
+and the short arm is selected. Both finitely reject `ab#abab!ab;`, where the
+doubled argument succeeds before entry but its later replay fails. This last
+input would accept if the continuation incorrectly reselected the short arm.
+These examples supplement the unbounded observation theorem.
+
+The remaining gap is still arbitrary argument capture for consuming rules:
+non-finite fresh parser results cannot in general be selected from these
+finite Word-expression candidates. General body decomposition and multiple
+independent general captures also remain outside this compiler. General
+Par/Seq equality or language-class separation is not established.
+Fifty-four new public axiom guards cover this extension.
+
+
+### Fresh recursive arguments without a source-side head replay
+
+`CBV/ScannerAbsorption.lean` provides a syntactic absorption condition for
+an independent recursive argument component. `Safe n A e` allows empty
+expressions, accepted characters, accepted literal words, sequencing, choice,
+repetition, zero-argument component calls, and arbitrary negative queries.
+Negation's query need not consume only accepted characters: successful
+negation itself consumes nothing. Lexical validity is checked separately.
+
+`evaluator_safe` proves that every successful evaluation leaves the greedy
+`A` scanner's final suffix unchanged. The proof uses a table invariant for
+component calls and structural control reasoning, including decreasing
+repetition. `physical_rows_safe` establishes the invariant on actual helper
+tables at every round; `frozen_rows_safe` transfers it to physically frozen
+helpers. `scan_after_success` states the resulting absorption law for a real
+successful recursive argument. No captured-word length bound is imposed.
+
+`CBV/ScannerPrefixFusion.lean` uses this law in a whole recursive grammar.
+Each rule has a fixed independent recursive head `H`, a scanner alphabet
+`A`, and an arbitrary recursively rendered tail `B`. The actual arity-one
+source rule body is `scan(A) B`; its caller supplies argument `H`. In
+particular the source body does not begin by reparsing `H` or replaying its
+captured parameter. Under Par, the scanner begins at the caller position;
+under Seq, argument capture advances to the end of `H` before the scanner
+begins. The syntactic absorption condition makes both scanners reach the
+same final position, with exactly the same original capture in their
+environments. The recursive tails can then use that capture after further
+consumption, in repetitions, predicates, choices, and nested fresh calls.
+Different rules may use different scanner alphabets.
+
+`tables_shifted` proves the actual user-row correspondence, using helper
+stability rather than assumed argument outcomes. `observations_iff` and
+`language_translation` preserve all finite observations and recognized
+languages on the same original character strings. `same_grammar` records
+that this particular fragment even uses identical installed source and
+target syntax; the theorem quantifies over all valid components, tails,
+inputs, and finite observations, rather than comparing a few executions.
+
+`scanner_before_capture_execution` kernel-checks physical tables for
+`aabbab#aabb;aabb?ababb#ab;ab`. The first recursive argument captures `aabb`,
+then the source body consumes the longer prefix `aabbab` before the first
+capture use. The recursive call later captures `ab` and scans the longer
+prefix `ababb`. Both captures are replayed repeatedly after consumption.
+`aabbab#aabbab` is rejected: the whole scanned prefix cannot replace the
+original shorter capture. `recursive_argument_undefined` proves on every
+input and every physical round that a looping argument remains undefined;
+the scanner cannot bypass it.
+
+This removes mandatory head replay for a syntactically verified consuming
+prefix. It does not normalize arbitrary consuming body control. The argument
+component remains closed and independent, and every helper body is checked
+against the applicable scanner alphabet. This is a separate fresh/scanner
+construction; it has not yet been combined with the guarded mixed-mode
+compiler. Arbitrary capture-dependent arguments and general Par/Seq equality
+or separation remain unresolved. Twenty-three new public axiom guards cover
+this construction.
+
+
+### Absorbing scanners and arbitrary replay arguments in one grammar
+
+`CBV/MixedScannerPrefixFusion.lean` connects the preceding scanner compiler
+with replay-headed rules in one actual fixed source/target grammar pair.
+A rule with a fixed closed recursive head uses `scan(A) B` at source body
+entry and the same scanner at target body entry. A rule without a fixed
+head instead accepts one arbitrary recursively rendered argument: the source
+replays its captured value before `B`, and the target enters `B` after Seq
+argument capture. Calls may recursively change modes. Neither the arbitrary
+arguments nor the replay-rule tails need satisfy the scanner-alphabet check;
+that condition applies only to independent fixed-parser heads and helpers.
+
+`Ready` distinguishes an actual fixed-head capture from a captured arbitrary
+argument prefix. `tables_shifted` closes both cases. In scanner mode, the
+syntactic absorption theorem makes the two body entries reach the same
+position. In replay mode, actual argument success supplies the prefix fact
+and the source replay reaches the Seq body position. `evaluator_of_shift`
+handles arbitrary recursively rendered argument computations, including
+choice, predicates, repetition, parameters, and nested calls. Physically
+stabilized helpers and frozen/physical cofinality eliminate semantic oracle
+assumptions from `observations_iff` and `language_translation`.
+
+This combines the two calling conventions operationally. The existing
+scanner-only grammar embeds exactly: `render_liftScanner` and
+`grammars_liftScanner` prove syntactic equality, and `valid_liftScanner`
+transfers its conditions. Fresh-mode source bodies still do not begin with a
+head reparse or a capture replay.
+
+`scanner_to_recursive_argument_execution` kernel-checks actual physical
+tables on `aabbab#aabbaabb;aabbaabb!ababb#abccc;abccc`. The first independent
+recursive argument captures `aabb`, then its body scans the longer prefix
+`aabbab`. A parameter-dependent argument runs a recursive negative query and
+captures the selected duplication `aabbaabb`. The replay rule uses that new
+capture repeatedly, then recurses into fresh mode. There the head captures
+`ab`, its body scans `ababb`, and a new argument captures `abccc`, adding
+fresh `c` characters to the retained value before further repeated replay.
+An altered final copy is finitely rejected by both actual grammars.
+
+`unbounded_suffix_capture` separately proves for all retained words `w`, all
+`n`, all tails, and all tables/strategies that the parameter followed by the
+`c` scanner really captures `w ++ c^n` before `#`. Both argument evaluators
+return that actual value; the Seq evaluator also returns the correct ending
+position. Thus this mode is not restricted to finite choices of existing
+Word expressions. `recursive_argument_choice_undefined` proves on every
+input and every physical round that an undefined recursive negative query
+inside an argument never falls through to the empty alternative.
+
+The fresh component is still closed and independently recursive, and its
+body entry must be the absorbing scanner. Replay mode retains its own
+leading-replay condition. This compiler has not been combined with arbitrary
+caller-position body plans. General body decomposition, multiple independent
+general captures, and the full Par/Seq equality or separation remain
+unresolved. Twenty additional public axiom guards cover the mixed compiler.
+
+
+### Short prefixes and overlapping fresh-capture replay
+
+`CBV/CaptureCommutation.lean` extracts a captured-word alphabet from the
+syntactic recursive-parser absorption condition. The earlier scanner endpoint
+invariant, combined with actual successful-prefix semantics, implies that
+all characters of the consumed prefix belong to the declared alphabet.
+`captured_alphabet` proves this using actual sound tables. For a singleton
+alphabet, `unary_word` identifies every captured value as a repetition of that
+character. `unary_commutes` then permits a fixed repetition prefix to commute
+with captures of every length. `prefix_swap` proves equality of the two Word
+parsers for any commuting words, including finite failure, without any
+assumption about disjoint input spans.
+
+`CBV/UnaryOverlapFusion.lean` applies this to a full recursive compiler.
+Each fixed-parser rule declares a symbol `c`, a shift `d`, and an arbitrary
+recursively rendered tail `B`. The Par rule body is `(c^d param(0)) B`;
+the Seq rule body is `c^d B`. The caller supplies a closed independent
+recursive argument `H`. Syntactic validity requires the component and head
+to satisfy the singleton-alphabet condition, alongside ordinary lexical
+validity. The source body does not begin with a head reparse or a capture
+replay: it first consumes its short prefix, then replays the held capture.
+
+When the prefix is shorter than the capture, the source's first replay starts
+strictly inside the original argument capture interval. The transformation
+does not move that original body unchanged to the capture endpoint. It
+commutes the short prefix with the capture replay, which makes the source
+reach the same tail position as Seq argument consumption followed by the
+short prefix. Both tails retain the same original capture. `tables_shifted`
+closes this correspondence through the actual recursive grammar, including
+failing prefixes and arbitrary consuming recursive tails. Helper stabilization
+and physical/frozen cofinality yield `observations_iff` and
+`language_translation` on all original character strings. Final premises are
+syntactic; no runtime commutation oracle is assumed.
+
+`overlapping_capture_execution` checks actual physical tables for the closed
+recursive helper `A <- 'a' A 'a' / 'a'`. On a first block of fourteen `a`
+characters, the argument really captures thirteen: the theorem checks the
+actual Par argument list, not an assumed capture. The source body consumes
+one `a` before replaying those thirteen, so the intervals overlap by twelve
+characters. It uses the same capture again after `#`, then recursively obtains
+a new five-character capture from a six-character block. Both transformed
+grammars accept that input. A thirteen-character first block lacks the extra
+shift character and is finitely rejected by both strategies.
+
+This treats overlap that the preceding absorbing-scanner entry did not
+cover: the initial one-character source consumption has not reached the end
+of the thirteen-character capture. The result remains a singleton-alphabet
+fragment with a fixed repetition prefix and one independent head per rule.
+General noncommuting overlap, arbitrary body decomposition, multiple
+independent general arguments, and full Par/Seq equality or separation remain
+unresolved. Twenty additional public axiom guards cover the construction.
+
+
+### Noncommuting overlap through periodic capture phases
+
+`CBV/BlockCapture.lean` replaces the singleton alphabet with a fixed word
+block `u`. `Safe n u` describes recursive expressions that consume whole
+numbers of these blocks: block-power literals, empty expressions, component
+calls, sequencing, choice, repetition, and unrestricted negative queries.
+Ordinary lexical validity remains a separate requirement. `evaluator_safe`
+proves an actual suffix relation with a block-power prefix;
+`physical_rows_safe` and `frozen_rows_safe` derive it for every helper round.
+`head_capture` then identifies the value captured by a block-safe recursive
+core followed by a fixed phase suffix `left` as `u^n ++ left`.
+
+If `u = left ++ right`, the appropriate word equation is
+`u ++ (u^n ++ left) = (u^n ++ left) ++ (right ++ left)`.
+`rotate` proves this for every block count. `prefix_rotate` turns the equation
+into exact parser equality, including finite failure, using a rotated residual
+rather than assuming that the source prefix and capture commute.
+`ab_noncommuting` proves for every `n` that `ab` and `(ab)^n a` do not commute.
+Thus this construction covers genuinely noncommuting shifted replay.
+
+`CBV/PeriodicOverlapFusion.lean` closes the corresponding fixed recursive
+grammar transformation. A rule specifies a closed recursive core, static
+`left` and `right`, and an arbitrary recursively rendered tail `B`. Its caller
+captures `core left`; the Par body is `(u param(0)) B`, while the Seq body is
+`(right left) B`. The target still holds the exact original capture for later
+uses. The syntactic block condition on the core and helper component derives
+the phase equation during the user-row induction. No runtime phase or word
+commutation oracle is assumed by `observations_iff` or
+`language_translation`; both concern the same original character strings and
+all finite observations. Undefined and finitely failing arguments retain their
+strict call semantics.
+
+`rotated_overlap_execution` kernel-checks actual physical tables for the
+recursive core `A <- 'ab' A 'ab' / 'ab'`. On `(ab)^14 a`, the argument
+`A 'a'` actually captures `(ab)^13 a`, a 27-character word. The source then
+consumes `ab` before its first replay, starting that replay 2 characters into
+the original capture and overlapping it by 25 characters. Seq captures the
+same word first and consumes the rotated residual `ba`. The theorem checks
+that using unrotated `ab` at this position fails. Both proper grammars also
+reuse the 27-character capture after `#`, recursively obtain an 11-character
+capture from `(ab)^6 a`, and accept. Replacing the first block's final `a`
+with `b` is finitely rejected by both strategies.
+
+The block and phase suffix remain static per rule; the captured block count
+and the input are unbounded. General nonperiodic overlap, runtime-dependent
+phase selection, arbitrary body decomposition, multiple independent general
+captures, and full Par/Seq equality or separation remain unresolved. This is
+an additional restricted compiler, not yet a unification with the guarded
+body-plan and absorbing-scanner compilers. Twenty-six new public axiom guards
+cover the construction.
+
+
+### Successful shifted replay forces periodicity of arbitrary captures
+
+`CBV/OverlapNecessity.lean` moves periodicity from a syntactic head condition
+to a necessary consequence of successful replay. `prefix_periodic` proves
+for every nonempty word `u` and every word `w` that if `w` is a prefix of
+`u ++ w`, then `u = left ++ right` and `w = u^n ++ left`, with a proper phase
+prefix `left`. The proof peels whole copies of `u` until the remaining word
+is shorter than `u`; it does not restrict the parser that produced `w`.
+
+`rotations u` enumerates `drop i u ++ take i u` for `i = 0..length u`.
+The final candidate duplicates the initial one for nonempty words and also
+handles the empty shift uniformly. `prefix_iff_rotation` gives the exact
+word-level equivalence between `w` being a prefix of `u ++ w` and existence
+of a candidate `v` satisfying `u ++ w = w ++ v`. `rotation_unique` proves
+uniqueness of the residual word, even when several candidate indices coincide;
+`rotation_length` fixes its length to the shift length.
+
+`actual_capture_rotation` connects that result to actual first-order Par
+evaluation. An arbitrary first-order argument `a` successfully captures
+`w = pre x p q`; if the source expression `lit(u) param(0)` succeeds from
+the original position `p`, then the residual belongs to `rotations u`.
+The argument may be capture-dependent, recursive, and part of the user
+grammar: no closedness, independent-component, singleton-alphabet, or
+block-safety condition is assumed. Actual sound-table semantics supplies
+the two prefixes of the same input; length comparability derives the word
+premise. `actual_capture_periodic` obtains the complete periodic normal form
+for every nonempty shift. `rotated_execution` proves that some such residual
+literal succeeds after capture at exactly the original replay's final
+position, in any target grammar/table.
+
+This corrects the direction of the remaining fixed-literal overlap problem:
+for this body shape, a nonperiodic captured word cannot be part of a successful
+shifted replay. The missing step is an effective grammar construction that
+filters the *actual selected capture* by its periodic phase, while preserving
+source priority, failure, and undefined recursion. The finite candidates and
+post-capture literal success alone do not supply that filter.
+
+`rotation_choice_false_positive` proves the failure of that tempting shortcut
+with actual physical tables. The argument captures `abac` on `abacab`; an
+origin lookahead first verifies `ab`. The original Par body `ab param(0) !.`
+finitely fails. A Seq replacement trying the rotation literals after capture
+accepts the whole input, since the remaining `ab` matches a candidate.
+The theorem also verifies that `abac` lacks the necessary periodic-prefix
+property. This is a counterexample to that local compiler, not a language-class
+separation.
+
+No new unrestricted translation is claimed. A general phase filter and the
+arbitrary consuming-body/multiple-capture cases remain open, as does the full
+Par/Seq language-class comparison. Twelve new public axiom guards cover the
+normal form, operational consequences, and counterexample.
+
+
+### A generated recursive capture/state product
+
+`CBV/RegularCaptureProduct.lean` constructs actual arity-zero PEG rules for
+filtering consumed words by a finite-state machine. The source is a finite
+graph with literal, sequence, ordered-choice, repetition, and negation nodes;
+node references may be recursive. Each graph node remains an original query
+rule. Additional rules are indexed by node, starting state, and ending state.
+The finite state count and graph fix the generated grammar independently of
+the input. Literal transitions use the actual literal word; sequence enumerates
+intermediate states; repetition recurses through product rules; predicates
+preserve the starting state.
+
+This is executable construction and local semantic groundwork, not yet a
+proved general product translation. `filter_rule` verifies the concrete
+address/decode scheme and rule lookup. `grammar_firstOrder`, `helper_valid`,
+and `original_installed` verify syntax and the independent original component.
+Every product rule first queries its original node through an actual grammar
+call. `filter_body_eval` and `filter_step` establish this guard at evaluator
+and physical-round level: unknown queries remain unknown, failed queries
+remain failed, and only a successful original query enters the state product.
+
+Ordered choice branches on the original left query, not its state-filtered
+version. `choice_commit` proves that a successful original left parse remains
+chosen when its filtered continuation fails. `choice_eval_unique` proves the
+intermediate-state enumeration law for success, finite failure, and undefined
+continuations. `filtered` records the intended full result specification;
+`literal_correct` verifies it for literal nodes when the original query has
+its actual literal result. Closing the recursive table correspondence for
+all graph nodes remains required.
+
+Some nontermination properties are already unbounded theorems of the actual
+construction. `left_cycle_undefined` covers a left-recursive graph on every
+input, valid position, and physical round, for every in-range state pair.
+`nullable_star_undefined` does the same for repetition of an empty successful
+operand. A final-state mismatch cannot change these undefined computations
+into finite rejection.
+
+Kernel-checked physical tables additionally exercise:
+
+- A recursive a/b/c scanner that captures both `ababa` and `abac` before `#`.
+  The generated alternating-a/b filter retains `ababa` at the original
+  endpoint and finitely rejects `abac`; the source graph is not block-safe.
+- `ab / a`: requesting the state reached by `a` rejects the winning `ab`
+  parse. Naively choosing between independently filtered alternatives would
+  incorrectly select the shorter `a`.
+- Greedy `a*`: a final-state request cannot stop repetition early. The whole
+  greedy capture reaches the sink state rather than the state after one `a`.
+- Negation: success retains the input position and starting automaton state;
+  requesting a different ending state finitely fails.
+- Prototype shift-`ab` caller wiring with an original `abac / aba` head.
+  Generated state guards reject the prior `abacab` false positive without
+  falling back to a different head capture. On `ababa`, the actual `aba`
+  capture selects residual `ba`, and both source and target accept.
+
+These executions validate concrete generated grammars at finite physical
+rounds. They do not prove correctness for all graph/input/state combinations.
+Outstanding work includes that global soundness/completeness correspondence,
+normalization of general ordinary PEG syntax (including any/range atoms) to
+the graph, and the unbounded caller-level observation theorem. The current
+product has no parameter-bearing source nodes, and the shift caller wiring
+is a prototype for `ab` with an EOF tail. General capture-dependent argument
+filtering, arbitrary body decomposition, multiple independent captures, and
+the full Par/Seq language-class goal remain unresolved. Twenty-six new public
+axiom guards cover the established local and physical results.
