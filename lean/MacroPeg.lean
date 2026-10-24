@@ -441,3 +441,13 @@ import MacroPeg.CBV.WordStarExamples
 import MacroPeg.CBV.FirstReturn
 import MacroPeg.CBV.GeneralStarFilter
 import MacroPeg.CBV.GeneralStarExamples
+import MacroPeg.CBV.CapturePrefixRows
+import MacroPeg.CBV.ProfileControl
+import MacroPeg.CBV.ControlFilter
+import MacroPeg.CBV.RecursiveArgumentCompiler
+import MacroPeg.CBV.RecursiveArgumentCorrespondence
+import MacroPeg.CBV.RecursiveArgumentExamples
+import MacroPeg.CBV.OriginControlNormalization
+import MacroPeg.CBV.OriginControlExamples
+import MacroPeg.CBV.EmptyReplayExamples
+import MacroPeg.CBV.ClosedOriginExamples

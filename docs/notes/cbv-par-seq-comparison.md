@@ -5358,3 +5358,213 @@ were updated to include the actual standard `Classical.choice` dependency
 from the new well-founded state-elimination definitions. All dependencies
 remain standard Lean axioms or none; the new/modified modules have no proof
 placeholders or Lean warnings.
+
+
+### Physical-prefix row correspondence and observer handoff
+
+`CapturePrefixRows` strengthens the row invariant used by the heterogeneous
+recursive compiler. For every physical decomposition `sfx x p = w ++ sfx x j`,
+the source unary row at `p`, supplied with `w`, equals its profile-specialized
+Seq row at `j`. The prefix need not arise from the user's configured argument
+at the same approximation stage, or from that argument at any stage. Both
+finite failure and undefined evaluation remain part of this equality.
+
+The proof derives replay rotation from a literal witness in an empty grammar;
+no soundness condition is imposed on the two replay tables. It then inducts
+on seeded user rounds with the stronger physical-prefix invariant. The old
+same-stage argument condition follows from this invariant using actual capture
+soundness, so the evaluator step applies without assuming that condition as a
+separate row oracle. `rows_of_capture` permits the witnessing capture to come
+from any sound first-order CBV grammar and table, at an unrelated stage.
+
+For any finite observer `D`, `filtered_rows` factors an observed source row
+through the captured word: the tail starts at `run D q w`, rather than `q`.
+`filtered_rows_profile` obtains that state from the finite incoming profile.
+This is an identity for the real recursive rows and all partial results; it
+is not yet a generator for filtered user rows. The proof uses physical suffix
+soundness of successful target row queries to compose the consumed prefixes.
+
+The kernel example configures the user's argument as `Z`, which fails on
+`ababa#aba`, but supplies the physical prefix `aba` directly to its unary row.
+The source row succeeds, and the target row's success follows from the general
+row theorem. A two-state b-parity observer distinguishes the full three b's
+from the two b's in the tail, detecting an incorrect unshifted observer state.
+
+This removes the same-stage capture premise needed for the next recursive
+argument construction. Parameter-bearing user calls inside arguments still
+require generated product user rows and a simultaneous argument/body proof.
+Multiple independent arguments, arbitrary body entry, original-grammar
+normalization, and general Par/Seq equality or separation remain unresolved.
+
+Validation: full `lake build` passed (847 jobs), including Audit. All thirteen
+new public axiom guards use only standard Lean axioms. The new module has no
+proof placeholders or Lean warnings.
+
+
+### Explicit recursive users inside dependent arguments
+
+`RecursiveArgumentCompiler` replaces the fixed argument chosen per callee by
+an explicit, structurally nested argument at every call site. Its syntax has
+literals, retained parameters, independent recursive helpers, unary user calls,
+sequence, prioritized choice, negation, and arbitrary nested stars. The same
+syntax describes both user bodies and arguments; user calls inside arguments
+can therefore invoke mutually recursive parameter-bearing users, whose bodies
+can call further users with different arguments. Rendering is structural and
+does not recursively expand a callee's configured argument at compile time.
+
+Each user still has a nonempty fixed literal shift and the source row entry
+`(shift_i param(0)) body_i`. The joint phase machine supplies complete finite
+profiles. The compiler generates ordinary target rows and product target rows,
+indexed by callee, incoming profile, and either plain mode or observer start/end
+states. A product row reads the same rotated prefix as the plain row, then
+filters the body from the state obtained by processing both the captured word
+and that rotated prefix. Its argument is the actual translated argument, so
+Seq's argument evaluation captures and consumes it once; no retained value is
+passed through a helper call merely to run a filter.
+
+`ProfileControl` implements profile selection over any actual plain expression
+and its actual product expressions. Its one-step correctness premise is local
+and is discharged structurally in the recursive compiler. Undefined arguments
+stay undefined, and a later continuation failure cannot select a different
+capture/profile. `ControlFilter` supplies the compositional sequence law.
+
+`RecursiveArgumentCorrespondence.evaluator_of_rows` proves plain and filtered
+evaluation together by structural induction, allowing recursive user calls
+inside the arguments themselves. `tables_rows` discharges its row premise by
+induction over seeded user rounds, simultaneously for every physical incoming
+prefix and every valid product state pair. Both modes have the same leading
+rotated prefix; therefore the existing physically justified prefix-failure
+seed preserves their zero-stage relation. The argument-stage and body-stage
+inductions are separate, resolving the mismatch that motivated the stronger
+physical-prefix invariant. No semantic row or argument-filter oracle remains
+in the final evaluator, observation, or language theorems.
+
+`observations_iff` removes the seeds and relates actual finite observations of
+the two fixed first-order grammars on every unchanged original input string.
+`language_translation` provides the corresponding fixed Seq grammar. Complete
+partial-result correspondence also preserves undefinedness.
+
+The kernel example uses different shifts `a` and `aa`. A recursive user under
+argument repetition captures the parent's six a's; a later call under star
+uses that retained value to capture fourteen a's for a recursive child. The
+child copies all fourteen after its delimiter, and the parent copies its own
+six after return. Substituting a six-character child copy or a two-character
+parent copy fails in the actual source grammar. Generated Seq observations
+follow from the unbounded compiler theorem, rather than bounded evaluation of
+the large profile/product grammar. An empty argument iteration is proved
+undefined in every seeded target round.
+
+Remaining scope: multiple independent general arguments, arbitrary source
+body entry, and normalization of arbitrary original first-order grammars into
+the shifted unary form. The new syntax uses literals and the listed controls;
+ordinary character atoms and other original syntax have not been normalized
+into it. General Par/Seq equality or separation remains unresolved.
+
+Validation: full `lake build` passed (852 jobs), including Audit. All
+thirty-eight new public axiom guards use only standard Lean axioms. The five
+new modules have no proof placeholders or Lean warnings.
+
+
+### Capture-dependent origin control with recursive arguments
+
+`OriginControlNormalization` allows source unary bodies to be finite trees of
+prioritized choice, negation, and positive guards over shifted-replay leaves.
+A source rule need not start with replay and can return before its argument's
+endpoint. Leaf tails and call-site arguments retain the recursive argument
+syntax, including capture-dependent user recursion and nested stars.
+
+The syntactic normalization expands a control call into its caller-side tree
+of leaf calls, preceded by lookahead of the normalized argument. The lookahead
+preserves argument failure and undefinedness before negation can inspect a
+branch. Every leaf re-evaluates the same deterministic argument at the same
+origin and stage, supplying the same word; later branch failure cannot select
+a different capture. This does not assume the original source is a normalized
+core grammar.
+
+Par-to-Par normalization is proved at every ordinary physical table round for
+the entire recursive family. The row invariant relates a source control-user
+row to the tree of actual normalized leaf-row queries. All leaves are unknown
+at zero; the plan's all-unknown law handles negation. At successor rounds the
+shared prefix and structural evaluator induction relate the recursive tails.
+The row premise is discharged by induction, while independent helper tables
+are transported between actual installed grammars. `normalized_observations_iff`
+then composes with the recursive argument compiler to prove actual finite
+observations and fixed Seq language translation on unchanged original strings.
+No semantic row/filter oracle or source-replacement assumption remains.
+
+The kernel example combines parent-six / child-fourteen / parent-six capture
+reuse with guarded choice and negative fallback. Short copies fail under a
+final delimiter. After a failed recursive branch, another caller returns after
+one character although its argument captured six, demonstrating restoration of
+the origin. Generated Seq observations, including that earlier endpoint,
+follow from the unbounded theorem. A kernel counterexample shows that dropping
+the argument lookahead turns a failed `Z` argument into success via negation.
+Empty argument iteration is unknown in every source physical round, and the
+generated Seq grammar has no finite success or failure observation for it.
+
+Remaining scope: arbitrary consuming sequences/stars at body entry are not
+yet reduced to origin control trees. Every consuming leaf still starts with a
+nonempty fixed shifted replay. Capture-independent consuming leaves, multiple
+independent general arguments, atom normalization, and arbitrary original
+grammar normalization remain open. General Par/Seq equality or separation is
+not established.
+
+Validation: full `lake build` passed (854 jobs), including Audit. All
+twenty-eight new public axiom guards use only standard Lean axioms or no
+axioms. The two added modules have no proof placeholders or Lean warnings.
+
+
+### Empty replay shifts and capture-independent consuming branches
+
+The recursive argument compiler now permits an empty fixed replay shift.
+For `u = []`, the source replays the actual captured word and the target tail
+starts immediately at its endpoint, with an empty literal prefix. No
+periodicity test is appropriate in this case. `UsersValid` consequently
+requires only valid body syntax. The complete simultaneous plain/product row
+proof, finite observations, and fixed-grammar language translation apply to
+these users together with users having nonempty shifts.
+
+`OriginControlNormalization.Leaf` now explicitly distinguishes replay leaves
+(`some u`, including `some []`) from capture-independent leaves (`none`). A
+closed leaf body may consume literals, sequence, choice, star, independent
+helpers, or invoke recursive users that capture and use their own arguments.
+It cannot refer to the incoming argument value at its own lexical scope. That
+condition is syntactic (`Closed`), and `render_closed` proves the actual source
+expression's environment independence.
+
+A replay leaf receives the original normalized argument; a closed leaf
+receives an empty literal argument and has an empty core replay prefix. This
+lets it start at the original origin without advancing over the discarded
+capture. Both kinds still query installed unary core rows at the same physical
+round. The normalization row induction uses the closed source body's
+independence to relate its incoming environment to `[[]]`. Therefore source
+origin control can choose between replay and capture-independent consuming
+branches in the same recursive family. The outer argument guard still
+preserves argument failure and undefinedness even when the selected body
+ignores that argument.
+
+The new kernel example mixes a nonempty replay, an unshifted replay, and a
+closed consuming fallback. The fallback consumes a literal, runs a recursive
+capture parser, repeats literals, and calls the same control user with a fresh
+argument. After return the outer parent value is reused. Both the replay and
+fallback inputs are accepted, and an incorrect inner copy is rejected. A
+separate physical core execution shows that passing the six-character original
+argument to the closed leaf incorrectly advances it and fails, while its empty
+argument succeeds. Generated Seq observations follow from the full compiler.
+
+An unshifted replay accepts the nonperiodic capture `abac` in `abac#abac`.
+A direct recursive cycle through an empty argument remains unknown in every
+source physical round; the generated Seq grammar has no finite success or
+failure observation on that input. This checks that removing nonempty shifts
+does not introduce an implicit progress assumption.
+
+Remaining scope: general capture-dependent consuming sequences/stars before
+replay, multiple independent general arguments, character-atom normalization,
+and normalization of arbitrary original first-order grammars. General Par/Seq
+equality or separation remains unresolved.
+
+Validation: full `lake build` passed (856 jobs), including Audit. All 93
+public PR theorem dependencies were rechecked. Fourteen new guards use only
+standard Lean axioms or no axioms; four existing normalization guards now
+include standard `Classical.choice`. The new modules have no proof
+placeholders or Lean warnings.
