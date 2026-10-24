@@ -472,3 +472,6 @@ import MacroPeg.CBV.BodySyntaxCompiler
 import MacroPeg.CBV.BodySyntaxExamples
 import MacroPeg.CBV.NullableStarControl
 import MacroPeg.CBV.NullableStarExamples
+import MacroPeg.CBV.ArgumentBodyView
+import MacroPeg.CBV.ArgumentBodyCompiler
+import MacroPeg.CBV.ArgumentBodyExamples
