@@ -5625,3 +5625,24 @@ Validation: full `lake build` passed (865 jobs), including Audit. All 77 public 
 This extends the leading-star case to per-iteration branch selection. The Consumer and closed-leaf conditions still restrict the eligible control syntax; arbitrary first consumption before replay, unrestricted leading stars, multiple independent captures, and general Par/Seq equality or separation remain unresolved.
 
 Validation: full `lake build` passed (866 jobs), including Audit. All 86 public PR theorem dependencies were rechecked and all guards passed; 9 guards are new. All dependencies are standard Lean axioms or none. The ten added modules compile without warnings or placeholders; source and whitespace audits passed.
+
+
+### Leading repetitions without a mandatory final replay
+
+`GuardedStarFactor` removes the final A requirement from the preceding rotation. For decreasing partial parsers A and B, put `G = &(A B) ; A`. It proves the complete partial-result identity
+
+```
+(A B)* C = (G ; (B G)* ; B ; C) / (!(A B) ; C).
+```
+
+The guard on every later A prevents consuming an A whose B fails. For example, `(ab)* ac` accepts `abac`; using an unguarded `(ba)*` on the right loses the final `a` and rejects it. The initial negative branch also commits to the original star result: a later C failure cannot restart C at the original position. The proof includes failed/undefined parses, zero iterations, empty successful iterations, and differing A/B consumption. All guards and repetitions are inline expressions; no recursive rotation helper or extra clock hypothesis is needed.
+
+`StarThenPlan` gives the actual finite leaf layout for this identity. A and C are expanded from two bounded origin-control plans P and Q over a local leaf list. P is Consumer; Q may also return through a negative test. Original leaves implement tests, selected P outputs receive B in one copy block and `(B G)* B C` in another. `ConsumingPlanOutputs` tracks only output leaves, so guard-only and C-only leaves remain unchanged in the copy blocks. In particular, a closed C-only leaf does not acquire an unused capture-dependent continuation. A closed leaf actually selected by P still has the existing closed-continuation restriction.
+
+`StarThenCompiler` combines these users with the earlier control/consuming/leading-replay users in one mutually recursive source grammar. It proves equality of ordinary physical tables at every round, then composes the existing translation to a fixed first-order Seq grammar. The final observation/language theorems preserve the same original input strings. Their assumptions are independent helper validity, computed syntactic family validity, and valid entry syntax. No partial-row, runtime capture/profile, non-nullability, replacement-source, or clock-cofinality premise remains.
+
+Kernel examples include zero repetitions, mixed L/R repetitions with different shifts under the same six-character capture, fresh twelve-character recursive child captures, a final successful A with failed B, a final negative test returning before the argument endpoint, and a closed final `ac` leaf despite a capture-dependent loop body. They reject a short retained copy and distinguish both missing-next-iteration guards and an unsound fallback after C failure. Seq observations of the recursive examples follow from the unbounded translation theorem. Empty capture/empty iteration preserves undefinedness.
+
+This removes the mandatory final replay and permits an independent final origin-control plan. It still requires an eligible finite Consumer plan at the beginning of each iteration, and computed validity for its generated leaves. Arbitrary consumption before the first replay, unrestricted original body normalization, and multiple independent general captures remain open. General Par/Seq equality or class separation is not established.
+
+Validation: full `lake build` passed (871 jobs), including Audit. All 38 new public theorem dependencies are standard Lean axioms or none and have guarded checks. The five added modules compile without warnings or placeholders; source and whitespace audits passed.

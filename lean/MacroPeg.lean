@@ -461,3 +461,8 @@ import MacroPeg.CBV.GreedyRotation
 import MacroPeg.CBV.LeadingReplayStar
 import MacroPeg.CBV.LeadingReplayStarExamples
 import MacroPeg.CBV.SelectedReplayStarExamples
+import MacroPeg.CBV.ConsumingPlanOutputs
+import MacroPeg.CBV.GuardedStarFactor
+import MacroPeg.CBV.StarThenPlan
+import MacroPeg.CBV.StarThenCompiler
+import MacroPeg.CBV.StarThenExamples
