@@ -15461,3 +15461,71 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.CodewordControlEnvironmentExamples.scanner_control
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCodewordControl.linked_append' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCodewordControl.linked_append
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCodewordControl.linked_uniform' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCodewordControl.linked_uniform
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCodewordControl.uniform_rotate' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCodewordControl.uniform_rotate
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCodewordControl.linked_replay' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCodewordControl.linked_replay
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCodewordControl.filter_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCodewordControl.filter_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCodewordControl.filter_none' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCodewordControl.filter_none
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCodewordControl.filter_fail' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCodewordControl.filter_fail
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCodewordControl.success' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCodewordControl.success
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCodewordControl.physical_compare' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCodewordControl.physical_compare
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCodewordControl.argument_checks' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCodewordControl.argument_checks
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCodewordControl.entry' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCodewordControl.entry
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCodewordControl.physical_entry' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCodewordControl.physical_entry
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCodewordExamples.dynamic_parent_executions' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCodewordExamples.dynamic_parent_executions
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCodewordExamples.actual_selected_parts' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCodewordExamples.actual_selected_parts
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCodewordExamples.preflight_preserves_undefined' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCodewordExamples.preflight_preserves_undefined
