@@ -8409,3 +8409,79 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.StatefulPairFusion.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayFallbackFusion.closed_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayFallbackFusion.closed_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayFallbackFusion.closedArgs_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayFallbackFusion.closedArgs_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayFallbackFusion.subst_closed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayFallbackFusion.subst_closed
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayFallbackFusion.substArgs_closed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayFallbackFusion.substArgs_closed
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayFallbackFusion.closed_env' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayFallbackFusion.closed_env
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayFallbackFusion.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayFallbackFusion.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayFallbackFusion.render_closed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayFallbackFusion.render_closed
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayFallbackFusion.par_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayFallbackFusion.par_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayFallbackFusion.seq_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayFallbackFusion.seq_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayFallbackFusion.par_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayFallbackFusion.par_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayFallbackFusion.seq_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayFallbackFusion.seq_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayFallbackFusion.evaluator_of_shift' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayFallbackFusion.evaluator_of_shift
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayFallbackFusion.tables_shifted' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayFallbackFusion.tables_shifted
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayFallbackFusion.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayFallbackFusion.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayFallbackFusion.decide_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayFallbackFusion.decide_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayFallbackFusion.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayFallbackFusion.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayFallbackFusion.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayFallbackFusion.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayFallbackFusion.fallback_returns_before_capture' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayFallbackFusion.fallback_returns_before_capture

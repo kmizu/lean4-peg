@@ -3806,3 +3806,59 @@ an arbitrary source body starting at the original call position. In particular,
 it does not establish the general CBV-Par/CBV-Seq reverse inclusion or a
 language-class separator. Those remain the full objective. Root imports and
 14 new public theorem axiom guards cover the complete compiler connection.
+
+
+### Restoring the caller for a capture-independent fallback
+
+`CBV/ReplayFallbackFusion.lean` addresses body entry through retained caller
+continuation rather than a residual body entered after all captures. Source
+rules have arity one and the form
+
+```
+F(x) <- (x B) / C
+```
+
+`B` is any first-order expression, including recursive calls and reuse of
+`x`. `C` has no reference to the outer captured environment (`Closed`); it
+may consume input, recurse, and invoke other rules with their own captures.
+The head argument is an arbitrary first-order expression. It is not restricted
+to a finite-state scan, finite palette, or bounded-length capture.
+
+The target generates an arity-one rule for translated `B` and an arity-zero
+rule for translated `C`. A translated call with argument `A` has the form
+
+```
+&translated(A) (F_main(translated(A)) / F_fallback())
+```
+
+The initial test preserves the source argument's failure and undefinedness
+before either body branch can run. Successful argument evaluation is repeated
+deterministically by the actual Seq call to `F_main`, which starts `B` at the
+capture endpoint with the captured value available. If that call finitely
+fails, ordinary caller-side PEG choice restores the original position before
+calling `F_fallback`. An undefined first branch never selects the fallback.
+`closed_env` and `render_closed` justify removing the outer capture from this
+fallback's environment, including through its argument expressions.
+
+`Shifted` relates a source row to an ordered choice between the target's
+advanced main row and its original-position fallback row. `evaluator_of_shift`
+proves the complete argument/call interface, including unknown, failed, and
+successful arguments. `tables_shifted` proves this relation at every physical
+table round for the actual generated rules. `evaluator_eq`, `decide_eq`,
+`observations_iff`, and `language_translation` then close the fixed recursive
+compiler without a user-table simulation hypothesis or totality assumption.
+All finite original-string observations are preserved.
+
+Unlike an unconditional replay source, the whole call need not advance past
+its argument capture. The kernel-checked `fallback_returns_before_capture`
+example captures all of `ab` but returns with `b` remaining after the first
+branch fails, under both actual grammars. This arrangement lies outside the
+single advanced-position interface ruled out by the earlier residual-control
+obstructions: it retains the original caller and its choice continuation.
+
+The restriction is substantive: the fallback cannot use the outer capture.
+Bodies whose non-replay branch accesses that value at arbitrary positions,
+multiple independent arbitrary arguments, and a general Par normal form
+remain unresolved. This is a direct extension of the reverse compiler, not
+a proof of general equality or a language-class separator. Root imports and
+18 new public axiom guards cover the compiler and the earlier-return example.

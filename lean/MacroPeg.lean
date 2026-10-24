@@ -392,3 +392,4 @@ import MacroPeg.CBV.ClockFreezing
 import MacroPeg.CBV.StatefulScannerStability
 import MacroPeg.CBV.FrozenPairArguments
 import MacroPeg.CBV.StatefulPairFusion
+import MacroPeg.CBV.ReplayFallbackFusion
