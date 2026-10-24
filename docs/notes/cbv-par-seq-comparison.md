@@ -4310,3 +4310,58 @@ normalization, and arbitrary independent captures are still outside this
 construction. General Par/Seq language-class equality or separation remains
 unresolved. Thirty-one new public axiom guards and root imports cover this
 extension.
+
+
+### Fresh captures and capture-dependent recursive arguments in one grammar
+
+`CBV/MixedPrefixFusion.lean` combines the independent-recursive-parser entry
+with the earlier leading-replay calling convention in one actual source/target
+grammar. A user specification has either a closed recursive parser head `A`,
+or no parser head. The corresponding Par bodies are `A B` and `x B`; both
+Seq bodies are `B`. All actual user rules have arity one.
+
+The raw shorthand `F()` calls a parser-headed rule with its fixed `A`.
+`R(a)` calls a replay-headed rule with the recursively translated argument
+`a`. Such arguments may use current captures, concatenation, ordered choice,
+consuming repetition, predicates, and user calls of either kind. They are
+not limited to Word expressions, a finite value palette, independent parser
+queries, or an origin-control-only body discipline. Both kinds of rules may
+call each other recursively, including inside an argument predicate. The
+parser-headed rules themselves still use their fixed closed arguments.
+
+`Ready` records the actual entry relationship: replay rules need the captured
+word's prefix split, while parser-headed rules need the real recursive parser
+result. `tables_shifted` derives both row relationships simultaneously at
+every frozen user stage. `ClockFreezing.frozen_sound` proves every defined
+frozen row has an actual derivation, using its information-order embedding
+into a physical table; it does not need a helper-stability assumption. This
+supplies the successful-prefix fact for arbitrary recursive replay arguments.
+The final `evaluator_eq`, `observations_iff`, and `language_translation`
+discharge the argument, helper, and user-table correspondence internally,
+preserving all finite observations and languages on the original strings.
+
+`lift`, `render_lift`, `grammars_lift`, and `valid_lift` embed the preceding
+independent-recursive-parser compiler exactly, including its eligibility,
+source/target grammars, and expanded expressions.
+
+`mixed_recursive_capture_execution` kernel-checks a run in which a new
+recursive capture `ab` feeds an argument containing `!Probe(x)` and
+`(x x / x)`. The replay rule consumes the selected argument, then recursively
+re-enters the parser-headed rule and obtains another fresh capture `aabb`.
+The two strategies accept `ab#abab!aabb#aabbaabb` and finitely reject
+`ab#abab!aabb#babbaabb` under their actual physical tables. The probe itself
+is a user-rule call, so argument evaluation crosses the recursive rule
+interface while using the caller's retained capture.
+
+`recursive_argument_choice_undefined` proves a separate user-recursive
+argument query stays undefined on **every** input and at **every** physical
+round. Negating it does not produce failure or success, and its following
+empty-word argument alternative cannot be selected.
+
+The remaining body restriction is an initial replay or an initial reparse of
+the fixed closed argument parser. No arbitrary body-entry normalization is
+proved. Parser-headed argument computations are still independent of user
+rules and current captures; unrestricted recursive/capture-dependent
+arguments enter through replay-headed rules. Multiple independent general
+arguments and general Par/Seq equality or separation remain unresolved.
+Twenty new public axiom guards cover the mixed compiler and frozen soundness.
