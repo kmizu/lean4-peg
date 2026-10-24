@@ -419,3 +419,11 @@ import MacroPeg.CBV.BlockCapture
 import MacroPeg.CBV.PeriodicOverlapFusion
 import MacroPeg.CBV.OverlapNecessity
 import MacroPeg.CBV.RegularCaptureProduct
+import MacroPeg.CBV.RegularCaptureCorrectness
+import MacroPeg.CBV.PeriodicCaptureMachine
+import MacroPeg.CBV.CaptureProductExtension
+import MacroPeg.CBV.FilteredOverlapCaller
+import MacroPeg.CBV.SeededClock
+import MacroPeg.CBV.RecursiveFilteredOverlap
+import MacroPeg.CBV.CaptureTransitionProfile
+import MacroPeg.CBV.DependentCaptureFilter

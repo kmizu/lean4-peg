@@ -4885,3 +4885,234 @@ is a prototype for `ab` with an EOF tail. General capture-dependent argument
 filtering, arbitrary body decomposition, multiple independent captures, and
 the full Par/Seq language-class goal remain unresolved. Twenty-six new public
 axiom guards cover the established local and physical results.
+
+
+## 2026-10-24: Recursive capture product correctness on every input
+
+`RegularCaptureCorrectness` closes the global table correspondence left open
+in the preceding section. For every valid finite literal/control graph,
+valid finite-state machine, input string, node, position, and state pair,
+`product_correct` equates the generated filter's canonical Seq result with
+`filtered` applied to the original parser's canonical result. In particular,
+undefined stays undefined, finite failure stays finite failure, a matching
+successful capture retains its exact endpoint, and a successful capture with
+the wrong final state becomes finite failure. There is no stopping,
+nonnullable-star, acyclicity, or capture-length hypothesis.
+
+The proof uses actual physical tables. `defined_at_fixed` transports any
+finite source result to a physical fixed point, including source rounds
+after the chosen fixed point. `row_at_fixed` establishes the installed PEG
+body equations. `finite_success` inducts on the source approximation round,
+with an inner strong induction on the remaining input position for star.
+Every successful star iteration strictly decreases that position; nullable
+iterations cannot yield a finite source success. `select_success` proves
+that the intermediate-state enumeration follows only the actual first
+capture's state, so later failure never selects another capture. Guards
+handle failed and undefined source results directly.
+
+`bound_fixed` eliminates a supplied fixed-point premise from the public
+correctness theorem by proving that the evaluator's standard bound is itself
+a fixed point. `canonical_helpers_eq` relates independent helper components
+across grammar extensions and both CBV strategies. Consequently,
+`product_source_correct` compares the generated Seq filter with the original
+standalone Par grammar, rather than only with queries inside the generated
+grammar. `product_observations` gives the corresponding unbounded successful
+finite-observation theorem on the unchanged original strings and preserves
+the exact remaining suffix.
+
+This proves the generated regular capture filter, not a general Par-to-Seq
+compiler. The graph still has no parameter-bearing source nodes and no
+any/range atoms. Ordinary syntax normalization, phase-machine construction
+for arbitrary shift words, and an unbounded theorem for the shifted caller
+that consumes the filtered argument remain to be connected. General
+capture-dependent filtering, arbitrary body decomposition, multiple
+independent captures, and full language-class equality/separation remain
+unresolved.
+
+Validation: full `lake build` succeeds (825 jobs), including `Audit`. All
+fourteen new public theorem guards use only standard Lean axioms. No bounded
+execution or new semantic axiom is used to justify the global correspondence.
+
+
+## 2026-10-24: Actual filtered arguments select arbitrary shift phases
+
+`PeriodicCaptureMachine` constructs a concrete machine for any nonempty
+fixed shift word `u`. Its states are the positions of `u` plus one sink.
+`prefix_iff_nonsink` proves that its run on `w` is nonsink exactly when
+`w` is a prefix of `u ++ w`. `run_rotation` proves the actual word equation
+`u ++ w = w ++ phase u r` at the reached nonsink state. No primitive-period,
+block-safe syntax, or capture-length hypothesis is imposed. The empty shift
+already belongs to the earlier direct replay-fusion case; this machine and
+the new caller theorem assume a nonempty shift.
+
+`CaptureProductExtension` proves that every original and generated product
+reference stays inside the zero-arity component. `component_valid` and
+`component_installed` allow ordinary parameter-bearing rows to be appended.
+`extension_call_eq` preserves canonical helper queries across these extensions
+and strategies; `extension_product_correct` installs the complete filter
+specification in the real caller grammar, without supplied semantic advice.
+
+`FilteredOverlapCaller` then constructs an actual Par/Seq grammar pair.
+The Par unary body is `(u param(0)) B`; the Seq grammar has one unary body
+`(phase u r) B` for each nonsink state. Its caller enumerates these rows with
+the corresponding generated state-filtered capture parser as the actual
+argument. Thus the selected Seq call consumes and retains the original full
+capture; the later continuation can replay or inspect that same value.
+A failed continuation cannot make another state use a different winning
+source capture. A sink capture makes source replay finitely fail and every
+Seq candidate fail. An undefined capture remains undefined because the
+nonempty phase list first queries the original undefined parse.
+
+`evaluator_eq` proves equality of complete partial results at every input and
+valid position. `observations_iff` includes finite failure and every successful
+remaining suffix. `language_translation` supplies one fixed first-order
+target grammar and start expression for all unchanged original strings.
+The continuation `B` may contain parameters, literals, any/range atoms,
+sequence, choice, repetition, predicates, and zero-argument calls into the
+independent helper component. The capture parser itself is any valid original
+literal/control graph, including mutual recursion, empty captures, cycles,
+and nullable repetition; it need not have periodic capture syntax.
+
+A kernel-checked physical execution uses shift `abc`, actual `abca` capture,
+residual `bca`, and reuse of the complete `abca` after `#`. A nonperiodic
+winning `abcx` capture is rejected by both real grammars.
+
+This connects the previous global product theorem to actual unary caller
+arguments and removes the old block-safe-head restriction for this entry
+shape. It does not yet compile parameter-dependent general capture parsers,
+recursive calls that replace the capture inside `B`, arbitrary body entry
+shapes, or multiple independent captures. Any/range source-graph normalization
+also remains open. Full Par/Seq equality or separation is still unresolved.
+
+Validation: full `lake build` succeeds (828 jobs). All 35 new public theorem
+axiom guards pass in `Audit` (34 use only standard Lean axioms, one needs no
+axioms); the updated Audit build also succeeds. No new Lean warnings or
+proof placeholders occur in these modules.
+
+
+## 2026-10-24: Recursive user recapture with prefix-failure seeding
+
+`RecursiveFilteredOverlap` extends filtered shifted replay to a recursively
+called user body. One fixed nonempty shift `u`, one fixed original capture
+node, and one fixed user-body template determine the source and target
+first-order grammars. Raw call zero recaptures at the current input position;
+raw call `j+1` invokes independent helper `j`. Parameters, ordinary atoms,
+sequence, ordered choice, predicates, and repetition are recursively rendered.
+Captures can have different unbounded lengths on successive calls. The
+caller's old capture remains available after the child returns.
+
+The ordinary bottom user tables cannot be compared round for round. A
+nonperiodic successful head is rejected by the Seq argument filter before
+entering a user rule, whereas Par needs a user step to reject its shifted
+replay. `SeededClock` resolves this proof issue without changing either
+installed grammar. `prefixSeed` initially records only a finite failure of
+an installed sequence body's leading expression, evaluated with actual
+frozen helper rows and bottom user rows. `prefixSeed_lower` and
+`prefixSeed_upper` place it between ordinary frozen stages zero and one.
+The resulting `frozen_le`, `le_frozen`, and `defined_iff` prove that seeded
+iteration has exactly the original physical evaluator's finite results.
+It cannot turn genuine undefinedness into a failed observation.
+
+`rounds_lexical` connects all seeded helper queries to the canonical physical
+evaluator. `rounds_failed_prefix` proves that a genuinely failed Word prefix
+is failed from seeded stage zero onwards, independently of its continuation.
+These are proof devices; no supplied capture oracle, seed table, or input
+length appears in the final generated grammar or language theorem.
+
+`entry_eq` compares actual phase-filtered unary calls from corresponding
+user rows. `evaluator_of_rows` extends that comparison through the rendered
+body's control and parameter uses. `tables_shifted` closes the recursive row
+correspondence by user-stage induction: the initial probes agree by the word
+rotation equation, and each subsequent stage uses the previous stage for
+its recursively rendered continuation. `evaluator_eq` preserves the full
+partial result at every seeded stage, environment, and valid position.
+`observations_iff` removes seeding using physical cofinality and preserves
+all finite failures and successful suffixes of the real source/target
+grammars. `language_translation` supplies one fixed target grammar and
+start expression for all unchanged original strings.
+
+A kernel execution checks actual capture endpoints: the parent captures
+five-character `ababa`, and a child call later captures three-character `aba`.
+The complete input `abababa#ababa!ababa#aba?ababa` is accepted by both actual
+physical grammars. Replacing the final parent copy by the child's shorter
+`aba` is rejected by both. Thus the parent value is retained across return
+from recursive fresh capture.
+
+This closes recursive capture replacement for one fixed independent capture
+parser, shift, and user-body template. It does not yet unify several such
+user families with different heads/shifts, compile capture parsers depending
+on incoming parameter values, support arbitrary body entry positions, or
+handle multiple independent general arguments. Ordinary graph normalization
+of any/range source atoms remains open. General Par/Seq language-class
+equality or separation is still unresolved.
+
+Validation: full `lake build` succeeds (830 jobs), including `Audit`. All
+34 new public theorem axiom guards use only standard Lean axioms. Both new
+modules compile without new warnings or proof placeholders.
+
+
+## 2026-10-24: Full transition profiles for parameter-dependent arguments
+
+A final state from one start state is insufficient metadata for a retained
+capture reused inside a later argument. `single_phase_insufficient` checks
+this with shift machine `aab`: `a` and `aaba` both take state zero to state
+one, but from state one they end at states two and three respectively.
+The same retained value can be replayed after another argument prefix, so
+its behavior from other start states matters.
+
+`CaptureTransitionProfile` represents a word by the array of its resulting
+states from every start state. `profile_mem` places every unbounded captured
+word's array in the fixed enumeration `profiles D`; `profiles_length` gives
+its size `width^width`. `compose_correct` computes the profile of a
+concatenation from the two finite arrays alone, without inspecting either
+retained word. None of this restricts actual capture lengths or replaces
+retained strings with a finite word palette.
+
+The profile is executable information, not a supplied semantic answer.
+`guard` uses lookaheads of the actual generated state-filtered capture calls
+for every starting state. `guard_correct` proves exact profile discrimination
+on the original committed capture, preserves undefined and failed original
+queries, and leaves the caller position unchanged. `select_correct` chooses
+a continuation from the finite profile list at the origin; a later failure
+cannot choose another capture or a different profile. These are unbounded
+canonical evaluator theorems on the generated helper grammar.
+
+`DependentCaptureFilter.Expr` then adds retained parameters to finite parser
+control: literals, parameters, independent recursive helper calls, sequence,
+ordered choice, and negation. An inline generated filter uses finite incoming
+profiles for parameter replay, the existing product for fresh helper captures,
+and real source queries for ordered-choice commitment. `correct` preserves
+the complete filtered result for every valid expression, input, environment,
+and state pair with accurate incoming metadata. Fresh helper calls can
+capture new arbitrarily long words, so these arguments are not merely Word
+expressions over a fixed environment.
+
+`render_eq` relates original Par and Seq argument evaluation for this syntax;
+`correct_par` gives the filtered Seq result against the original Par query.
+`guard_accurate` derives the incoming metadata condition from an actual
+successful profile guard on the previous capture. `guarded_argument_correct`
+therefore justifies the parameter-dependent filter after the previous capture
+has advanced the input position, using the retained original string and its
+actual generated guard instead of a semantic profile premise.
+
+A bounded kernel execution additionally constructs real profile-specialized
+unary Seq rows. It captures `a` or `b`, selects the complete profile through
+lookaheads, retains that character as the actual argument, and parses
+`c + param(0) + fresh b*`. `a#cabb#` succeeds and `b#cbbb#` fails for requested
+state zero. Both old words have state zero from zero. Deliberately supplying
+the `a` profile with retained `b` would wrongly pass the inner filter; the
+actual profile selector prevents that inconsistency in the execution.
+
+This closes finite-control parameter-dependent argument filtering, not the
+complete recursive parameter-dependent call translation. Selecting the new
+argument's full profile and threading it through specialized recursive user
+rows still need an unbounded caller correspondence. Parameter-dependent
+repetition and general parameter-bearing recursive parsers are outside this
+inline syntax (independent helpers may already recurse and repeat). Multiple
+user families, general body entry and independent arguments, ordinary graph
+normalization, and full Par/Seq language-class equality/separation remain
+unresolved.
+
+Validation: full `lake build` succeeds (832 jobs), including `Audit`. All
+29 new public theorem axiom guards use only standard Lean axioms. The new
+modules have no proof placeholders or Lean warnings.
