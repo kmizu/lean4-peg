@@ -6335,3 +6335,61 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SequentialReturnPackedMachine.finite_alphabet' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialReturnPackedMachine.finite_alphabet
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureCopyMachine.transfer_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCaptureCopyMachine.transfer_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureCopyMachine.capture_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCaptureCopyMachine.capture_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureCopyMachine.wordCode_encode' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCaptureCopyMachine.wordCode_encode
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureCopyMachine.pre_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCaptureCopyMachine.pre_length
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureCopyMachine.original_input_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCaptureCopyMachine.original_input_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureCopyMachine.original_input_tape' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCaptureCopyMachine.original_input_tape
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureCopyMachine.finite_alphabet' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCaptureCopyMachine.finite_alphabet
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureCopyMachine.withInput_fits' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCaptureCopyMachine.withInput_fits
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureCopyMachine.reachable_buffer_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCaptureCopyMachine.reachable_buffer_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureCopyMachine.reachable_buffer_tape' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCaptureCopyMachine.reachable_buffer_tape
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureCopyMachine.wordTape_append' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCaptureCopyMachine.wordTape_append
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureCopyMachine.argHead_word_target' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCaptureCopyMachine.argHead_word_target
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureCopyMachine.character_bound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCaptureCopyMachine.character_bound

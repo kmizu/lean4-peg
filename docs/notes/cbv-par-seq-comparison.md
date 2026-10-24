@@ -2757,3 +2757,53 @@ creation), dynamic matching, ordinary-input initialization, and the complete
 recognition connection remain open. The complete recognizer's established
 bound remains `O(n log n)`, and the general same-input Par/Seq language-class
 comparison remains unresolved.
+
+### Copy an actual capture from the unchanged original input
+
+`MacroPeg.CBV.SequentialCaptureCopyMachine` implements the character-copying
+part of a successful argument-head return. The compressed cursor stream on
+tape 0 begins with the current cursor `q` and the saved cursor `p`; its two
+unary blocks have lengths `q` and `p-q`. Tape 6 holds the original input's
+positive character symbols in their original order. Neither decoded cursor
+values nor an externally computed substring is supplied to the program.
+
+The fixed `program` transfers one original-input symbol per bit of the first
+cursor block into a temporary suffix buffer. It saves that block's delimiter,
+then transfers one symbol per bit of the next difference block, also copying
+each character into the word tape. A zero delimiter is pushed before those
+characters. Finally, both the original input and the complete cursor stream
+are restored and the two scratch tapes are cleared. All unrelated tapes,
+including the clock and control stream, are preserved.
+
+`transfer_runs` proves the actual runtime loop for arbitrary lengths and
+symbol lists. `capture_runs` composes both loops and restorations. The proof
+covers empty captures, empty suffixes, and arbitrarily many remaining saved
+positions. `original_input_runs` and `original_input_tape` prove that the
+produced word is exactly `pre x p q`, in the same character order and with the
+same delimiter as the existing retained-word codec (`wordCode_encode`).
+Capacity bounds apply at every intermediate instruction and compiled tape
+state, including both temporary source copies.
+
+`withInput` extends the six packed-state tapes by the unchanged original
+input and one reserved environment-prefix scratch tape. For every initialized
+reachable state with those first two cursors, `reachable_buffer_runs` and
+`reachable_buffer_tape` execute the same fixed copier with capacity
+
+```
+(linearFactor g e + 1) * (input length + 1) + 3.
+```
+
+`finite_alphabet` verifies the pushed-symbol requirement, and
+`character_bound` gives a fixed Unicode symbol bound independent of the input.
+
+The resulting word is currently appended to the top of the word tape as a
+temporary buffer. This is not yet a complete argument-head return: the
+retained-word order requires the new capture **below the current environment**.
+`argHead_word_target` identifies the exact required target for every
+environment and continuation stack: the reversed stack-word suffix, followed
+by the new word, followed by the reversed current environment. A streaming
+save/restore of the environment prefix using the environment-length header,
+the final cursor and control edits, ordinary-input loading, other instructions,
+and whole-machine selection remain to be composed. The complete recognizer
+still has the established `O(n log n)` bound; general Par/Seq language-class
+equality or separation remains unresolved.
