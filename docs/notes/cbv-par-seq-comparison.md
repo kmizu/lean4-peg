@@ -4607,3 +4607,58 @@ construction; it has not yet been combined with the guarded mixed-mode
 compiler. Arbitrary capture-dependent arguments and general Par/Seq equality
 or separation remain unresolved. Twenty-three new public axiom guards cover
 this construction.
+
+
+### Absorbing scanners and arbitrary replay arguments in one grammar
+
+`CBV/MixedScannerPrefixFusion.lean` connects the preceding scanner compiler
+with replay-headed rules in one actual fixed source/target grammar pair.
+A rule with a fixed closed recursive head uses `scan(A) B` at source body
+entry and the same scanner at target body entry. A rule without a fixed
+head instead accepts one arbitrary recursively rendered argument: the source
+replays its captured value before `B`, and the target enters `B` after Seq
+argument capture. Calls may recursively change modes. Neither the arbitrary
+arguments nor the replay-rule tails need satisfy the scanner-alphabet check;
+that condition applies only to independent fixed-parser heads and helpers.
+
+`Ready` distinguishes an actual fixed-head capture from a captured arbitrary
+argument prefix. `tables_shifted` closes both cases. In scanner mode, the
+syntactic absorption theorem makes the two body entries reach the same
+position. In replay mode, actual argument success supplies the prefix fact
+and the source replay reaches the Seq body position. `evaluator_of_shift`
+handles arbitrary recursively rendered argument computations, including
+choice, predicates, repetition, parameters, and nested calls. Physically
+stabilized helpers and frozen/physical cofinality eliminate semantic oracle
+assumptions from `observations_iff` and `language_translation`.
+
+This combines the two calling conventions operationally. The existing
+scanner-only grammar embeds exactly: `render_liftScanner` and
+`grammars_liftScanner` prove syntactic equality, and `valid_liftScanner`
+transfers its conditions. Fresh-mode source bodies still do not begin with a
+head reparse or a capture replay.
+
+`scanner_to_recursive_argument_execution` kernel-checks actual physical
+tables on `aabbab#aabbaabb;aabbaabb!ababb#abccc;abccc`. The first independent
+recursive argument captures `aabb`, then its body scans the longer prefix
+`aabbab`. A parameter-dependent argument runs a recursive negative query and
+captures the selected duplication `aabbaabb`. The replay rule uses that new
+capture repeatedly, then recurses into fresh mode. There the head captures
+`ab`, its body scans `ababb`, and a new argument captures `abccc`, adding
+fresh `c` characters to the retained value before further repeated replay.
+An altered final copy is finitely rejected by both actual grammars.
+
+`unbounded_suffix_capture` separately proves for all retained words `w`, all
+`n`, all tails, and all tables/strategies that the parameter followed by the
+`c` scanner really captures `w ++ c^n` before `#`. Both argument evaluators
+return that actual value; the Seq evaluator also returns the correct ending
+position. Thus this mode is not restricted to finite choices of existing
+Word expressions. `recursive_argument_choice_undefined` proves on every
+input and every physical round that an undefined recursive negative query
+inside an argument never falls through to the empty alternative.
+
+The fresh component is still closed and independently recursive, and its
+body entry must be the absorbing scanner. Replay mode retains its own
+leading-replay condition. This compiler has not been combined with arbitrary
+caller-position body plans. General body decomposition, multiple independent
+general captures, and the full Par/Seq equality or separation remain
+unresolved. Twenty additional public axiom guards cover the mixed compiler.

@@ -412,3 +412,4 @@ import MacroPeg.CBV.MappedGuardedWordSelection
 import MacroPeg.CBV.GuardedPrefixControl
 import MacroPeg.CBV.ScannerAbsorption
 import MacroPeg.CBV.ScannerPrefixFusion
+import MacroPeg.CBV.MixedScannerPrefixFusion

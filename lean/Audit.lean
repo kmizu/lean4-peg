@@ -9950,3 +9950,96 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.ScannerPrefixFusion.recursive_argument_undefined' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ScannerPrefixFusion.recursive_argument_undefined
+
+-- Absorbing fresh scanners and arbitrary recursive replay arguments.
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.par_installed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.par_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.seq_installed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.seq_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.par_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.par_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.seq_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.seq_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.par_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.par_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.seq_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.seq_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.evaluator_of_shift' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.evaluator_of_shift
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.lexical_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.lexical_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.tables_shifted' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.tables_shifted
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.render_liftScanner' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.render_liftScanner
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.grammars_liftScanner' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.grammars_liftScanner
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.valid_liftScanner' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.valid_liftScanner
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.example_valid' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.example_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.scanner_to_recursive_argument_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.scanner_to_recursive_argument_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.unbounded_suffix_capture' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.unbounded_suffix_capture
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.recursive_argument_choice_undefined' depends on axioms: [propext,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.recursive_argument_choice_undefined
