@@ -13797,3 +13797,101 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.CountedCodeExamples.translated_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.LastCodewordRotation.star_stop_test' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LastCodewordRotation.star_stop_test
+
+/-- info: 'Shallot.MacroPeg.CBV.LastCodewordRotation.rotate' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LastCodewordRotation.rotate
+
+/-- info: 'Shallot.MacroPeg.CBV.LastCodewordRotation.expression_rotation' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LastCodewordRotation.expression_rotation
+
+/-- info: 'Shallot.MacroPeg.CBV.LastCodewordRotation.argument_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LastCodewordRotation.argument_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.LastCodewordRotation.step_success' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LastCodewordRotation.step_success
+
+/-- info: 'Shallot.MacroPeg.CBV.LastCodewordRotation.step_trace' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LastCodewordRotation.step_trace
+
+/-- info: 'Shallot.MacroPeg.CBV.LastCodewordRotation.capture_endpoint' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LastCodewordRotation.capture_endpoint
+
+/-- info: 'Shallot.MacroPeg.CBV.LastCodewordRotation.last_trace' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LastCodewordRotation.last_trace
+
+/-- info: 'Shallot.MacroPeg.CBV.LastCodewordCandidate.power_succ_right' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LastCodewordCandidate.power_succ_right
+
+/-- info: 'Shallot.MacroPeg.CBV.LastCodewordCandidate.constant_trace' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LastCodewordCandidate.constant_trace
+
+/-- info: 'Shallot.MacroPeg.CBV.LastCodewordCandidate.scanner_stop' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LastCodewordCandidate.scanner_stop
+
+/-- info: 'Shallot.MacroPeg.CBV.LastCodewordCandidate.literal_at' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LastCodewordCandidate.literal_at
+
+/-- info: 'Shallot.MacroPeg.CBV.LastCodewordCandidate.capture_at' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LastCodewordCandidate.capture_at
+
+/-- info: 'Shallot.MacroPeg.CBV.LastCodewordCandidate.verifier_at' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LastCodewordCandidate.verifier_at
+
+/-- info: 'Shallot.MacroPeg.CBV.LastCodewordCandidate.captured_value' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LastCodewordCandidate.captured_value
+
+/-- info: 'Shallot.MacroPeg.CBV.LastCodewordCandidate.body_at' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LastCodewordCandidate.body_at
+
+/-- info: 'Shallot.MacroPeg.CBV.LastCodewordCandidate.source_execution' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LastCodewordCandidate.source_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.LastCodewordCandidate.target_execution' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LastCodewordCandidate.target_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.LastCodewordCandidate.scanner_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LastCodewordCandidate.scanner_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.LastCodewordCandidate.source_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LastCodewordCandidate.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.LastCodewordCandidate.target_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LastCodewordCandidate.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.LastCodewordCandidate.entries_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LastCodewordCandidate.entries_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.LastCodewordCandidate.observations' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LastCodewordCandidate.observations
+
+/-- info: 'Shallot.MacroPeg.CBV.LastCodewordCandidate.LateUndefined.argument_guard_required' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LastCodewordCandidate.LateUndefined.argument_guard_required

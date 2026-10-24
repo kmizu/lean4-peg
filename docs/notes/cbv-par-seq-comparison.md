@@ -6044,3 +6044,51 @@ translate arbitrary capture shapes, retained-value-dependent headers,
 argument calls into parameterized user rules, independent multiple
 captures, or arbitrary consuming prefixes. General Par/Seq class equality
 or separation remains unresolved.
+
+
+### Leave the final header outside an input-dependent capture
+
+A separate route keeps the **whole original capture**, avoiding loss of
+its input-dependent codeword count. For a partial header parser A, let
+`B = (A &A)*`. `LastCodewordRotation.rotate` proves
+`B A = A A*` for all deterministic decreasing partial parsers, including
+finite failure, later undefined results, and nullable repetition loops.
+`expression_rotation` connects this equation to actual first-order CBV
+expression evaluation under a sound table. `capture_endpoint` derives from
+a successful actual B that either A already fails at the original position
+and B is empty, or B ends at a final successful A immediately followed by
+A's finite failure. `last_trace` constructs the B trace with one fewer
+iterations from any nonempty maximal finite A trace. No grammar count is
+used in these parsers.
+
+`LastCodewordCandidate` supplies a **candidate**, not yet an all-input
+translation. Set A to `a* '#'`, B as above, and `tail = '!';param0`.
+The source has `F(x) <- A x tail`, called as F(B) under Par.
+The Seq candidate has `F(x) <- A tail`, plus
+`V(u) <- (&A u)* !A`, entered through `&B; &V(A); F(B)`.
+V checks that the maximal run consists of copies of its runtime first
+header; F retains B's entire capture and consumes the final header before
+reusing that original capture after '!'.
+
+For `u = a^k '#'`, the **same fixed pair of grammars**, independent of k
+and n, is proved to accept every `u^(n+1) '!' u^n` for all k,n, including
+n=0. These are ordinary physical-stage evaluations and SObs derivations,
+not bounded enumeration. `capture_at` and `captured_value` prove that the
+actual B captures n complete runtime words while leaving the final word.
+`verifier_at` checks all n remaining words, and `body_at` verifies the same
+retained full string after the source shifted replay and the candidate's
+last-header consumption. Both runtime header length and captured word
+count are unbounded without changing the grammar.
+
+The initial `&B` is necessary for partial semantics: with header
+`A / (eps)*`, input `a#aa#Z` gives an undefined source argument. A premature
+verification sees unequal headers and finitely fails before reaching the
+later undefinedness. The actual ordinary Seq candidate without `&B` thus
+fails, whereas the guarded entry remains undefined. This guard-order
+counterexample is kernel-checked.
+
+The new candidate's equivalence on **all** inputs, its rejection of every
+unequal run, and integration with arbitrary recursive user tails remain
+unproved. The preceding fixed-count compiler's all-input theorems remain
+separate and verified. General Par/Seq class equality or separation is
+still unresolved.
