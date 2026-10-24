@@ -10043,3 +10043,87 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.MixedScannerPrefixFusion.recursive_argument_choice_undefined
+
+-- Commuting a short unary prefix across a fresh overlapping capture.
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureCommutation.all_of_dropWhile_append' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureCommutation.all_of_dropWhile_append
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureCommutation.captured_alphabet' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureCommutation.captured_alphabet
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureCommutation.unary_word' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureCommutation.unary_word
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureCommutation.unary_commutes' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureCommutation.unary_commutes
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureCommutation.prefix_swap' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureCommutation.prefix_swap
+
+/-- info: 'Shallot.MacroPeg.CBV.UnaryOverlapFusion.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UnaryOverlapFusion.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.UnaryOverlapFusion.par_installed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UnaryOverlapFusion.par_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.UnaryOverlapFusion.seq_installed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UnaryOverlapFusion.seq_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.UnaryOverlapFusion.par_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UnaryOverlapFusion.par_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.UnaryOverlapFusion.seq_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UnaryOverlapFusion.seq_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.UnaryOverlapFusion.par_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UnaryOverlapFusion.par_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.UnaryOverlapFusion.seq_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UnaryOverlapFusion.seq_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.UnaryOverlapFusion.evaluator_of_shift' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UnaryOverlapFusion.evaluator_of_shift
+
+/-- info: 'Shallot.MacroPeg.CBV.UnaryOverlapFusion.lexical_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UnaryOverlapFusion.lexical_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.UnaryOverlapFusion.tables_shifted' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UnaryOverlapFusion.tables_shifted
+
+/-- info: 'Shallot.MacroPeg.CBV.UnaryOverlapFusion.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UnaryOverlapFusion.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.UnaryOverlapFusion.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UnaryOverlapFusion.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.UnaryOverlapFusion.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UnaryOverlapFusion.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.UnaryOverlapFusion.example_valid' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UnaryOverlapFusion.example_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.UnaryOverlapFusion.overlapping_capture_execution' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UnaryOverlapFusion.overlapping_capture_execution

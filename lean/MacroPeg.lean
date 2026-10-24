@@ -413,3 +413,5 @@ import MacroPeg.CBV.GuardedPrefixControl
 import MacroPeg.CBV.ScannerAbsorption
 import MacroPeg.CBV.ScannerPrefixFusion
 import MacroPeg.CBV.MixedScannerPrefixFusion
+import MacroPeg.CBV.CaptureCommutation
+import MacroPeg.CBV.UnaryOverlapFusion

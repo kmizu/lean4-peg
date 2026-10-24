@@ -4662,3 +4662,56 @@ leading-replay condition. This compiler has not been combined with arbitrary
 caller-position body plans. General body decomposition, multiple independent
 general captures, and the full Par/Seq equality or separation remain
 unresolved. Twenty additional public axiom guards cover the mixed compiler.
+
+
+### Short prefixes and overlapping fresh-capture replay
+
+`CBV/CaptureCommutation.lean` extracts a captured-word alphabet from the
+syntactic recursive-parser absorption condition. The earlier scanner endpoint
+invariant, combined with actual successful-prefix semantics, implies that
+all characters of the consumed prefix belong to the declared alphabet.
+`captured_alphabet` proves this using actual sound tables. For a singleton
+alphabet, `unary_word` identifies every captured value as a repetition of that
+character. `unary_commutes` then permits a fixed repetition prefix to commute
+with captures of every length. `prefix_swap` proves equality of the two Word
+parsers for any commuting words, including finite failure, without any
+assumption about disjoint input spans.
+
+`CBV/UnaryOverlapFusion.lean` applies this to a full recursive compiler.
+Each fixed-parser rule declares a symbol `c`, a shift `d`, and an arbitrary
+recursively rendered tail `B`. The Par rule body is `(c^d param(0)) B`;
+the Seq rule body is `c^d B`. The caller supplies a closed independent
+recursive argument `H`. Syntactic validity requires the component and head
+to satisfy the singleton-alphabet condition, alongside ordinary lexical
+validity. The source body does not begin with a head reparse or a capture
+replay: it first consumes its short prefix, then replays the held capture.
+
+When the prefix is shorter than the capture, the source's first replay starts
+strictly inside the original argument capture interval. The transformation
+does not move that original body unchanged to the capture endpoint. It
+commutes the short prefix with the capture replay, which makes the source
+reach the same tail position as Seq argument consumption followed by the
+short prefix. Both tails retain the same original capture. `tables_shifted`
+closes this correspondence through the actual recursive grammar, including
+failing prefixes and arbitrary consuming recursive tails. Helper stabilization
+and physical/frozen cofinality yield `observations_iff` and
+`language_translation` on all original character strings. Final premises are
+syntactic; no runtime commutation oracle is assumed.
+
+`overlapping_capture_execution` checks actual physical tables for the closed
+recursive helper `A <- 'a' A 'a' / 'a'`. On a first block of fourteen `a`
+characters, the argument really captures thirteen: the theorem checks the
+actual Par argument list, not an assumed capture. The source body consumes
+one `a` before replaying those thirteen, so the intervals overlap by twelve
+characters. It uses the same capture again after `#`, then recursively obtains
+a new five-character capture from a six-character block. Both transformed
+grammars accept that input. A thirteen-character first block lacks the extra
+shift character and is finitely rejected by both strategies.
+
+This treats overlap that the preceding absorbing-scanner entry did not
+cover: the initial one-character source consumption has not reached the end
+of the thirteen-character capture. The result remains a singleton-alphabet
+fragment with a fixed repetition prefix and one independent head per rule.
+General noncommuting overlap, arbitrary body decomposition, multiple
+independent general arguments, and full Par/Seq equality or separation remain
+unresolved. Twenty additional public axiom guards cover the construction.
