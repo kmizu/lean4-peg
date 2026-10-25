@@ -8478,11 +8478,12 @@ also validates calls nested inside queries.
 This avoids requiring unused scanner helpers to consume words defined from
 every M state. A partial scanner can have different readable characters in
 different states while certified replay users build safe arguments.
-Consuming calls into an uncertified scanner user remain rejected. Safe
-incoming retained values are required by the open-environment evaluator
-theorem and are derived for every actual new capture; root language
-preservation starts with an empty environment. Actual consuming captures
-still need the stated finite selected-rule and literal checks.
+Consuming calls into an uncertified scanner user remain rejected when
+proving safety of their output. Replay users can now retain arbitrary words,
+including characters outside M and profiles reaching the total observer's
+sink. Only arguments to scanner entries or explicitly safe replay entries
+need the finite selected-rule and literal checks. Root language preservation
+starts with an empty environment.
 
 `observations_iff` preserves all finite observations, including failure,
 on every unchanged original input. `language_translation` supplies one fixed
@@ -8539,9 +8540,137 @@ physical grammar accepts and short copies fail; the fixed Seq translation
 preserves the whole source language on all inputs. Earlier mixed-entry and
 partial-scanner examples remain checked.
 
+`CaptureInputSafety` removes the global safe-environment requirement for
+replay users. Entries are `replay`, `safeReplay`, or `scan q`; the first two
+have the same actual replay prefix, while `safeReplay` additionally requires
+checked safe arguments. A body's check uses its own entry's input-safety
+flag. Every nested call is checked, including calls inside queries, but only
+callees requiring safe inputs demand a capture certificate. The
+open-environment correspondence likewise makes the retained-value safety
+premise conditional on the entry. Whole-capture observer profiles remain
+accurate for arbitrary words, including sink profiles.
+
+When checking an argument in an arbitrary replay environment,
+`CaptureInputSafety.withoutParams` forbids consuming uncertified retained
+values while allowing their actual use in zero-output queries. Its
+`suffix_shape` theorem derives safe output without assuming that the
+incoming environment is safe. In a safe environment the existing selected
+capture checker remains available. Thus safe values can still be forwarded
+through `safeReplay` users into scanner calls; arbitrary values can be
+constructed, passed between replay users, and reused after return. The
+final all-input observation, language, definedness, and undefinedness
+results take only finite checks, without a new semantic safety oracle.
+
+A mixed example captures an input-dependent z*# through a positive
+parameterized replay call, retains z#, constructs z#z for a recursive child,
+and reuses both complete values after returning. Those words fail M's
+all-state word check. The same arbitrary retained value is queried in the
+argument `!param 0; a` to a scanner call, whose new capture is safe. The
+scanner consumes an extra b and then reuses its own a; the parent query
+cannot be erased, as different retained values change its actual result.
+Directly consuming the arbitrary retained value as a scanner argument is
+rejected by the finite check. Kernel examples verify longer initial
+captures, three short-copy failures, and all-input/all-clock nullable
+argument divergence, and instantiate the fixed-Seq all-input language
+theorem for this grammar.
+
 The remaining restrictions include unary source users, the stated argument
-syntax, replay or scanner entry forms, a common machine M, and the finite
-consuming-capture checks. Arbitrary PEG prefixes, mixed-fragment compiler
+syntax, replay or scanner entry forms, a common machine M, and finite
+capture checks for calls requiring safe inputs. Arbitrary PEG prefixes, mixed-fragment compiler
 integration, independently captured multiple source arguments, and
 unrestricted first-order Par/Seq class equality or separation remain
 unresolved.
+
+
+## Exact entry-state scanner frontier certificates
+
+`ScannerFrontierCertificate.readable_iff_endpoint` identifies the exact
+resumption condition for an arbitrary captured word w and arbitrary suffix:
+w is readable from the actual scanner entry q iff the original scan reaches
+at least the end of w. `check` tests this condition using the whole-capture
+profile already selected by the generated filters. `check_position` expresses
+it at actual input positions. `RecursiveScannerProductHeader.argument_frontier`
+connects it to every actual source argument success, with arbitrary retained
+values and without a capture safety check.
+
+Both `plain_body` and `product_body` now require readability only from the
+configured entry, rather than Total M w. The generic entry lemmas use
+`entryCheck` on that finite profile; replay entries require no scanner
+frontier. The existing complete compiler derives this weaker certificate
+from its current stronger checks through `entryCheck_of_safe`.
+
+`covers` separately checks a finite simulation between one scanner start
+state and one required target state. Its soundness transports every defined
+source word, and `covers_consumed` transports the exact whole word of an
+actual scan. It requires neither all-state coverage nor convergence of
+relation refinement. `RecursiveScannerProductCapture.scanner_frontier_physical`
+derives this certificate for actual installed scanner rows at every physical
+clock and arbitrary retained environment, by lifting successes monotonically
+to the exact run. No primitive-row safety oracle is an input. A machine that reads b only from state 1 certifies its
+state-1 scanner language for entry 1 while rejecting entry 0 and failing
+the old all-state scanner-language certificate.
+
+This removes an unnecessary hypothesis from the resumption proof and gives
+an exact executable entry certificate. The full recursive compiler's
+argument checks still enforce the stronger Total condition for scanner
+calls. Replacing those checks with entry-indexed recursive capture safety,
+while tracking retained values through every consuming call, remains open.
+No broader all-input compiler theorem or class equality/separation is claimed
+from the local frontier results.
+
+
+## Checked profile sets close state-specific recursive capture safety
+
+`RecursiveCaptureProfiles` and `ProfileCheckedScannerCorrespondence` close
+the entry-indexed recursive argument-check gap described above. They reuse
+the same actual source and generated target grammars, with a different
+finite certification path. No Total M condition is used for captured words
+or incoming retained values in this path.
+
+Finite annotations describe possible scanner output profiles H(q), possible
+user output profiles C(i,P) for each actual argument profile P, and admitted
+user input profiles A(i). `scannerCheck` checks identity and closure under
+every actual scanner arc. `grammarCheck` checks actual user bodies for every
+finite input profile; parameters use their full actual profile, sequence
+composes output sets, choice takes their union, and queries output identity
+while retaining their actual computations. Stars use a finite candidate
+closure with an explicit identity/composition check. If that check fails,
+the abstract result conservatively falls back to the finite profile universe;
+no convergence or termination assumption enters soundness.
+
+Structural argument induction and user-round induction derive actual new
+capture profile membership from these finite checks. In particular,
+`frozen_rows` and `capture` do not take a semantic recursive-row or
+argument-success oracle as an input. Captures may vary across iterations,
+include nested stars, and invoke positive parameterized or mutually recursive
+users. Source headers have their actual original-position behavior.
+
+The call checker requires every possible argument profile to be admitted by
+the callee and to satisfy that callee's exact `entryCheck`. Body checks only
+need the admitted profiles; every nested call, including calls inside
+queries, retains its own check. Actual profile accuracy connects these finite
+checks to the source captures. The resulting simultaneous plain/product row
+correspondence preserves every finite observation on every unchanged original
+input, supplies one fixed first-order Seq grammar for the entire language,
+and preserves physical definedness and all-clock undefinedness. The final
+theorems require only the finite scanner, grammar, body, and root checks.
+Annotations are checked finite sets, not assumed semantic invariants; no
+completeness or automatic discovery of successful annotations is claimed.
+
+A partial machine reads a from both states and b only from state 1. Its
+state-1 whole scanner language fails the old all-state certificate. The new
+finite checks nevertheless certify positive parameterized scanner calls:
+an a/b star is captured as ab, the parent ab plus fresh b is passed into
+another scanner inside an argument and captured as abb, and both complete
+values are reused after return. The initial capture is input-dependent and
+unbounded. The star's a and b operands have different full profiles. Kernel
+examples verify the real physical source execution, generated target
+acceptance, four short-copy failures, and all-input/all-clock nullable
+argument divergence. The grammar instantiates the all-input language theorem.
+
+This closes the state-specific safety integration for this compiler family.
+Unary source users, the stated syntax, replay/scanner headers, one common
+machine, and existence of successful finite profile annotations remain
+restrictions. Arbitrary PEG prefixes, integration with other fragment
+compilers, independent multiple source captures, and unrestricted Par/Seq
+class equality or separation remain unresolved.

@@ -1,3 +1,4 @@
+import MacroPeg.CBV.ScannerFrontierCertificate
 import MacroPeg.CBV.RecursiveScannerProductCapture
 
 namespace Shallot.MacroPeg.CBV.RecursiveScannerProductHeader
@@ -6,17 +7,31 @@ open StatefulScanner (Machine)
 open DynamicScannerCapture (observer)
 open CaptureTransitionProfile (profile)
 
+/-- Entry resumption depends only on the configured scanner state and
+whole-capture profile. Replay entries impose no scanner frontier. -/
+def entryCheck {n : Nat} (entry : Entry n) (P : List Nat) : Bool :=
+  match entry with
+  | .scan q => ScannerFrontierCertificate.check P q
+  | .replay | .safeReplay => true
+
+theorem entryCheck_of_safe {n : Nat} (M : Machine n) (entry : Entry n) (w : List Char)
+    (h : entry.inputSafe=true → TotalCaptureSafety.Total M w) :
+    entryCheck entry (profile (observer M) w)=true := by
+  cases entry with
+  | scan q => exact (ScannerFrontierCertificate.check_actual M w q).mpr (h rfl q)
+  | replay | safeReplay => rfl
+
 /-- A positive parameterized call inside an actual source argument obtains
 its capture safety from the finite certified prefix, with arbitrary other
 user bodies outside that prefix. -/
 theorem argument_capture {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
     (safeUsers : Nat) (hSafe : sourceSafe M entries bodies safeUsers=true)
-    (a : Arg) (ha : argumentCheck M safeUsers a=true) (x : List Char) (k : Nat)
-    (E : List (List Char)) (hE : TotalCaptureSafety.Environment M E) (p j : Nat) (hp : p≤x.length)
+    (a : Arg) (trusted : Bool) (ha : argumentCheck M safeUsers trusted a=true) (x : List Char) (k : Nat)
+    (E : List (List Char)) (hE : CaptureInputSafety.EnvironmentFor M trusted E) (p j : Nat) (hp : p≤x.length)
     (hv : evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) E (sourceExpr M a) p=some (some j)) :
     TotalCaptureSafety.Total M (pre x p j) ∧ sfx x p=pre x p j++sfx x j :=
   ParameterizedCaptureSafety.capture_of_shape M x p j hp
-    (SelectedCaptureSafety.suffix_shape M (source M entries bodies) x .callByValuePar _ E hE
+    (CaptureInputSafety.suffix_shape M (source M entries bodies) x .callByValuePar _ E trusted hE
       (selected M safeUsers) (RecursiveScannerProductCapture.frozen_rows M entries bodies safeUsers hSafe x k)
       (sourceExpr M a) ha p j hp hv)
 
@@ -40,11 +55,26 @@ theorem source_scan_prefix {n : Nat} (M : Machine n) (entries : Entries n) (bodi
     (ClockFreezing.frozen_sound (source_firstOrder M entries bodies) x .callByValuePar (by decide) _ _ k)
     E (.call q.val []) True.intro p _ hp (source_scan M entries bodies q x k p E hp)
 
+/-- For an actual source argument, the selected finite profile certifies
+exactly that the original scanner reaches the capture endpoint. This lemma
+requires neither a capture safety check nor a safe retained environment. -/
+theorem argument_frontier {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
+    (a : Arg) (x : List Char) (k : Nat) (E : List (List Char))
+    (p j : Nat) (hp : p≤x.length)
+    (hv : evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) E
+      (sourceExpr M a) p=some (some j)) (q : Fin n) :
+    ScannerFrontierCertificate.check (profile (observer M) (pre x p j)) q=true ↔
+      (StatefulScanner.run M q (sfx x p)).2.length≤j := by
+  have hh := DependentCaptureFilter.success_prefix (by decide)
+    (ClockFreezing.frozen_sound (source_firstOrder M entries bodies) x .callByValuePar (by decide) _ _ k)
+    E (sourceExpr M a) (sourceExpr_firstOrder M a) p j hp hv
+  exact ScannerFrontierCertificate.check_position M x (pre x p j) p j hh.1 hh.2 q
+
 /-- The plain generated header starts after the actual argument but
 reaches the exact endpoint of the source's original-position header. -/
 theorem plain_body {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg) (q : Fin n)
     (b : Arg) (w x : List Char) (p j k l : Nat) (hp : p≤x.length) (hj : j≤x.length)
-    (hcap : sfx x p=w++sfx x j) (hw : TotalCaptureSafety.Total M w)
+    (hcap : sfx x p=w++sfx x j) (hw : StatefulScanner.advance M q w≠none)
     (hBody : ∀ z, z≤x.length →
       evV (target M entries bodies) x .callByValueSeq (targetTable M entries bodies x l) [w]
         (plain M bodies [profile (observer M) w] b) z=
@@ -54,7 +84,7 @@ theorem plain_body {n : Nat} (M : Machine n) (entries : Entries n) (bodies : Lis
     evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [w]
       (.seq (.call q.val []) (sourceExpr M b)) p := by
   cases ht : StatefulScanner.advance M q w with
-  | none => exact False.elim (hw q ht)
+  | none => exact False.elim (hw ht)
   | some r =>
     have hs := source_scan M entries bodies q x k p [w] hp
     have hscan := target_scan M entries bodies r x l j [w] hj
@@ -71,7 +101,7 @@ continuation relation is the structural induction hypothesis at the real
 shared scanner endpoint, including finite failure and undefinedness. -/
 theorem product_body {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg) (q : Fin n)
     (b : Arg) (w x : List Char) (p j k l : Nat) (hp : p≤x.length) (hj : j≤x.length)
-    (hcap : sfx x p=w++sfx x j) (hw : TotalCaptureSafety.Total M w)
+    (hcap : sfx x p=w++sfx x j) (hw : StatefulScanner.advance M q w≠none)
     (a : Fin (observer M).width) (t : Nat) (ht : t<(observer M).width)
     (hBody : ∀ z, z≤x.length → ∀ u, u<(observer M).width →
       evV (target M entries bodies) x .callByValueSeq (targetTable M entries bodies x l) [w]
@@ -84,7 +114,7 @@ theorem product_body {n : Nat} (M : Machine n) (entries : Entries n) (bodies : L
       (evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [w]
         (.seq (.call q.val []) (sourceExpr M b)) p) := by
   cases hstep : StatefulScanner.advance M q w with
-  | none => exact False.elim (hw q hstep)
+  | none => exact False.elim (hw hstep)
   | some r =>
     have hs := source_scan M entries bodies q x k p [w] hp
     have hz := source_scan_prefix M entries bodies q x k p [w] hp
@@ -125,9 +155,9 @@ theorem replay_prefix (g : MGrammar) (x w : List Char) (s : Strategy) (T : Clock
   simp only [evV,List.getElem?_cons_zero,hs,length_sfx x hj]
 
 theorem entry_plain_body {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
-    (entry : Option (Fin n)) (b : Arg) (w x : List Char) (p j k l : Nat)
+    (entry : Entry n) (b : Arg) (w x : List Char) (p j k l : Nat)
     (hp : p≤x.length) (hj : j≤x.length) (hcap : sfx x p=w++sfx x j)
-    (hw : TotalCaptureSafety.Total M w)
+    (hw : entryCheck entry (profile (observer M) w)=true)
     (hBody : ∀ z, z≤x.length →
       evV (target M entries bodies) x .callByValueSeq (targetTable M entries bodies x l) [w]
         (plain M bodies [profile (observer M) w] b) z=
@@ -137,16 +167,16 @@ theorem entry_plain_body {n : Nat} (M : Machine n) (entries : Entries n) (bodies
     evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [w]
       (.seq (sourceHeader entry) (sourceExpr M b)) p := by
   cases entry with
-  | some q => exact plain_body M entries bodies q b w x p j k l hp hj hcap hw hBody
-  | none =>
-    rw [show sourceHeader (none : Option (Fin n))=.param 0 from rfl,
-      evV_seq_ok (replay_prefix _ x w .callByValuePar _ p j hj hcap)]
+  | scan q => exact plain_body M entries bodies q b w x p j k l hp hj hcap ((ScannerFrontierCertificate.check_actual M w q).mp hw) hBody
+  | replay | safeReplay =>
+    simp only [sourceHeader]
+    rw [evV_seq_ok (replay_prefix _ x w .callByValuePar _ p j hj hcap)]
     exact hBody j hj
 
 theorem entry_product_body {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
-    (entry : Option (Fin n)) (b : Arg) (w x : List Char) (p j k l : Nat)
+    (entry : Entry n) (b : Arg) (w x : List Char) (p j k l : Nat)
     (hp : p≤x.length) (hj : j≤x.length) (hcap : sfx x p=w++sfx x j)
-    (hw : TotalCaptureSafety.Total M w)
+    (hw : entryCheck entry (profile (observer M) w)=true)
     (a : Fin (observer M).width) (t : Nat) (ht : t<(observer M).width)
     (hBody : ∀ z, z≤x.length → ∀ u, u<(observer M).width →
       evV (target M entries bodies) x .callByValueSeq (targetTable M entries bodies x l) [w]
@@ -159,14 +189,14 @@ theorem entry_product_body {n : Nat} (M : Machine n) (entries : Entries n) (bodi
       (evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [w]
         (.seq (sourceHeader entry) (sourceExpr M b)) p) := by
   cases entry with
-  | some q => exact product_body M entries bodies q b w x p j k l hp hj hcap hw a t ht hBody
-  | none =>
+  | scan q => exact product_body M entries bodies q b w x p j k l hp hj hcap ((ScannerFrontierCertificate.check_actual M w q).mp hw) a t ht hBody
+  | replay | safeReplay =>
     rw [targetBody]
     simp only [dif_pos a.isLt]
     rw [SequentialRecursiveScanner.state_actual]
     rw [hBody j hj _ (ObservedScanner.finish (observer M) (valid M) a w).isLt]
-    rw [show sourceHeader (none : Option (Fin n))=.param 0 from rfl,
-      evV_seq_ok (replay_prefix _ x w .callByValuePar _ p j hj hcap)]
+    simp only [sourceHeader]
+    rw [evV_seq_ok (replay_prefix _ x w .callByValuePar _ p j hj hcap)]
     exact (CapturePrefixRows.filter_prefix (observer M) x w p j a.val t hp hj hcap
       (evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [w] (sourceExpr M b) j)
       (fun z h => DependentCaptureFilter.success_prefix (by decide)

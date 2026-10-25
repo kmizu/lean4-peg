@@ -1,3 +1,8 @@
+import MacroPeg.CBV.RecursiveCaptureProfiles
+import MacroPeg.CBV.ProfileCheckedScannerCorrespondence
+import MacroPeg.CBV.ProfileCheckedScannerExamples
+import MacroPeg.CBV.ScannerFrontierCertificate
+import MacroPeg.CBV.CaptureInputSafety
 import MacroPeg.CBV.RecursiveScannerProductCapture
 import MacroPeg.CBV.ScannerLanguageSafety
 import MacroPeg.CBV.SelectedCaptureSafety
