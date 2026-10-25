@@ -1,4 +1,5 @@
 import MacroPeg.CBV.CallLookahead
+import MacroPeg.CBV.ChoiceArguments
 import MacroPeg.CBV.PartialCodewordCapture
 
 namespace Shallot.MacroPeg.CBV.ArgumentGuard
@@ -109,5 +110,18 @@ theorem window_call_eq (g : MGrammar) (x : List Char) (T : ClockFreezing.Table)
   rw [call_eq g x T E i p body (.seq a (look after)) before hr]
   exact look_sequence_congr g g x .callByValuePar .callByValuePar T T E E
     before before _ _ p rfl (suffix_call_eq g x T E i p body a after hr)
+
+/-- A successful argument alternative commits the unary call even when
+its selected body subsequently fails or remains undefined. -/
+theorem choice_call_eq (g : MGrammar) (x : List Char) (T : ClockFreezing.Table)
+    (E : List (List Char)) (i p : Nat) (body a b : MExp)
+    (hr : ruleAtM g.rules i=some ⟨1,body⟩) :
+    evV g x .callByValuePar T E (.call i [.alt a b]) p=
+      evV g x .callByValuePar T E
+        (RootObservation.branch (.andP a) (.call i [a]) (.call i [b])) p := by
+  rw [ChoiceArguments.branch_eval]
+  cases ha : evV g x .callByValuePar T E a p with
+  | none => simp [evV,hr,evParArgs,ha]
+  | some v => cases v <;> simp [evV,hr,evParArgs,ha]
 
 end Shallot.MacroPeg.CBV.ArgumentGuard

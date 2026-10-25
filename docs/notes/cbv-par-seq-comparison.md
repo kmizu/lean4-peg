@@ -179,8 +179,175 @@ H の正 query は同じ元 user を新しい空捕捉で呼び、その後外�
 省いた素朴な呼出しだけが誤成功する。clock 0 の実未定義、nullable H の全入力全 clock
 未定義、非空継続や replay-kind を copy として指定した場合の有限拒否も kernel で確認する。
 
-これで固定 literal に限らず、この入力依存で非有界の区切り scanner prefix に進んだ。
-実引数は既存の G/H で選択する codeword＋a-fragment family に限定し、prefix も A に限定する。
+実引数の family を、fragment 引数の任意の有限な優先選択木へ拡張した。
+`FragmentMixedRecursive` の3つの表面 template は before / choices / after を表す。
+choices の `seq G H` は一つの fragment 引数を指定する葉、`alt` は候補間の優先選択である。
+ここでの seq は template の組であり、実引数二つの連結ではない。元の実 call は引き続き
+unary で、引数は `&before; (arg1 / arg2 / …); &after` となる。
+`ArgumentGuard.choice_call_eq` は任意の実 table・環境で、成功した引数の枝を固定してから
+本体へ入る全 partial 恒等式を証明する。本体の失敗／未定義で別の捕捉へ戻らない。
+終点検査も選択木全体の後に置き、その失敗を引数候補の失敗と混同しない。
+生成 Seq は選ばれた引数を同じ位置・同じ table で再検査し、従来の fragment leaf 変換へ渡す。
+相互再帰する renderer・選択木の対応を既存の physical 段数帰納に組み込み、
+実 G/H と before/after の内部から同 user を呼ぶ場合も含めて、元の全入力観測・
+固定一階 Seq 元文字列言語・全 physical partial 結果を保存する。新しい行 oracle は不要。
+
+`SelectedFragmentArgumentExamples` では aa#aa#a 上で先頭候補が aa#aa を捕捉し、
+本体の query が有限失敗する。後の aa#a 候補なら成功するが、正しい変換は選び直さない。
+呼出しを選択肢へ素朴に分配した Seq だけが誤成功する。終点検査で同じ誤りが起こる例も
+kernel 検証した。先頭引数自身が失敗する a#a#a では後続候補へ進み、aa#aa#aa では
+先頭候補のまま成功する。ネストした選択木の H は同じ raw query user を空捕捉で呼ぶ。
+固定開始式2つに全入力の言語変換を適用し、nullable な先頭候補は全入力全 clock で
+後続候補と有限失敗の終点検査を遮断し、元位置の失敗はその nullable 候補を遮断すると証明した。
+
+別の経路として、`UniversalCaptureProfiles` は完全な固定 shift／直接再照合の
+入口制御木に対し、実引数の形と手動 profile 注釈の制約を外した。
+`CaptureViews` の全捕捉再構成だけでは本体入口の位置差は解消しないため、ここでは
+既存の finite-state 残余機械による入口対応へ直接合成する。各 user の入力／出力候補を
+observer の全有限 profile に自動設定する。有限 profile は連結の合成で閉じ、star の候補
+計算も同じ有限集合内に留まることを証明した。これにより scanner／user の全 summary
+検査、実引数内の全 nested call 検査、全 rule 本体検査を、元の呼出し番号の scope と
+入口の構文検査だけから導く。成功する注釈の発見を利用者の仮定にしない。
+
+元 user は unary、入口は replay または完全な回転残余機械を持つ shift と、それらの
+有限 alt／正負 guard の制御木である。この入口制約の下で、実引数と本体の継続は
+literal・param・user・seq・alt・notP・star の全構文を許す。連結後の捕捉は全体の
+有限 transition profile を合成して扱い、引数の部分ごとの有限文字列 palette を要求しない。
+任意の個数の連結、入力依存で非有界の反復、同 user／相互再帰と親の全値再利用を
+含め、既存の生成固定一階 Seq の全入力 SObs・元文字列言語・定義／全 clock 未定義へ
+合成した。補助行が安定した共有 user clock では全 partial 結果が一致するが、
+この経路は source と target の生 physical clock が等しいとは主張しない。
+一般 scanner 入口は全 profile では安全でないため、新しい自動検査では拒否する。
+既存の精密 profile による scanner 変換はそのまま利用できる。
+
+`UniversalCaptureProfileExamples` の元規則は `!(a;param0);param0` の入口に続き、
+旧値を二倍にする実引数 `param0;param0` で同じ user へ入り、子から戻って親の値を
+もう一度照合する。初期引数は `b*;a` で、a-fragment family 外の実捕捉を使う。
+同じ固定開始式の複数入力で、捕捉長と再帰深さを変えた実行を kernel 検証し、
+生成 Seq の生実行も直接確認した。一般の全入力言語保存の実例とし、nullable 引数の
+全入力全 clock 未定義、および不完全 shift／無条件 scanner の有限拒否も証明する。
+これは制限された入口の文法 family 全体に対する注釈不要の変換であり、任意 PEG prefix
+や複数の独立 source capture を含む一般 Par→Seq 変換ではない。
+
+`AutomaticOriginControl` は、この自動 profile 生成を元位置制御と生 prefix query へ合成する。
+元の Plan／raw Body の有限構文検査だけから、正規化で生成する各実引数と core 本体の
+scope、各 core 入口の完全 shift／replay 条件、および全有限 profile 検査を証明する。
+閉じた leaf は旧 capture を空に置き換えて元位置で実行できるので、消費しない負 query や
+capture より短く消費して終わる本体も含め、任意の実 Arg と同居させられる。
+`prefixCheck` は元の `linkCheck`／independent／scope と入口の完全性だけを検査する。
+利用者は生成 core 文法の検査成功や、入力／出力 profile 集合を別に与える必要がない。
+既存の body 書換え・caller 正規化・helper 安定化を順に合成し、元の生文法から固定 Seq の
+全入力観測・元文字列言語・定義／全 clock 未定義を得る。
+
+`AutomaticOriginControlExamples` の実元規則は `a;!param0` と `a;&param0` である。
+実引数 `a;b*;a` が abba の全4文字を捕捉しても、負 query は a の1文字だけを消費する。
+正 query は aaa の全コピーを必要とし、aaaa なら1文字消費、aaa なら有限失敗する。
+同じ元文法では負 query を guard に使い、保持値の二倍を同じ user へ再捕捉して、
+子から戻ると親の全値を再利用する。入力依存の捕捉長と再帰深さを変えた source 成功・
+生成 Seq 成功、および早期 query の生 target 実行を kernel で検証した。
+固定開始式2つの全入力言語変換、実引数失敗の優先、nullable 引数の全入力全 clock
+未定義、旧値を参照する閉じた leaf と無条件 scanner 入口の有限拒否も証明する。
+これは元位置に戻る本体と任意実 Arg の接続であり、prefix 自体は認証済み固定 literal に
+限られる。一般の PEG 本体 prefix や独立複数 source capture の変換はまだ未解決である。
+
+`FinitePrefixControl` は、prefix を一つの固定 literal から、有限消費の制御式へ広げる。
+消費葉は literal、保持値への正負 query と seq／優先 alt／notP は任意有限の深さに入れ子に
+できる。prefix の途中の旧値 query が枝を変えるため、成功する消費語や長さは旧値に依存してよい。
+CPS 変換は、既に消費した語を静的な word offset として持ち、各 query をその語に対応する
+shift/replay leaf で元位置から検査する。選択の test は継続前の prefix だけを評価し、
+一度成功した枝を後の query／継続の失敗や未定義で選び直さない。
+
+成功した prefix の消費語が有限の構文由来候補に入り、連結ではその語を正確に連結することを
+証明した。この制約は prefix の消費に掛かり、実引数の捕捉長／語彙には掛からない。
+有限 `checkAt` は、使用する各 word offset の独立 read leaf と shift/replay copy leaf を
+実構文で検査する。続いて既存の元位置変換と自動 profile 検査へ合成する。
+任意 table・環境・strategy で CPS の全 partial 対応を証明し、実元規則を書き換えて
+全入力 SObs・固定一階 Seq 元文字列言語・定義／全 clock 未定義へ接続した。
+source の unary 呼出しの実 Arg は引き続き任意の連結・反復・query・user 呼出しの入れ子を許す。
+この単体 frontend の raw prefix 本体には消費する user 呼出しがない。
+非有界の再帰継続を CPS の終端へ置く場合は、後述の `RecursiveFinitePrefix` を使う。
+
+`FinitePrefixControlExamples` の実元規則は `(aa / a); &param0` そのものである。
+aaa から aa を捕捉すると、aa の選択後に全コピー query が失敗する。正しい生成先も拒否し、
+query を枝へ素朴に分配した本体だけが a へ戻って誤成功する。別の prefix
+`a; !param0; a / a` は、同じ aaa 入力でも旧値 aa なら1文字、旧値 aaa なら2文字を
+成功消費する。旧値依存の prefix 長を実 source／target で kernel 検証した。
+消費 prefix を含む notP、実引数内から同じ user への空捕捉 query、外側の全 aa 捕捉への
+復帰、入力依存の `a;b*;a` 捕捉、元位置の空成功、nullable 引数の全入力全 clock 未定義、
+欠けた offset link の拒否も確認し、固定開始式2つに全入力言語変換を適用した。
+
+この経路は固定 literal 一個への制限を外したが、prefix の消費は構文から有限に列挙できる
+必要がある。prefix の consuming star／非有界の user 呼出し、一般の PEG prefix、
+独立複数 source capture、および一般 Par/Seq 一致／分離はまだ未解決である。
+
+`RecursiveFinitePrefix` は有限 prefix の CPS 終端を実際の再帰継続へ接続した。
+元 Body は prefix でそのまま終える `finish` と、`prefix; param0; tail` として
+全保持値を再照合して任意の Arg 継続へ入る `resume` を持ち、同じ文法に混在できる。
+`resumeCheck` は各成功消費語に対応する実 shift/replay leaf の本体がその tail と
+構文的に同じことを有限検査する。Arg の構文等値は kernel で計算する。
+単なる「継続結果が一致する」という仮定を最終入力にせず、任意 table／環境／strategy の
+実 leaf 評価を prefix 終点からの全値再照合と継続評価へ合わせる。
+先の CPS 対応をこの終端へ具体化し、元規則の実本体書換え・元位置正規化・自動 profile
+から、再帰規則群全体の全入力観測・固定一階 Seq 元文字列言語・定義／全 clock 未定義を得る。
+tail は旧値参照、任意の Arg 連結・選択・否定・反復、同 user／相互再帰を許す。
+
+`RecursiveFinitePrefixExamples` の raw source 規則本体は、`a;&param0;a/a` の prefix の後に
+全 param0 を読み、子へ `param0;param0` の二倍捕捉で同じ user を呼ぶ。子から戻ると
+`?` と親の元の全値を照合する。実初期引数も入力の a-run から末尾2文字を残して捕捉するため、
+初期捕捉長・各子の捕捉長・実際の再帰深さが同じ固定文法で入力依存となる。
+初期長1/2/4と深さ0/1/2の source 実行、生成 Seq 成功、深さ1の生 Seq 実行を
+kernel 検証した。子のコピー不足や親の復元コピー不足は全消費にならない。
+再照合失敗だけでなく tail だけが失敗する例でも prefix を選び直さず、素朴分配だけが
+誤成功する。prefix と再照合成功後の nullable tail は固定入力の全 clock で未定義を保存する。
+早期終了する負 query user も同じ実元文法に残し、2つの固定開始式の全入力言語変換、
+nullable 実引数の全入力全 clock 未定義、異なる tail／欠けた継続 link の拒否も証明した。
+
+これにより新しい有限 prefix の後に非有界の再帰継続を置ける。prefix 自体で消費する star／
+非有界 user 呼出しはまだ扱わず、tail への入口には全保持値の再照合を要求する。
+任意の PEG prefix と独立複数 source capture、および一般 Par/Seq 一致／分離は未解決である。
+
+`CaptureOriginRewrite` は、本体書換えの正しさを「実際の Par 呼出しが作れる環境」に
+制限しても、文法全体の各 physical 段数の評価一致へ持ち上げる。実引数の成功から、
+各捕捉値が同じ呼出し元入力の prefix であることを導き、その行だけを対応させる。
+任意の架空の環境の行一致や全 table の一致は要求しない。元 first-order 文法の実 table の
+soundness から捕捉条件を導くため、到達可能な行の oracle を新たに仮定しない。
+
+この不変条件を使い、`GuardedReplayIteration` は非有界の query 付き prefix へ進む。
+任意の語方程式 `u ++ w = w ++ v` の下で、実保持値 w が元位置に照合できれば
+`(u; &param0)*; param0` を、捕捉終点での `v*` へ移せると全 partial 結果で証明した。
+空の反復は両側で未定義のままである。u が一文字 c の場合、実捕捉 prefix と最初の
+`c;param0` の成功だけから w が c の反復語であることを導き、v=c を得る。
+最初の照合が失敗すれば prefix の反復は0回で止まり、元位置から全 w を再照合する。
+
+`GuardedReplayCompiler` の raw source 本体は `(c;&param0)*;param0;tail` であり、
+prefix 自体の反復回数に構文由来の上限はない。正規化は最初の `c;param0` を先に検査し、
+成功枝は実 fixed-shift leaf の後で c を貪欲反復して tail へ、失敗枝は直接再照合 leaf の
+後で tail へ進む。この分岐も tail の失敗で選び直さない。有限の実 leaf／tail 構文検査から
+capture-origin 本体書換えを導き、既存の元位置制御・自動 profile compiler へ接続した。
+旧有限 prefix／早期 query／実再帰継続の body family と同じ文法で混在でき、固定一階 Seq の
+全入力観測・元文字列言語・定義／全 clock 未定義まで証明する。
+
+`GuardedReplayExamples` では prefix 反復回数1/2/4と再帰深さ0/1/2を独立に変える。
+同じ user の子は全保持値を二倍に再捕捉し、終了後に親の元の値を再利用する。
+生成 Seq の生実行も直接 kernel 検証した。`a;b*;a` の非 unary 捕捉では最初の query が
+失敗し、0反復＋全値再照合を保つ。固定開始式2つの全入力言語変換、nullable 実引数の
+全入力全 clock 未定義、成功した反復／再照合後の nullable tail の全 clock 未定義、
+不正 tail link の拒否も証明した。generic な残余補題は ab/aba の非可換例で v=ba を使い、
+元の ab をそのまま再開すると誤ることと、空 step の全入力での未定義を確認する。
+この multi-byte 例は補題の検証であり、完成した新 compiler の反復 step は一文字 c である。
+
+架空の保持値 b を aba の元位置に与えると、元反復本体は ab だけ消費する一方、
+無条件に正規化すると最後の a も消費する。これは同じ元位置から b を捕捉できない行であり、
+捕捉不変条件を外した body 書換えが実際に誤る反例として kernel 検証した。
+この証明を任意 table の全環境一致と取り違えない。
+
+非有界の prefix 消費はこの一文字・正の保持値 query 付き反復 family で接続した。
+任意 PEG prefix、保持値に依存する一般の反復／消費 user 呼出し、全保持値の再照合を伴わない
+一般の依存継続、独立複数 source capture、および一般 Par/Seq 一致／分離は未解決である。
+
+断片経路は固定 literal に限らず、入力依存で非有界の区切り scanner prefix を扱う。
+この経路の実引数は G/H で選択する codeword＋a-fragment family とその有限優先選択閉包に限定し、prefix も A に限定する。
+自動 profile 経路は実引数の形を制限せず、対応する入口 family を完全固定 shift／replay 制御木に限定する。
 有限状態 scanner compiler との任意混在、任意 PEG prefix／実引数、独立複数捕捉、および
 一般 Par/Seq 一致・分離は依然未解決である。
 

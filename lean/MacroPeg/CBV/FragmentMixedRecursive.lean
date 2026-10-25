@@ -116,29 +116,54 @@ private theorem direct_firstOrder (n : Nat) (plans : List Plan) (par : Bool) (i 
       · exact ⟨ha,True.intro⟩
     · exact ⟨ha,True.intro⟩
 
-/-- In fragment mode only a-consuming syntax is generated. Tests switch
+/- In fragment mode only a-consuming syntax is generated. Tests switch
 back to normal mode so they may inspect parents or invoke recursive users.
 The second template of a two-template normal call describes H itself,
-not its star test. Four-template calls also carry origin/endpoint tests. -/
-def render (kinds : List Bool) (n : Nat) (plans : List Plan) (par : Bool) : Bool → MExp → MExp
-  | false,.call i [] => call kinds n plans par i .eps .eps
-  | false,.call i [G] => if eligible kinds n plans i then directCall n plans par i (render kinds n plans par false G)
-    else call kinds n plans par i (render kinds n plans par false G) .eps
-  | false,.call i [G,H] => call kinds n plans par i (render kinds n plans par false G) (render kinds n plans par true H)
-  | false,.call i [before,G,H,after] => guardedCall kinds n plans par i
-      (render kinds n plans par false before) (render kinds n plans par false G)
-      (render kinds n plans par true H) (render kinds n plans par false after)
-  | f,.seq a b => .seq (render kinds n plans par f a) (render kinds n plans par f b)
-  | f,.alt a b => .alt (render kinds n plans par f a) (render kinds n plans par f b)
-  | f,.star a => .star (render kinds n plans par f a)
-  | _,.notP a => .notP (render kinds n plans par false a)
-  | _,.eps => .eps
-  | true,.chr c => if c='a' then .chr 'a' else MExp.failAlways
-  | true,.lit w => if ∀ c∈w, c='a' then aWord w.length else MExp.failAlways
-  | false,.param k => .param k
-  | false,.any => .any | false,.chr c => .chr c
-  | false,.range a b => .range a b | false,.lit w => .lit w
-  | _,_ => MExp.failAlways
+not its star test. Four-template calls also carry origin/endpoint tests.
+Three-template calls are before / choice tree / after. A tree leaf seq G H
+supplies the two fragment controls; alt commits the first successful capture.
+The actual source call still has exactly one captured argument. -/
+mutual
+  def render (kinds : List Bool) (n : Nat) (plans : List Plan) (par : Bool) : Bool → MExp → MExp
+    | false,.call i [] => call kinds n plans par i .eps .eps
+    | false,.call i [G] => if eligible kinds n plans i then directCall n plans par i (render kinds n plans par false G)
+      else call kinds n plans par i (render kinds n plans par false G) .eps
+    | false,.call i [G,H] => call kinds n plans par i (render kinds n plans par false G) (render kinds n plans par true H)
+    | false,.call i [before,choices,after] => match plans[i]? with
+      | none => MExp.failAlways
+      | some _ => if par then .call i [.seq (PartialCodewordCapture.look (render kinds n plans par false before))
+          (.seq (choiceArgument kinds n plans par choices) (PartialCodewordCapture.look (render kinds n plans par false after)))]
+        else .seq (PartialCodewordCapture.look (render kinds n plans par false before))
+          (.seq (PartialCodewordCapture.look (.seq (choiceArgument kinds n plans par choices) (render kinds n plans par false after)))
+            (choiceCalls kinds n plans par i choices))
+    | false,.call i [before,G,H,after] => guardedCall kinds n plans par i
+        (render kinds n plans par false before) (render kinds n plans par false G)
+        (render kinds n plans par true H) (render kinds n plans par false after)
+    | f,.seq a b => .seq (render kinds n plans par f a) (render kinds n plans par f b)
+    | f,.alt a b => .alt (render kinds n plans par f a) (render kinds n plans par f b)
+    | f,.star a => .star (render kinds n plans par f a)
+    | _,.notP a => .notP (render kinds n plans par false a)
+    | _,.eps => .eps
+    | true,.chr c => if c='a' then .chr 'a' else MExp.failAlways
+    | true,.lit w => if ∀ c∈w, c='a' then aWord w.length else MExp.failAlways
+    | false,.param k => .param k
+    | false,.any => .any | false,.chr c => .chr c
+    | false,.range a b => .range a b | false,.lit w => .lit w
+    | _,_ => MExp.failAlways
+
+  /-- In the three-template call, a leaf seq G H denotes one selected
+  fragment argument; alt constructs an arbitrary finite priority tree. -/
+  def choiceArgument (kinds : List Bool) (n : Nat) (plans : List Plan) (par : Bool) : MExp → MExp
+    | .seq G H => argument (render kinds n plans par false G) (render kinds n plans par true H)
+    | .alt a b => .alt (choiceArgument kinds n plans par a) (choiceArgument kinds n plans par b)
+    | _ => MExp.failAlways
+
+  def choiceCalls (kinds : List Bool) (n : Nat) (plans : List Plan) (par : Bool) (i : Nat) : MExp → MExp
+    | .seq G H => call kinds n plans par i (render kinds n plans par false G) (render kinds n plans par true H)
+    | .alt a b => RootObservation.branch (.andP (choiceArgument kinds n plans par a))
+        (choiceCalls kinds n plans par i a) (choiceCalls kinds n plans par i b)
+    | _ => MExp.failAlways
+end
 
 private theorem call_firstOrder (kinds : List Bool) (n : Nat) (plans : List Plan) (par : Bool) (i : Nat)
     (G H : MExp) (hG : G.FirstOrder) (hH : H.FirstOrder) : (call kinds n plans par i G H).FirstOrder := by
@@ -151,37 +176,75 @@ private theorem call_firstOrder (kinds : List Bool) (n : Nat) (plans : List Plan
         Plan.exp_firstOrder (fun j => entry_firstOrder kinds n j G H hG hH) b⟩
     · exact ⟨⟨⟨scanner_firstOrder,scanner_firstOrder,hG⟩,hH⟩,True.intro⟩
 
-theorem render_firstOrder (kinds : List Bool) (n : Nat) (plans : List Plan) (par : Bool) : ∀ f e, (render kinds n plans par f e).FirstOrder
-  | false,.call i [] => call_firstOrder kinds n plans par i .eps .eps True.intro True.intro
-  | false,.call i [G] => by
-      simp only [render]; split
-      · exact direct_firstOrder n plans par i _ (render_firstOrder kinds n plans par false G)
-      · exact call_firstOrder kinds n plans par i _ .eps (render_firstOrder kinds n plans par false G) True.intro
-  | false,.call i [G,H] => call_firstOrder kinds n plans par i _ _
-      (render_firstOrder kinds n plans par false G) (render_firstOrder kinds n plans par true H)
-  | false,.call i [before,G,H,after] => guarded_firstOrder kinds n plans par i _ _ _ _
-      (render_firstOrder kinds n plans par false before) (render_firstOrder kinds n plans par false G)
-      (render_firstOrder kinds n plans par true H) (render_firstOrder kinds n plans par false after)
-      (call_firstOrder kinds n plans false i _ _ (render_firstOrder kinds n plans par false G)
-        (render_firstOrder kinds n plans par true H))
-  | f,.seq a b | f,.alt a b => by
-      have ha := render_firstOrder kinds n plans par f a
-      have hb := render_firstOrder kinds n plans par f b
-      cases f <;> exact ⟨ha,hb⟩
-  | f,.star a => by
-      have ha := render_firstOrder kinds n plans par f a
-      cases f <;> exact ha
-  | f,.notP a => by cases f <;> exact render_firstOrder kinds n plans par false a
-  | true,.chr c => by simp only [render]; split <;> trivial
-  | true,.lit w => by
-      simp only [render]; split
-      · exact FragmentConsumingSyntax.firstOrder (aWord_syntax _)
-      · trivial
-  | f,.eps => by cases f <;> trivial
-  | false,.param _ | false,.any | false,.chr _ | false,.range _ _ | false,.lit _ => trivial
-  | true,.param _ | true,.any | true,.range _ _ | true,.call _ _
-  | false,.call _ [_,_,_] | false,.call _ (_::_::_::_::_::_) => trivial
-  | f,.dbg _ | f,.lam _ _ | f,.callParam _ _ | f,.invoke _ _ _ => by cases f <;> trivial
+mutual
+  theorem render_firstOrder (kinds : List Bool) (n : Nat) (plans : List Plan) (par : Bool) : ∀ f e, (render kinds n plans par f e).FirstOrder
+    | false,.call i [] => call_firstOrder kinds n plans par i .eps .eps True.intro True.intro
+    | false,.call i [G] => by
+        simp only [render]; split
+        · exact direct_firstOrder n plans par i _ (render_firstOrder kinds n plans par false G)
+        · exact call_firstOrder kinds n plans par i _ .eps (render_firstOrder kinds n plans par false G) True.intro
+    | false,.call i [G,H] => call_firstOrder kinds n plans par i _ _
+        (render_firstOrder kinds n plans par false G) (render_firstOrder kinds n plans par true H)
+    | false,.call i [before,choices,after] => by
+        have hb := render_firstOrder kinds n plans par false before
+        have ha := render_firstOrder kinds n plans par false after
+        have hc := choiceArgument_firstOrder kinds n plans par choices
+        have hf := choiceCalls_firstOrder kinds n plans par i choices
+        simp only [render]
+        cases hr : plans[i]? with
+        | none => trivial
+        | some P =>
+          cases par
+          · exact ⟨hb,⟨hc,ha⟩,hf⟩
+          · exact ⟨⟨hb,hc,ha⟩,True.intro⟩
+    | false,.call i [before,G,H,after] => guarded_firstOrder kinds n plans par i _ _ _ _
+        (render_firstOrder kinds n plans par false before) (render_firstOrder kinds n plans par false G)
+        (render_firstOrder kinds n plans par true H) (render_firstOrder kinds n plans par false after)
+        (call_firstOrder kinds n plans false i _ _ (render_firstOrder kinds n plans par false G)
+          (render_firstOrder kinds n plans par true H))
+    | f,.seq a b | f,.alt a b => by
+        have ha := render_firstOrder kinds n plans par f a
+        have hb := render_firstOrder kinds n plans par f b
+        cases f <;> exact ⟨ha,hb⟩
+    | f,.star a => by
+        have ha := render_firstOrder kinds n plans par f a
+        cases f <;> exact ha
+    | f,.notP a => by cases f <;> exact render_firstOrder kinds n plans par false a
+    | true,.chr c => by simp only [render]; split <;> trivial
+    | true,.lit w => by
+        simp only [render]; split
+        · exact FragmentConsumingSyntax.firstOrder (aWord_syntax _)
+        · trivial
+    | f,.eps => by cases f <;> trivial
+    | false,.param _ | false,.any | false,.chr _ | false,.range _ _ | false,.lit _ => trivial
+    | true,.param _ | true,.any | true,.range _ _ | true,.call _ _
+    | false,.call _ (_::_::_::_::_::_) => trivial
+    | f,.dbg _ | f,.lam _ _ | f,.callParam _ _ | f,.invoke _ _ _ => by cases f <;> trivial
+  termination_by _f e => sizeOf e
+  decreasing_by all_goals simp_wf; all_goals omega
+
+  theorem choiceArgument_firstOrder (kinds : List Bool) (n : Nat) (plans : List Plan) (par : Bool) :
+      ∀ e, (choiceArgument kinds n plans par e).FirstOrder
+    | .seq G H => ⟨⟨scanner_firstOrder,scanner_firstOrder,render_firstOrder kinds n plans par false G⟩,
+        render_firstOrder kinds n plans par true H⟩
+    | .alt a b => ⟨choiceArgument_firstOrder kinds n plans par a,choiceArgument_firstOrder kinds n plans par b⟩
+    | .call _ _ | .param _ | .eps | .any | .chr _ | .range _ _ | .lit _ | .star _ | .notP _
+    | .dbg _ | .lam _ _ | .callParam _ _ | .invoke _ _ _ => trivial
+  termination_by e => sizeOf e
+  decreasing_by all_goals simp_wf; all_goals omega
+
+  theorem choiceCalls_firstOrder (kinds : List Bool) (n : Nat) (plans : List Plan) (par : Bool) (i : Nat) :
+      ∀ e, (choiceCalls kinds n plans par i e).FirstOrder
+    | .seq G H => call_firstOrder kinds n plans par i _ _
+        (render_firstOrder kinds n plans par false G) (render_firstOrder kinds n plans par true H)
+    | .alt a b =>
+        ⟨⟨choiceArgument_firstOrder kinds n plans par a,choiceCalls_firstOrder kinds n plans par i a⟩,
+          choiceArgument_firstOrder kinds n plans par a,choiceCalls_firstOrder kinds n plans par i b⟩
+    | .call _ _ | .param _ | .eps | .any | .chr _ | .range _ _ | .lit _ | .star _ | .notP _
+    | .dbg _ | .lam _ _ | .callParam _ _ | .invoke _ _ _ => trivial
+  termination_by e => sizeOf e
+  decreasing_by all_goals simp_wf; all_goals omega
+end
 
 /-- The single argument of a replay-only source call is the actual parser
 argument itself, rather than the G test of a fragment-capture template. -/
@@ -731,77 +794,175 @@ private theorem render_star (kinds : List Bool) (n : Nat) (plans : List Plan) (p
 private theorem render_notP (kinds : List Bool) (n : Nat) (plans : List Plan) (par f : Bool) (a : MExp) :
     render kinds n plans par f (.notP a)=.notP (render kinds n plans par false a) := by
   cases f <;> rfl
-/-- Current-clock structural induction handles normal expressions and
+/- Current-clock structural induction handles normal expressions and
 consuming fragments together, switching to normal mode inside tests.
 Previous-clock induction handles the actual callee continuation. -/
-theorem evaluator_of_previous (plans : List Plan) (tails : List Part) (hValid : Valid plans tails) (x : List Char) (m : Nat)
-    (hprev : ∀ k, m=k+1 → ∀ e E p, p≤x.length →
-      evV (source plans tails) x .callByValuePar (tblV (source plans tails) x .callByValuePar k) E (render (tails.map Prod.fst) tails.length plans true false e) p=
-      evV (target plans tails) x .callByValueSeq (tblV (target plans tails) x .callByValueSeq k) E (render (tails.map Prod.fst) tails.length plans false false e) p) :
-    ∀ f e E p, p≤x.length →
-      evV (source plans tails) x .callByValuePar (tblV (source plans tails) x .callByValuePar m) E (render (tails.map Prod.fst) tails.length plans true f e) p=
-      evV (target plans tails) x .callByValueSeq (tblV (target plans tails) x .callByValueSeq m) E (render (tails.map Prod.fst) tails.length plans false f e) p
-  | false,.call i [], E, p, hp => call_eq plans tails hValid x m i p E .eps .eps .eps .eps .eps hp True.intro True.intro
-      (by intro q hq; rfl) (by intro q hq; rfl) hprev
-  | false,.call i [G], E, p, hp => by
+mutual
+  theorem evaluator_of_previous (plans : List Plan) (tails : List Part) (hValid : Valid plans tails) (x : List Char) (m : Nat)
+      (hprev : ∀ k, m=k+1 → ∀ e E p, p≤x.length →
+        evV (source plans tails) x .callByValuePar (tblV (source plans tails) x .callByValuePar k) E (render (tails.map Prod.fst) tails.length plans true false e) p=
+        evV (target plans tails) x .callByValueSeq (tblV (target plans tails) x .callByValueSeq k) E (render (tails.map Prod.fst) tails.length plans false false e) p) :
+      ∀ f e E p, p≤x.length →
+        evV (source plans tails) x .callByValuePar (tblV (source plans tails) x .callByValuePar m) E (render (tails.map Prod.fst) tails.length plans true f e) p=
+        evV (target plans tails) x .callByValueSeq (tblV (target plans tails) x .callByValueSeq m) E (render (tails.map Prod.fst) tails.length plans false f e) p
+    | false,.call i [], E, p, hp => call_eq plans tails hValid x m i p E .eps .eps .eps .eps .eps hp True.intro True.intro
+        (by intro q hq; rfl) (by intro q hq; rfl) hprev
+    | false,.call i [G], E, p, hp => by
+        simp only [render]
+        split
+        · rename_i helig
+          exact direct_call_eq plans tails hValid x m i p E _ _
+            (render_firstOrder _ _ _ true false G) hp helig
+            (evaluator_of_previous plans tails hValid x m hprev false G E p hp) hprev
+        · exact call_eq plans tails hValid x m i p E _ _ .eps .eps .eps hp (render_firstOrder _ _ _ true false G) True.intro
+            (fun q hq => evaluator_of_previous plans tails hValid x m hprev false G E q hq) (by intro q hq; rfl) hprev
+    | false,.call i [G,H], E, p, hp => call_eq plans tails hValid x m i p E _ _ _ _ (render_fragment_syntax (tails.map Prod.fst) tails.length plans false H) hp
+        (render_firstOrder _ _ _ true false G) (render_firstOrder _ _ _ true true H)
+        (fun q hq => evaluator_of_previous plans tails hValid x m hprev false G E q hq)
+        (fun q hq => evaluator_of_previous plans tails hValid x m hprev true H E q hq) hprev
+    | false,.call i [before,choices,after], E, p, hp => by
       simp only [render]
-      split
-      · rename_i helig
-        exact direct_call_eq plans tails hValid x m i p E _ _
-          (render_firstOrder _ _ _ true false G) hp helig
-          (evaluator_of_previous plans tails hValid x m hprev false G E p hp) hprev
-      · exact call_eq plans tails hValid x m i p E _ _ .eps .eps .eps hp (render_firstOrder _ _ _ true false G) True.intro
-          (fun q hq => evaluator_of_previous plans tails hValid x m hprev false G E q hq) (by intro q hq; rfl) hprev
-  | false,.call i [G,H], E, p, hp => call_eq plans tails hValid x m i p E _ _ _ _ (render_fragment_syntax (tails.map Prod.fst) tails.length plans false H) hp
-      (render_firstOrder _ _ _ true false G) (render_firstOrder _ _ _ true true H)
-      (fun q hq => evaluator_of_previous plans tails hValid x m hprev false G E q hq)
-      (fun q hq => evaluator_of_previous plans tails hValid x m hprev true H E q hq) hprev
-  | false,.call i [before,G,H,after], E, p, hp => guarded_call_eq plans tails hValid x m i p E _ _ _ _ _ _ _ _
-      (render_fragment_syntax (tails.map Prod.fst) tails.length plans false H) hp
-      (render_firstOrder _ _ _ true false G) (render_firstOrder _ _ _ true true H)
-      (fun q hq => evaluator_of_previous plans tails hValid x m hprev false G E q hq)
-      (fun q hq => evaluator_of_previous plans tails hValid x m hprev true H E q hq)
-      (evaluator_of_previous plans tails hValid x m hprev false before E p hp)
-      (fun q hq => evaluator_of_previous plans tails hValid x m hprev false after E q hq) hprev
-  | f,.seq a b, E, p, hp => by
-    have hh := evaluator_of_previous plans tails hValid x m hprev f a E p hp
-    simp only [render_seq]
-    cases hv : evV (source plans tails) x .callByValuePar (tblV (source plans tails) x .callByValuePar m) E (render (tails.map Prod.fst) tails.length plans true f a) p with
-    | none => rw [evV_seq_none hv,evV_seq_none (hh.symm.trans hv)]
-    | some result => cases result with
-      | none => rw [evV_seq_fail hv,evV_seq_fail (hh.symm.trans hv)]
-      | some q =>
-        rw [evV_seq_ok hv,evV_seq_ok (hh.symm.trans hv)]
-        exact evaluator_of_previous plans tails hValid x m hprev f b E q (evV_ok (tblV_ok _ _ _ m) _ p hp q hv)
-  | f,.alt a b, E, p, hp => by
-    have hh := evaluator_of_previous plans tails hValid x m hprev f a E p hp
-    simp only [render_alt]
-    cases hv : evV (source plans tails) x .callByValuePar (tblV (source plans tails) x .callByValuePar m) E (render (tails.map Prod.fst) tails.length plans true f a) p with
-    | none => rw [evV_alt_none hv,evV_alt_none (hh.symm.trans hv)]
-    | some result => cases result with
-      | none =>
-        rw [evV_alt_fail hv,evV_alt_fail (hh.symm.trans hv)]
-        exact evaluator_of_previous plans tails hValid x m hprev f b E p hp
-      | some q => rw [evV_alt_ok hv,evV_alt_ok (hh.symm.trans hv)]
-  | f,.star a, E, p, hp => by
-    simp only [render_star,evV_star]
-    exact evStar_congr p (fun q hq => evaluator_of_previous plans tails hValid x m hprev f a E q (by omega))
-  | f,.notP a, E, p, hp => by
-    simp only [render_notP,evV]
-    rw [evaluator_of_previous plans tails hValid x m hprev false a E p hp]
-  | false,.param _, _, _, _ | false,.any, _, _, _ | false,.chr _, _, _, _
-  | false,.range _ _, _, _, _ | false,.lit _, _, _, _ => rfl
-  | true,.chr c, _, _, _ => by simp only [render]; split <;> rfl
-  | true,.lit w, _, _, _ => by
-    simp only [render]; split
-    · exact ParserPrefixFusion.pure_eval _ _ x .callByValuePar .callByValueSeq _ _ _ _ (aWord w.length)
-        (by induction w.length with | zero => trivial | succ n ih => exact ⟨True.intro,ih⟩) _
-    · rfl
-  | f,.eps, _, _, _ => by cases f <;> rfl
-  | true,.param _, _, _, _ | true,.any, _, _, _ | true,.range _ _, _, _, _ | true,.call _ _, _, _, _
-  | false,.call _ [_,_,_], _, _, _ | false,.call _ (_::_::_::_::_::_), _, _, _ => rfl
-  | f,.dbg _, _, _, _ | f,.lam _ _, _, _, _ | f,.callParam _ _, _, _, _
-  | f,.invoke _ _ _, _, _, _ => by cases f <;> rfl
+      cases hr : plans[i]? with
+      | none => rfl
+      | some P =>
+        simp only [Bool.false_eq_true,ite_true,ite_false]
+        rw [ArgumentGuard.window_call_eq _ x _ E i p _
+          (choiceArgument (tails.map Prod.fst) tails.length plans true choices)
+          (render (tails.map Prod.fst) tails.length plans true false before)
+          (render (tails.map Prod.fst) tails.length plans true false after) (source_rule plans tails i P hr)]
+        apply ArgumentGuard.look_sequence_congr _ _ x .callByValuePar .callByValueSeq _ _ E E
+          (render (tails.map Prod.fst) tails.length plans true false before)
+          (render (tails.map Prod.fst) tails.length plans false false before) _ _ p
+          (evaluator_of_previous plans tails hValid x m hprev false before E p hp)
+        apply ArgumentGuard.look_sequence_congr _ _ x .callByValuePar .callByValueSeq _ _ E E
+          _ _ _ _ p
+        · have ha := choiceArgument_eq plans tails hValid x m hprev choices E p hp
+          cases hv : evV (source plans tails) x .callByValuePar (tblV (source plans tails) x .callByValuePar m) E
+              (choiceArgument (tails.map Prod.fst) tails.length plans true choices) p with
+          | none => rw [evV_seq_none hv,evV_seq_none (ha.symm.trans hv)]
+          | some v => cases v with
+            | none => rw [evV_seq_fail hv,evV_seq_fail (ha.symm.trans hv)]
+            | some q =>
+              rw [evV_seq_ok hv,evV_seq_ok (ha.symm.trans hv)]
+              exact evaluator_of_previous plans tails hValid x m hprev false after E q
+                (evV_ok (tblV_ok _ _ _ m) _ p hp q hv)
+        · exact choiceCalls_eq plans tails hValid x m hprev i P hr choices E p hp
+    | false,.call i [before,G,H,after], E, p, hp => guarded_call_eq plans tails hValid x m i p E _ _ _ _ _ _ _ _
+        (render_fragment_syntax (tails.map Prod.fst) tails.length plans false H) hp
+        (render_firstOrder _ _ _ true false G) (render_firstOrder _ _ _ true true H)
+        (fun q hq => evaluator_of_previous plans tails hValid x m hprev false G E q hq)
+        (fun q hq => evaluator_of_previous plans tails hValid x m hprev true H E q hq)
+        (evaluator_of_previous plans tails hValid x m hprev false before E p hp)
+        (fun q hq => evaluator_of_previous plans tails hValid x m hprev false after E q hq) hprev
+    | f,.seq a b, E, p, hp => by
+      have hh := evaluator_of_previous plans tails hValid x m hprev f a E p hp
+      simp only [render_seq]
+      cases hv : evV (source plans tails) x .callByValuePar (tblV (source plans tails) x .callByValuePar m) E (render (tails.map Prod.fst) tails.length plans true f a) p with
+      | none => rw [evV_seq_none hv,evV_seq_none (hh.symm.trans hv)]
+      | some result => cases result with
+        | none => rw [evV_seq_fail hv,evV_seq_fail (hh.symm.trans hv)]
+        | some q =>
+          rw [evV_seq_ok hv,evV_seq_ok (hh.symm.trans hv)]
+          exact evaluator_of_previous plans tails hValid x m hprev f b E q (evV_ok (tblV_ok _ _ _ m) _ p hp q hv)
+    | f,.alt a b, E, p, hp => by
+      have hh := evaluator_of_previous plans tails hValid x m hprev f a E p hp
+      simp only [render_alt]
+      cases hv : evV (source plans tails) x .callByValuePar (tblV (source plans tails) x .callByValuePar m) E (render (tails.map Prod.fst) tails.length plans true f a) p with
+      | none => rw [evV_alt_none hv,evV_alt_none (hh.symm.trans hv)]
+      | some result => cases result with
+        | none =>
+          rw [evV_alt_fail hv,evV_alt_fail (hh.symm.trans hv)]
+          exact evaluator_of_previous plans tails hValid x m hprev f b E p hp
+        | some q => rw [evV_alt_ok hv,evV_alt_ok (hh.symm.trans hv)]
+    | f,.star a, E, p, hp => by
+      simp only [render_star,evV_star]
+      exact evStar_congr p (fun q hq => evaluator_of_previous plans tails hValid x m hprev f a E q (by omega))
+    | f,.notP a, E, p, hp => by
+      simp only [render_notP,evV]
+      rw [evaluator_of_previous plans tails hValid x m hprev false a E p hp]
+    | false,.param _, _, _, _ | false,.any, _, _, _ | false,.chr _, _, _, _
+    | false,.range _ _, _, _, _ | false,.lit _, _, _, _ => rfl
+    | true,.chr c, _, _, _ => by simp only [render]; split <;> rfl
+    | true,.lit w, _, _, _ => by
+      simp only [render]; split
+      · exact ParserPrefixFusion.pure_eval _ _ x .callByValuePar .callByValueSeq _ _ _ _ (aWord w.length)
+          (by induction w.length with | zero => trivial | succ n ih => exact ⟨True.intro,ih⟩) _
+      · rfl
+    | f,.eps, _, _, _ => by cases f <;> rfl
+    | true,.param _, _, _, _ | true,.any, _, _, _ | true,.range _ _, _, _, _ | true,.call _ _, _, _, _
+    | false,.call _ (_::_::_::_::_::_), _, _, _ => rfl
+    | f,.dbg _, _, _, _ | f,.lam _ _, _, _, _ | f,.callParam _ _, _, _, _
+    | f,.invoke _ _ _, _, _, _ => by cases f <;> rfl
+  termination_by _f e => sizeOf e
+  decreasing_by all_goals simp_wf; all_goals omega
+
+  theorem choiceArgument_eq (plans : List Plan) (tails : List Part) (hValid : Valid plans tails) (x : List Char) (m : Nat)
+      (hprev : ∀ k, m=k+1 → ∀ e E p, p≤x.length →
+        evV (source plans tails) x .callByValuePar (tblV (source plans tails) x .callByValuePar k) E (render (tails.map Prod.fst) tails.length plans true false e) p=
+        evV (target plans tails) x .callByValueSeq (tblV (target plans tails) x .callByValueSeq k) E (render (tails.map Prod.fst) tails.length plans false false e) p) :
+      ∀ e E p, p≤x.length →
+        evV (source plans tails) x .callByValuePar (tblV (source plans tails) x .callByValuePar m) E
+          (choiceArgument (tails.map Prod.fst) tails.length plans true e) p=
+        evV (target plans tails) x .callByValueSeq (tblV (target plans tails) x .callByValueSeq m) E
+          (choiceArgument (tails.map Prod.fst) tails.length plans false e) p
+    | .seq G H,E,p,hp =>
+      FragmentConsumingEntry.argument_congr _ _ x .callByValuePar .callByValueSeq _ _ (tblV_ok _ _ _ m) E E _ _ _ _
+        (fun q hq => evaluator_of_previous plans tails hValid x m hprev false G E q hq)
+        (fun q hq => evaluator_of_previous plans tails hValid x m hprev true H E q hq) p hp
+    | .alt a b,E,p,hp => by
+      have ha := choiceArgument_eq plans tails hValid x m hprev a E p hp
+      simp only [choiceArgument]
+      cases hv : evV (source plans tails) x .callByValuePar (tblV (source plans tails) x .callByValuePar m) E
+          (choiceArgument (tails.map Prod.fst) tails.length plans true a) p with
+      | none => rw [evV_alt_none hv,evV_alt_none (ha.symm.trans hv)]
+      | some v => cases v with
+        | none =>
+          rw [evV_alt_fail hv,evV_alt_fail (ha.symm.trans hv)]
+          exact choiceArgument_eq plans tails hValid x m hprev b E p hp
+        | some q => rw [evV_alt_ok hv,evV_alt_ok (ha.symm.trans hv)]
+    | .call _ _,_,_,_ | .param _,_,_,_ | .eps,_,_,_ | .any,_,_,_ | .chr _,_,_,_
+    | .range _ _,_,_,_ | .lit _,_,_,_ | .star _,_,_,_ | .notP _,_,_,_ | .dbg _,_,_,_
+    | .lam _ _,_,_,_ | .callParam _ _,_,_,_ | .invoke _ _ _,_,_,_ => rfl
+  termination_by e => sizeOf e
+  decreasing_by all_goals simp_wf; all_goals omega
+
+  theorem choiceCalls_eq (plans : List Plan) (tails : List Part) (hValid : Valid plans tails) (x : List Char) (m : Nat)
+      (hprev : ∀ k, m=k+1 → ∀ e E p, p≤x.length →
+        evV (source plans tails) x .callByValuePar (tblV (source plans tails) x .callByValuePar k) E (render (tails.map Prod.fst) tails.length plans true false e) p=
+        evV (target plans tails) x .callByValueSeq (tblV (target plans tails) x .callByValueSeq k) E (render (tails.map Prod.fst) tails.length plans false false e) p) (i : Nat) (P : Plan) (hr : plans[i]?=some P) :
+      ∀ e E p, p≤x.length →
+        evV (source plans tails) x .callByValuePar (tblV (source plans tails) x .callByValuePar m) E
+          (.call i [choiceArgument (tails.map Prod.fst) tails.length plans true e]) p=
+        evV (target plans tails) x .callByValueSeq (tblV (target plans tails) x .callByValueSeq m) E
+          (choiceCalls (tails.map Prod.fst) tails.length plans false i e) p
+    | .seq G H,E,p,hp => by
+      have hc := call_eq plans tails hValid x m i p E _ _ _ _
+        (render_fragment_syntax (tails.map Prod.fst) tails.length plans false H) hp
+        (render_firstOrder _ _ _ true false G) (render_firstOrder _ _ _ true true H)
+        (fun q hq => evaluator_of_previous plans tails hValid x m hprev false G E q hq)
+        (fun q hq => evaluator_of_previous plans tails hValid x m hprev true H E q hq) hprev
+      simpa only [choiceArgument,choiceCalls,call,hr,ite_true] using hc
+    | .alt a b,E,p,hp => by
+      simp only [choiceArgument,choiceCalls]
+      rw [ArgumentGuard.choice_call_eq _ x _ E i p _ _ _ (source_rule plans tails i P hr),
+        ChoiceArguments.branch_eval,ChoiceArguments.branch_eval]
+      have ha := choiceArgument_eq plans tails hValid x m hprev a E p hp
+      rw [←ha]
+      cases hv : evV (source plans tails) x .callByValuePar (tblV (source plans tails) x .callByValuePar m) E
+          (choiceArgument (tails.map Prod.fst) tails.length plans true a) p with
+      | none => rfl
+      | some v => cases v with
+        | none => exact choiceCalls_eq plans tails hValid x m hprev i P hr b E p hp
+        | some q => exact choiceCalls_eq plans tails hValid x m hprev i P hr a E p hp
+    | .call _ _,E,p,_ | .param _,E,p,_ | .eps,E,p,_ | .any,E,p,_ | .chr _,E,p,_
+    | .range _ _,E,p,_ | .lit _,E,p,_ | .star _,E,p,_ | .notP _,E,p,_ | .dbg _,E,p,_
+    | .lam _ _,E,p,_ | .callParam _ _,E,p,_ | .invoke _ _ _,E,p,_ => by
+      simp only [choiceArgument,choiceCalls]
+      rw [evV_call_par (source_rule plans tails i P hr) rfl (by decide)]
+      simp [MExp.failAlways,evParArgs,evV]
+  termination_by e => sizeOf e
+  decreasing_by all_goals simp_wf; all_goals omega
+end
 
 theorem evaluator_eq (plans : List Plan) (tails : List Part) (hValid : Valid plans tails) (x : List Char) (m : Nat)
     (f : Bool) (e : MExp) (E : List (List Char)) (p : Nat) (hp : p≤x.length) :

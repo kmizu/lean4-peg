@@ -1,3 +1,16 @@
+import MacroPeg.CBV.GuardedReplayExamples
+import MacroPeg.CBV.GuardedReplayCompiler
+import MacroPeg.CBV.GuardedReplayIteration
+import MacroPeg.CBV.CaptureOriginRewrite
+import MacroPeg.CBV.RecursiveFinitePrefixExamples
+import MacroPeg.CBV.RecursiveFinitePrefix
+import MacroPeg.CBV.FinitePrefixControlExamples
+import MacroPeg.CBV.FinitePrefixControl
+import MacroPeg.CBV.AutomaticOriginControlExamples
+import MacroPeg.CBV.AutomaticOriginControl
+import MacroPeg.CBV.UniversalCaptureProfileExamples
+import MacroPeg.CBV.UniversalCaptureProfiles
+import MacroPeg.CBV.SelectedFragmentArgumentExamples
 import MacroPeg.CBV.FragmentPrefixQueryExamples
 import MacroPeg.CBV.FragmentPrefixQuery
 import MacroPeg.CBV.PrefixCaptureQueryExamples
