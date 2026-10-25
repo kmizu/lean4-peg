@@ -16,6 +16,52 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 末尾確認なしの反復：停止位置の一般式と残る文法操作
+
+`SynchronizedStarFrontier.star_maximum` は、同期する有限個の検査の conjunction と、
+それぞれを独立に反復したときの停止位置の関係を示す。
+各検査は有限に成功または失敗し、成功すれば厳密に入力を消費する。
+同時検査は、すべての検査が同じ終点で成功したとき、その終点で成功し、
+一つでも失敗すれば失敗する。この一周の条件だけから、非有界の実 `evStar` について
+
+```
+evStar simultaneous p = maximum (component evaluators' evStar results at p)
+```
+
+を導く。位置は残り文字数なので、`maximum` は**最も早く止まった位置**に対応する。
+反復回数、残余文字列の内容、停止する component は固定しない。
+`maximum` は実評価結果を受け取る Lean の計算であり、PEG の新しい primitive でも、
+Seq 文法の閉包性として仮定した操作でもない。
+
+`RepeatedWordFrontier.source_failure_iff/step_success/step_failure` は、
+元の全捕捉語と各 unary view の一周の実結果を対応させる。
+区切り自由性と delimiter 境界の一意性から条件を証明するため、上の同期条件を
+別名の仮定として残していない。`physical` は任意の非空 parameter pattern・正の引数個数・
+区切り自由な実保持語・任意の元入力と開始位置に対して、実 bare `star` の返り値を計算する。
+元側と view 側の grammar・strategy・有限評価表は別々でもよい。
+`followed_by` は任意の後続を元の保持環境のまま、その停止位置で実行する評価式を示す。
+EOF、末尾 marker、有限 suffix 辞書、反復の展開上限は要求しない。
+
+`RepeatedFrontierTransfer.positive_iterations` は、元の引数が実際にすべて成功し、
+一周目も成功する場合に、**実 Par 規則呼出し**の残余位置が、各 actual を
+自分の終点から実行した **実 unary Seq 呼出し**の返す残余位置の最大値になることを証明する。
+caller の親環境を保ち、元 actual と変換後 actual の局所対応と捕捉の区切り自由性を明示する。
+Seq 呼出しの本体は、初回の `afterParts` に続いて通常の view 周期を bare `star` で反復する。
+`zero_iterations` は一周目の失敗時に元位置を返す別の場合を導く。
+初回の調整自体が失敗する view があるため、この零周の場合を成功時の最大値計算へ混ぜられない。
+
+実例は保持語 `a` と `ab`、周期 `[1,0]` である。
+`ab#a#ab#b#` では元の反復は残余5文字で止まり、短語の実 Seq 呼出しも5文字、長語の呼出しは0文字を返す。
+`ab#a#x#a#` では元は残余4文字、短語の呼出しは0文字、長語の呼出しは4文字を返す。
+`no_fixed_projection` は固定したどちらか一方を全入力で使う方法を否定する。
+両例の実捕捉値、正しい残余で成功する元の後続、誤った投影で消失する後続、
+零周の場合、先行 actual 失敗、clock 0 未定義を kernel で確認した。
+
+**一般の停止位置を返す Seq 文法は、まだ構成できていない。**
+この投影法を完成するには、各呼出しの残余位置を実際の入力上で比較・選択する手段が必要である。
+今回の `maximum` を文法操作として使う翻訳は提示していない。
+以下の完成済み文法翻訳は引き続き EOF 付きの範囲であり、一般 Par/Seq の一致・分離も未解決である。
+
 ## 入力末尾までの消費反復を、固定個数の unary 検査へ
 
 `RepeatedWordPattern` と `DelimitedRepeatEvaluation/RepeatedWordEvaluation/RepeatedWordTransfer` は、
@@ -11545,3 +11591,13 @@ RepeatedWordTransfer preserves actual Par/Seq calls at every physical clock in a
 The five-rule source generates nine fixed Seq rules. Symbolic proofs cover every parent length and every positive consuming repetition count with real captures. Kernel checks include recursive positive producers, 0/7/21 separator inputs with empty actuals, excess input, invalid scope/patterns, initialization/preflight omissions, early argument failure and true cycles undefined on every input and clock. Without EOF the two real unary passes on ab#a#ab#b# stop after different iteration counts; this is a limitation of the proposed transformation, not a class separator. General stopping frontiers, arbitrary bodies and unrestricted Par/Seq class equality/separation remain unresolved.
 
 Validation: full lake build including Audit passes (1,319 jobs). All 3,167 related public theorem dependency reports use standard Lean axioms (3,100) or none (67); the 92 new reports have matching Audit guards. This extension adds nine Lean modules.
+
+## Exact general stopping frontiers (evaluator theorem, not a new grammar compiler)
+
+SynchronizedStarFrontier proves that greedy iteration of a synchronized conjunction stops at the maximum remaining-input position among the independently iterated component evaluators. The premises concern one actual finite consuming step, not iteration bounds or a termination oracle. RepeatedWordFrontier discharges them for arbitrary nonempty delimited parameter patterns and delimiter-free retained tuples, with arbitrary input, residual and valid source/view tables. An arbitrary continuation runs at that calculated frontier in the original environment. No EOF or finite suffix guard is used.
+
+RepeatedFrontierTransfer connects this formula to actual Par calls and actual unary Seq calls at their differing argument endpoints, in an arbitrary caller environment, when actuals and the first complete iteration succeed. Zero iterations are handled separately. The two real examples with a/ab captures show that either component can stop first; neither fixed consuming component is correct on all inputs, and using the other frontier loses the original continuation.
+
+The maximum operation is an explicit Lean calculation on evaluator results, not an MExp, a grammar closure assumption or a general Par-to-Seq construction. Selecting that frontier in a Seq grammar remains unresolved, as do unrestricted class equality/separation. The established EOF compiler retains its stated scope.
+
+Validation after this addition: full lake build including Audit passes (1,323 jobs). All 3,193 related public dependencies are standard (3,125) or axiom-free (68). This addition has 26 public theorem guards in four new modules; PR69 totals 118 new guards across 13 new Lean modules.

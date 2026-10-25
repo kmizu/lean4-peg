@@ -1,3 +1,7 @@
+import MacroPeg.CBV.SynchronizedStarFrontier
+import MacroPeg.CBV.RepeatedWordFrontier
+import MacroPeg.CBV.RepeatedFrontierTransfer
+import MacroPeg.CBV.RepeatedFrontierExamples
 import MacroPeg.CBV.RepeatedWordPattern
 import MacroPeg.CBV.DelimitedRepeatEvaluation
 import MacroPeg.CBV.RepeatedWordEvaluation

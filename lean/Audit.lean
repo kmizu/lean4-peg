@@ -1,3 +1,7 @@
+import MacroPeg.CBV.SynchronizedStarFrontier
+import MacroPeg.CBV.RepeatedWordFrontier
+import MacroPeg.CBV.RepeatedFrontierTransfer
+import MacroPeg.CBV.RepeatedFrontierExamples
 import MacroPeg.CBV.RepeatedWordPattern
 import MacroPeg.CBV.DelimitedRepeatEvaluation
 import MacroPeg.CBV.RepeatedWordEvaluation
@@ -35841,3 +35845,113 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.RepeatedCopyProofs.preflight_cannot_be_omitted' depends on axioms: [propext] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.RepeatedCopyProofs.preflight_cannot_be_omitted
+
+/-- info: 'Shallot.MacroPeg.CBV.SynchronizedStarFrontier.maximum_bound' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SynchronizedStarFrontier.maximum_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.SynchronizedStarFrontier.maximum_attained' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SynchronizedStarFrontier.maximum_attained
+
+/-- info: 'Shallot.MacroPeg.CBV.SynchronizedStarFrontier.loops_bound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SynchronizedStarFrontier.loops_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.SynchronizedStarFrontier.star_maximum' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SynchronizedStarFrontier.star_maximum
+
+/-- info: 'Shallot.MacroPeg.CBV.RepeatedWordFrontier.compile_success' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RepeatedWordFrontier.compile_success
+
+/-- info: 'Shallot.MacroPeg.CBV.RepeatedWordFrontier.source_failure_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RepeatedWordFrontier.source_failure_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.RepeatedWordFrontier.step_success' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RepeatedWordFrontier.step_success
+
+/-- info: 'Shallot.MacroPeg.CBV.RepeatedWordFrontier.step_failure' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RepeatedWordFrontier.step_failure
+
+/-- info: 'Shallot.MacroPeg.CBV.RepeatedWordFrontier.physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RepeatedWordFrontier.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.RepeatedWordFrontier.followed_by' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RepeatedWordFrontier.followed_by
+
+/-- info: 'Shallot.MacroPeg.CBV.RepeatedFrontierTransfer.afterLoop_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RepeatedFrontierTransfer.afterLoop_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RepeatedFrontierTransfer.adjusted_loop' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RepeatedFrontierTransfer.adjusted_loop
+
+/-- info: 'Shallot.MacroPeg.CBV.RepeatedFrontierTransfer.unary_call' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RepeatedFrontierTransfer.unary_call
+
+/-- info: 'Shallot.MacroPeg.CBV.RepeatedFrontierTransfer.positive_iterations' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RepeatedFrontierTransfer.positive_iterations
+
+/-- info: 'Shallot.MacroPeg.CBV.RepeatedFrontierTransfer.zero_iterations' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RepeatedFrontierTransfer.zero_iterations
+
+/-- info: 'Shallot.MacroPeg.CBV.RepeatedFrontierExamples.actual_captures' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RepeatedFrontierExamples.actual_captures
+
+/-- info: 'Shallot.MacroPeg.CBV.RepeatedFrontierExamples.small_stops_first' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RepeatedFrontierExamples.small_stops_first
+
+/-- info: 'Shallot.MacroPeg.CBV.RepeatedFrontierExamples.large_stops_first' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RepeatedFrontierExamples.large_stops_first
+
+/-- info: 'Shallot.MacroPeg.CBV.RepeatedFrontierExamples.exact_maximum' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RepeatedFrontierExamples.exact_maximum
+
+/-- info: 'Shallot.MacroPeg.CBV.RepeatedFrontierExamples.no_fixed_projection' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RepeatedFrontierExamples.no_fixed_projection
+
+/-- info: 'Shallot.MacroPeg.CBV.RepeatedFrontierExamples.continuation_uses_original_frontier' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RepeatedFrontierExamples.continuation_uses_original_frontier
+
+/-- info: 'Shallot.MacroPeg.CBV.RepeatedFrontierExamples.fixed_large_projection_loses_continuation' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RepeatedFrontierExamples.fixed_large_projection_loses_continuation
+
+/-- info: 'Shallot.MacroPeg.CBV.RepeatedFrontierExamples.fixed_small_projection_loses_continuation' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RepeatedFrontierExamples.fixed_small_projection_loses_continuation
+
+/-- info: 'Shallot.MacroPeg.CBV.RepeatedFrontierExamples.zero_iterations_need_separate_branch' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RepeatedFrontierExamples.zero_iterations_need_separate_branch
+
+/-- info: 'Shallot.MacroPeg.CBV.RepeatedFrontierExamples.actual_failure_before_loop' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RepeatedFrontierExamples.actual_failure_before_loop
+
+/-- info: 'Shallot.MacroPeg.CBV.RepeatedFrontierExamples.clock_zero_is_undefined' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RepeatedFrontierExamples.clock_zero_is_undefined
