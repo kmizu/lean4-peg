@@ -16,6 +16,56 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 入力末尾までの消費反復を、固定個数の unary 検査へ
+
+`RepeatedWordPattern` と `DelimitedRepeatEvaluation/RepeatedWordEvaluation/RepeatedWordTransfer` は、
+非空の有限 index 列 `js` を用いたコピー規則の本体
+
+```
+((param_js[0];d); ...; (param_js[last];d))*; !any
+```
+
+を、固定個数の unary Seq 検査へ翻訳する。引数個数、出現順、重複、捕捉語の長さ、
+反復回数はいずれも一般である。捕捉語は区切り `d` を含まず、空語でもよい。
+従来の `ControlledCopy` の構文上零幅の反復とは異なり、ここでは各周回が区切りを含む実入力を消費する。
+反復回数を展開した文法や捕捉語の有限辞書は生成しない。
+
+検査 `i` は実際に捕捉した一語 `w_i` を保持し、`js` の各位置で、index が `i` なら
+`w_i;d`、それ以外なら「区切りまでの任意語;d」を読む。この有限の周期をそのまま反復する。
+Seq 引数が既に消費した先頭部分は初回だけ `afterParts` で調整し、二周目以後は周期全体を検査する。
+各検査が入力末尾で成功すれば、実入力の区切り数は必ず `反復回数 * js.length` になる。
+`iteration_unique` が、別々に計算された検査の周回数の一致を導き、`source_iff_after` が
+元の全保持語 tuple による全体照合へ戻す。`js` の非空性はこの同期と各周回の厳密な消費に必要である。
+
+`DelimitedRepeatEvaluation.physical` は任意の進行する template の実 `evStar` を有限周回の照合へ接続する。
+これは反復回数の oracle を仮定する定理ではなく、実際の評価の trace と停止条件を使う証明である。
+`RepeatedWordTransfer.physical` は、実際の元引数と変換後引数を同じ caller 環境・同じ clock で評価し、
+新しく捕捉した実文字列と各 Seq 引数の異なる終点から、コピー呼出し全体の実評価一致を導く。
+元順の preflight の後に nullary 初期化 gate を呼び、空入力も clock 0 の未定義を保存する。
+空入力の分岐は元位置で判断し、引数を評価した後の位置が空であるだけでは成功させない。
+
+`RepeatedCopySyntax/Correspondence/Compiler` は、この本体を既存の parent/client の制御構文へ統合する。
+helper は独立 nullary prefix、client は親語を先頭で再照合する unary source 規則であり、
+コピー actual は親を正に消費し、parameterized recursive producer を呼べる。
+client ごとの親 alphabet 条件・戻り値効果の再帰閉包・全 actual の捕捉効果、全 raw 宣言と root、
+非空 pattern と全 index の範囲を有限検査する。
+client 実表の同時帰納で、任意の root 文脈・実再帰・actual 内の変換も同じ physical clock に接続し、
+元文字列言語・残余・有限失敗・定義性・全 clock 未定義性を保存する。
+
+例は source 5 規則 `[0,0,1,1,4]` から、Seq 9 規則 `[0,0,1,1,0,1,1,1,1]` への固定翻訳である。
+実捕捉は `[a^(2n)b c^(2n), a^n, a^(2n), a^(2n)b]`、周期は `[0,2,1,0,3,2,1]`。
+`source_and_target_all_repetitions` は任意の `n` と任意の正の周回数で両文法の受理を証明する。
+さらに空の親を持つ producer が実際に再帰して `aaaa` を捕捉し、三周消費する両文法の kernel 実行を確認した。
+全 actual が空でも `#` を 0/7/21 個消費できる。後続余剰文字、範囲外 index、空 pattern は拒否される。
+真の actual/client cycle は全入力・全 clock で未定義となり、preflight を除くと空入力で誤成功する。
+初期化省略の clock 0 誤成功と、初期化より先の actual 失敗も確認した。
+
+**末尾確認は現時点で必須である。** `js=[1,0]`、保持語 `a` と `ab`、
+実入力 `ab#a#ab#b#` では、末尾確認を外した二つの unary loop はそれぞれ一周・二周で止まり、
+残余が 5 文字と 0 文字になる。この kernel 反例は、停止位置を任意の後続へ返す翻訳には別の同期が
+必要なことを示す。これは特定の投影法の制限であり、言語クラス分離ではない。
+一般の消費反復と後続・任意の本体・複数親・先頭再照合なしの client・無制限の Par/Seq 一致または分離は未解決。
+
 ## 保持語を読み進めた後の選択・否定を含むコピー本体
 
 `CopyBodyControl/Evaluation/Projections/Emission` と
@@ -11485,3 +11535,13 @@ CopyBodyControl/Evaluation/Projections/Emission and ControlledCopySyntax/Corresp
 ControlledCaptureEffects connects the actual grammar's recursive return-effect certificates, positive parent consumption, parameterized recursive producers and parent restoration to the same-physical-clock proof. Complete source/root and finite scope/effect checks yield original-string language and residual preservation, finite failure/definedness and all-clock undefinedness. The five-rule example generates 97 fixed Seq rules. Symbolic proofs cover every parent length and recursion depth with actual unbounded captures and child doubling. Kernel cases cover alternative post-consumption choice paths, incorrect continuation distribution, missing initialization/preflight, early argument failure, value-dependent nullable repetition and malformed scope/body rejection.
 
 Validation: full lake build including Audit passes (1,310 jobs). All 3,075 related public dependency reports use only standard axioms (3,014) or no axioms (61); the 97 new reports are guarded in Audit. The PR has 1,443 new guarded dependency checks across 134 new Lean modules. Consuming body repetition, general header recursion, arbitrary body atoms, multiple-parent clients and the unrestricted Par/Seq class comparison remain unresolved.
+
+## Consuming delimited repetition through EOF (latest extension)
+
+RepeatedWordPattern synchronizes arbitrarily many repetitions of any fixed nonempty parameter-index pattern, with arbitrary positive arity, occurrence order and repetition, and unbounded delimiter-free retained words (including empty words). Each unary pass checks its own retained word and skips other segments. Successful full-input passes have the same delimiter count, hence the same unbounded iteration count. The first pass starts after its actual Seq argument endpoint; later iterations use the whole fixed pattern. DelimitedRepeatEvaluation derives the real greedy evStar semantics from strict progress and finite traces, with no iteration bound or language oracle.
+
+RepeatedWordTransfer preserves actual Par/Seq calls at every physical clock in arbitrary caller environments, conditional on local actual correspondence and checked capture freedom. RepeatedCopySyntax/Correspondence/Compiler discharge those premises using complete raw-source/root checks, parent requirements, return effects and simultaneous client-table induction, including positive parent consumption and parameterized producer calls inside actuals. Original-string languages, residuals, finite failure/definedness and all-clock undefinedness are preserved.
+
+The five-rule source generates nine fixed Seq rules. Symbolic proofs cover every parent length and every positive consuming repetition count with real captures. Kernel checks include recursive positive producers, 0/7/21 separator inputs with empty actuals, excess input, invalid scope/patterns, initialization/preflight omissions, early argument failure and true cycles undefined on every input and clock. Without EOF the two real unary passes on ab#a#ab#b# stop after different iteration counts; this is a limitation of the proposed transformation, not a class separator. General stopping frontiers, arbitrary bodies and unrestricted Par/Seq class equality/separation remain unresolved.
+
+Validation: full lake build including Audit passes (1,319 jobs). All 3,167 related public theorem dependency reports use standard Lean axioms (3,100) or none (67); the 92 new reports have matching Audit guards. This extension adds nine Lean modules.

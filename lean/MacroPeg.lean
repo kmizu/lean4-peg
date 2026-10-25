@@ -1,3 +1,12 @@
+import MacroPeg.CBV.RepeatedWordPattern
+import MacroPeg.CBV.DelimitedRepeatEvaluation
+import MacroPeg.CBV.RepeatedWordEvaluation
+import MacroPeg.CBV.RepeatedWordTransfer
+import MacroPeg.CBV.RepeatedCopySyntax
+import MacroPeg.CBV.RepeatedCopyCorrespondence
+import MacroPeg.CBV.RepeatedCopyCompiler
+import MacroPeg.CBV.RepeatedCopyExamples
+import MacroPeg.CBV.RepeatedCopyProofs
 import MacroPeg.CBV.CopyBodyControl
 import MacroPeg.CBV.CopyBodyEvaluation
 import MacroPeg.CBV.CopyBodyProjections
