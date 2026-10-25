@@ -16,6 +16,28 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 親依存actualを含む有限view同一視
+
+`FiniteSuffixDependentView`は、有限suffix guardを残した一般の式構文で、
+実引数を任意の式列へ広げる。実引数内で親の保持値を参照し、さらにuserを呼び出してよい。
+`specialize`は任意の実表`T`（通常の位置範囲不変条件のみ）について、
+現在の親の保持値を有限viewのliteral/失敗へ代入しても評価結果が変わらないことを証明する。
+Par実引数列の**実捕捉語列全体**と、Seq実引数列の実捕捉語列・終点も一致する。
+呼出し先には元と同じ実捕捉語を渡し、同じ`T i W`を参照する。
+
+したがって`environment_congr`は、同じviewを持つ任意の二つの親環境を同一視できる。
+`physical_environment_congr`は実際の`tblV`の各clockへ、`rows_factor`は
+この構文で書いた任意の相互再帰sourceの実user行へ接続する。
+どちらも親依存actualやactual内callを独立helperへ制限していない。
+直接例では、長い親`aabb`の否定再照合を含むactual内userが実語`a`を捕捉し、
+外側userがその`a`を再照合する。親参照を特殊化した式も直接実行で同じ結果になる。
+親`bbaa`とは全clock一致し、親を候補語`ab`へ変えると実引数の否定が失敗する。
+
+**これはcallee表を共有する式とsource行の同一視であり、生成Seq文法の定理ではない。**
+新たに捕捉した語のviewを、独立helper以外の実引数についても固定の生成規則で観測し、
+共有したparameterized表への依存を消すことが次の接続点である。
+下記の全体変換の実引数条件はまだ独立helperのままで、一般のPar/Seq一致・分離も未解決。
+
 ## 有限suffix再照合を持つ異なるarityのuser相互再帰
 
 `FiniteSuffixRecursiveSyntax/Helpers/Selection/Evaluation/Correspondence/Compiler`は、
@@ -10931,3 +10953,24 @@ on an accepted example; this operational contrast is not a class separation.
 The general original-string Par/Seq equality or separation remains unresolved. The existing EOF
 backend permits parent-dependent recursive actuals but restricts direct replay to EOF; this backend
 relaxes that replay region to finite exact-content observations while retaining independent actuals.
+
+
+## Finite-view congruence with parent-dependent recursive actuals
+
+FiniteSuffixDependentView removes the independent-actual syntax restriction for a separate
+shared-table expression theorem. Actuals may inspect parent retained words using guarded replay
+and invoke users inside actuals. Specialization replaces the current parent's guarded references
+by finite-view literals/failure. It preserves the entire actual captured-word tuple for Par,
+and the tuple and final position for Seq, over any shared table with the ordinary position-range
+invariant. Calls then consult the same original table at identical real actual words.
+Equal parent views consequently give equal expression results at every actual tblV clock;
+rows_factor proves this for every user row of an arbitrary mutually recursive source in this syntax.
+Direct executions check a parent-dependent negative query, a user inside an actual, capture of a,
+subsequent replay, and a different result when an other-view parent becomes the candidate ab.
+Two distinct other-view parents have symbolically equal results at all clocks.
+
+This is not yet a nullary Seq grammar translation: it still shares the original parameterized
+callee table. The next missing construction is a generated observer for the fresh captured words
+of arbitrary dependent actuals, followed by elimination of that table. The complete finite-suffix
+compiler above continues to require independent helper actuals. The unrestricted class question
+remains open.

@@ -854,3 +854,5 @@ import MacroPeg.CBV.FiniteSuffixRecursiveExamples
 import MacroPeg.CBV.FiniteSuffixRecursiveHelpers
 import MacroPeg.CBV.FiniteSuffixRecursiveSelection
 import MacroPeg.CBV.FiniteSuffixRecursiveSyntax
+
+import MacroPeg.CBV.FiniteSuffixDependentView

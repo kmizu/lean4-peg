@@ -1,3 +1,4 @@
+import MacroPeg.CBV.FiniteSuffixDependentView
 import MacroPeg.CBV.FiniteSuffixRecursiveCompiler
 import MacroPeg.CBV.FiniteSuffixRecursiveCorrespondence
 import MacroPeg.CBV.FiniteSuffixRecursiveEvaluation
@@ -32607,3 +32608,57 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSyntax.target_firstOrder' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSyntax.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixDependentView.renderArgs_length' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixDependentView.renderArgs_length
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixDependentView.specialize' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixDependentView.specialize
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixDependentView.specializePar' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixDependentView.specializePar
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixDependentView.specializeSeq' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixDependentView.specializeSeq
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixDependentView.environment_congr' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixDependentView.environment_congr
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixDependentView.physical_environment_congr' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixDependentView.physical_environment_congr
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixDependentView.source_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixDependentView.source_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixDependentView.rows_factor' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixDependentView.rows_factor
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixDependentView.Examples.actual_parent_dependent_capture' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixDependentView.Examples.actual_parent_dependent_capture
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixDependentView.Examples.dependent_nested_runs' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixDependentView.Examples.dependent_nested_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixDependentView.Examples.different_other_parents' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixDependentView.Examples.different_other_parents
