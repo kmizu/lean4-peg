@@ -1,3 +1,10 @@
+import MacroPeg.CBV.FiniteSuffixRecursiveCompiler
+import MacroPeg.CBV.FiniteSuffixRecursiveCorrespondence
+import MacroPeg.CBV.FiniteSuffixRecursiveEvaluation
+import MacroPeg.CBV.FiniteSuffixRecursiveExamples
+import MacroPeg.CBV.FiniteSuffixRecursiveHelpers
+import MacroPeg.CBV.FiniteSuffixRecursiveSelection
+import MacroPeg.CBV.FiniteSuffixRecursiveSyntax
 import MacroPeg.CBV.FiniteSuffixExamples
 import MacroPeg.CBV.FiniteSuffixCallCompiler
 import MacroPeg.CBV.FiniteSuffixBody
@@ -32255,3 +32262,348 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixExamples.balanced_target_run' depends on axioms: [propext] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.FiniteSuffixExamples.balanced_target_run
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveCompiler.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveCompiler.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveCompiler.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveCompiler.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveCompiler.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveCompiler.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveCompiler.defined_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveCompiler.defined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveCompiler.undefined_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveCompiler.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveCorrespondence.source_stable' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveCorrespondence.source_stable
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveCorrespondence.target_stable' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveCorrespondence.target_stable
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveCorrespondence.defined_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveCorrespondence.defined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveCorrespondence.canonical' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveCorrespondence.canonical
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveCorrespondence.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveCorrespondence.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveCorrespondence.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveCorrespondence.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveCorrespondence.undefined_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveCorrespondence.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveEvaluation.call_eq' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveEvaluation.call_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveEvaluation.evaluator' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveEvaluation.evaluator
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveEvaluation.rows_related' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveEvaluation.rows_related
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveEvaluation.frozen_equality' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveEvaluation.frozen_equality
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.nodes_valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.nodes_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.source_arities' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.source_arities
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.fixed_target_size' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.fixed_target_size
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.reversed_content_views' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.reversed_content_views
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.actual_parent_and_child_tuples' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.actual_parent_and_child_tuples
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.source_runs' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.source_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.target_runs' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.target_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.leaking_child_view_is_wrong' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.leaking_child_view_is_wrong
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.wrong_tuple_order_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.wrong_tuple_order_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.parent_accepts_only_its_actual_view' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.parent_accepts_only_its_actual_view
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.observations' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.observations
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.original_language' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.original_language
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.unchanged_source_under_seq_fails' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.unchanged_source_under_seq_fails
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.actual_unbounded_family_samples' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.actual_unbounded_family_samples
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.epsilon_helper' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.epsilon_helper
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.cycle_rows' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.cycle_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.cycle_source_all_inputs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.cycle_source_all_inputs
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.cycle_target_all_inputs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.cycle_target_all_inputs
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.nullable_rows' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.nullable_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.nullable_source_all_clocks' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.nullable_source_all_clocks
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.nullable_target_all_clocks' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.nullable_target_all_clocks
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.undefined_helper' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.undefined_helper
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.undefined_argument_source_all_inputs' depends on axioms: [propext,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.undefined_argument_source_all_inputs
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.undefined_argument_target_all_inputs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.undefined_argument_target_all_inputs
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.failure_before_undefined_argument' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.failure_before_undefined_argument
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.bypassing_preflight_changes_undefinedness' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.bypassing_preflight_changes_undefinedness
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.other_view_preserves_negative_replay' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.other_view_preserves_negative_replay
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.short_view_changes_negative_replay' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.short_view_changes_negative_replay
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.omitted_guard_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.omitted_guard_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.invalid_calls_skip_undefined_actual' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveExamples.invalid_calls_skip_undefined_actual
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveHelpers.frozen_lexical_base' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveHelpers.frozen_lexical_base
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveHelpers.source_query' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveHelpers.source_query
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveHelpers.target_lexical' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveHelpers.target_lexical
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveHelpers.target_query' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveHelpers.target_query
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveHelpers.source_ok' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveHelpers.source_ok
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveHelpers.target_ok' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveHelpers.target_ok
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSelection.helper_eq' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSelection.helper_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSelection.test_at' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSelection.test_at
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSelection.choose_at' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSelection.choose_at
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSelection.select_at' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSelection.select_at
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSelection.gather_at' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSelection.gather_at
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSelection.arguments_eq' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSelection.arguments_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSyntax.observe_mem' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSyntax.observe_mem
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSyntax.views_mem' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSyntax.views_mem
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSyntax.key_mem' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSyntax.key_mem
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSyntax.permitted_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSyntax.permitted_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSyntax.source_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSyntax.source_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSyntax.target_rule' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSyntax.target_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSyntax.source_installed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSyntax.source_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSyntax.target_installed' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSyntax.target_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSyntax.arguments_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSyntax.arguments_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSyntax.firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSyntax.firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSyntax.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSyntax.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSyntax.target_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteSuffixRecursiveSyntax.target_firstOrder

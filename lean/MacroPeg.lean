@@ -846,3 +846,11 @@ import MacroPeg.CBV.RecursiveScannerProductHelpers
 import MacroPeg.CBV.RecursiveScannerProductHeader
 import MacroPeg.CBV.RecursiveScannerProductCorrespondence
 import MacroPeg.CBV.RecursiveScannerProductExamples
+
+import MacroPeg.CBV.FiniteSuffixRecursiveCompiler
+import MacroPeg.CBV.FiniteSuffixRecursiveCorrespondence
+import MacroPeg.CBV.FiniteSuffixRecursiveEvaluation
+import MacroPeg.CBV.FiniteSuffixRecursiveExamples
+import MacroPeg.CBV.FiniteSuffixRecursiveHelpers
+import MacroPeg.CBV.FiniteSuffixRecursiveSelection
+import MacroPeg.CBV.FiniteSuffixRecursiveSyntax

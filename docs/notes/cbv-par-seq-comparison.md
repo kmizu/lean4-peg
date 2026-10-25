@@ -16,6 +16,38 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 有限suffix再照合を持つ異なるarityのuser相互再帰
+
+`FiniteSuffixRecursiveSyntax/Helpers/Selection/Evaluation/Correspondence/Compiler`は、
+下記の単一callee backendを、任意個・異なるarityのuser規則の相互再帰へ拡張する。
+各直接参照は引き続き`guard(R);param_k`で、実引数は独立したnullary再帰helperの呼出し列に限る。
+本体ではseq/alt/not/star、独立helper呼出し、他のuserへの呼出しを自由に組み合わせる。
+calleeごとのarityと有限viewの組合せから固定nullary規則を列挙し、実捕捉列を等値queryで選ぶ。
+user呼出しの有限arity/参照検査に失敗した場合は、元の失敗式へ下げて実引数を評価しない。
+
+helper prefixだけを実安定表で固定した後、user段数について全user行を同時帰納する。
+行不変条件は、規則のarityに合う任意の実保持文字列列を、その正確な候補語／その他viewへ対応させる。
+親のviewは継続へ構文的に残り、子の新しいviewで上書きされない。
+元helperも生成product helperも実宣言から閉じ、helperの意味や停止性を外部の仮定として渡さない。
+有限な全宣言・開始式の一致検査から、元文字列言語・全残余・有限失敗・有限実行の存在と
+全physical clock未定義を保存する。helper固定後のuser段数対応であり、同physical clock対応ではない。
+
+主例の元arityは`[0,0,0,0,0,0,0,0,2,2,1]`、生成Seqは固定844規則・全nullary。
+非空の二語`a`/`ab`を親子で逆順に保持する相互再帰を、深さ0/1/2で元・生成双方直接実行した。
+再照合は空でないsuffix `ab`上で行う。outerは子から戻った後に自身の保持値`ab`を実際に消費する。
+子のviewが親へ漏れた場合と実引数を逆順に渡した場合は失敗することも直接実行した。
+balanced `a^n b^n`の実捕捉をn=1/2/4で確認し、候補外の長い値を否定再照合で使う
+元・生成双方の成功と、短い`ab`に変えた場合の失敗を確認した。
+user循環は全入力・全clock未定義、空捕捉の反復は非空suffix `ab`上で全clock未定義。
+未定義実引数の先行は全入力・全clock未定義を保存し、失敗実引数を先へ移すと有限失敗になる。
+preflight省略の誤った有限失敗、guard欠落の検査拒否、不正arity/範囲外userが
+未定義実引数を評価せず失敗する動作も検証した。
+
+この拡張でuser本体の相互再帰という制限は外れたが、親依存actualおよびactual内のuser呼出しは未対応。
+EOF backendはそれらを既に扱える一方、直接参照にEOFを要求する。
+両方の長所を合わせる一般の有限内容観測、任意位置での無guard再照合、
+Par/Seq言語クラスの一般一致・分離は依然として未解決である。
+
 ## 有限suffix領域で実内容を保つ捕捉再照合
 
 `FiniteSuffixCallCompiler`は、EOFだけでなく、残り入力が指定した有限集合`R`に入る位置で
@@ -10869,3 +10901,33 @@ guard are checked, with unguarded raw source rules rejected by the frontend.
 Arbitrary unguarded replay can match an overflow word and cannot be replaced
 by this finite view. General replay locations, arbitrary parameterized user
 control and the unrestricted Par/Seq equality or separation remain open.
+
+
+## Mutually recursive users with exact finite-suffix views
+
+The FiniteSuffixRecursive modules extend the single-callee backend to any finite family of
+mutually recursive users with arbitrary, mixed arities. Each direct replay retains the explicit
+finite remaining-suffix guard. Actuals remain calls to independent nullary recursive helpers;
+parent-dependent actuals and parameterized calls inside actuals are not yet supported.
+Generated fixed nullary rows are indexed by user and exact candidate/other tuple. Ordered original
+argument preflight and strict equality probes select the new tuple without overwriting the
+parent view in its continuation. Invalid calls lower to failure before evaluating actuals.
+
+The helper prefix is frozen at actual physical stabilization; simultaneous induction over user
+stages proves rows for every retained environment of the declared arity. Physical finite-run
+cofinality then gives all original-string observations and accepted languages, residuals, finite
+failure and all-clock undefinedness, without a same-physical-clock claim or semantic helper oracle.
+Complete raw declarations and root expressions are checked by finite AST comparison.
+
+The eleven-rule source has arities [0,0,0,0,0,0,0,0,2,2,1] and its fixed target has 844 nullary rules.
+Direct kernel executions at nesting depths 0/1/2 distinguish nonempty a/ab parent and reversed
+ab/a child tuples at nonempty remaining suffix ab. On return the outer rule consumes its own
+retained ab. Leaking the child tuple or reversing actuals fails. Balanced captures at n=1/2/4,
+long other-view negative replay success versus short ab failure, all-input/all-clock undefined
+user cycles, nullable retained repetition on a nonempty suffix, ordered failure/divergence,
+preflight bypass and malformed-call behavior are verified. The unchanged source under Seq fails
+on an accepted example; this operational contrast is not a class separation.
+
+The general original-string Par/Seq equality or separation remains unresolved. The existing EOF
+backend permits parent-dependent recursive actuals but restricts direct replay to EOF; this backend
+relaxes that replay region to finite exact-content observations while retaining independent actuals.
