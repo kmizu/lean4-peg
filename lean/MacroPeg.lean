@@ -1,3 +1,5 @@
+import MacroPeg.CBV.AutomaticOriginControlExamples
+import MacroPeg.CBV.AutomaticOriginControl
 import MacroPeg.CBV.UniversalCaptureProfileExamples
 import MacroPeg.CBV.UniversalCaptureProfiles
 import MacroPeg.CBV.SelectedFragmentArgumentExamples

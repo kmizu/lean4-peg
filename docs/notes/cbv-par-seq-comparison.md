@@ -229,6 +229,27 @@ literal・param・user・seq・alt・notP・star の全構文を許す。連結�
 これは制限された入口の文法 family 全体に対する注釈不要の変換であり、任意 PEG prefix
 や複数の独立 source capture を含む一般 Par→Seq 変換ではない。
 
+`AutomaticOriginControl` は、この自動 profile 生成を元位置制御と生 prefix query へ合成する。
+元の Plan／raw Body の有限構文検査だけから、正規化で生成する各実引数と core 本体の
+scope、各 core 入口の完全 shift／replay 条件、および全有限 profile 検査を証明する。
+閉じた leaf は旧 capture を空に置き換えて元位置で実行できるので、消費しない負 query や
+capture より短く消費して終わる本体も含め、任意の実 Arg と同居させられる。
+`prefixCheck` は元の `linkCheck`／independent／scope と入口の完全性だけを検査する。
+利用者は生成 core 文法の検査成功や、入力／出力 profile 集合を別に与える必要がない。
+既存の body 書換え・caller 正規化・helper 安定化を順に合成し、元の生文法から固定 Seq の
+全入力観測・元文字列言語・定義／全 clock 未定義を得る。
+
+`AutomaticOriginControlExamples` の実元規則は `a;!param0` と `a;&param0` である。
+実引数 `a;b*;a` が abba の全4文字を捕捉しても、負 query は a の1文字だけを消費する。
+正 query は aaa の全コピーを必要とし、aaaa なら1文字消費、aaa なら有限失敗する。
+同じ元文法では負 query を guard に使い、保持値の二倍を同じ user へ再捕捉して、
+子から戻ると親の全値を再利用する。入力依存の捕捉長と再帰深さを変えた source 成功・
+生成 Seq 成功、および早期 query の生 target 実行を kernel で検証した。
+固定開始式2つの全入力言語変換、実引数失敗の優先、nullable 引数の全入力全 clock
+未定義、旧値を参照する閉じた leaf と無条件 scanner 入口の有限拒否も証明する。
+これは元位置に戻る本体と任意実 Arg の接続であり、prefix 自体は認証済み固定 literal に
+限られる。一般の PEG 本体 prefix や独立複数 source capture の変換はまだ未解決である。
+
 断片経路は固定 literal に限らず、入力依存で非有界の区切り scanner prefix を扱う。
 この経路の実引数は G/H で選択する codeword＋a-fragment family とその有限優先選択閉包に限定し、prefix も A に限定する。
 自動 profile 経路は実引数の形を制限せず、対応する入口 family を完全固定 shift／replay 制御木に限定する。
