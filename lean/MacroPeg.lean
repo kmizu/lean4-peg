@@ -1,3 +1,8 @@
+import MacroPeg.CBV.SequentialResultSyntax
+import MacroPeg.CBV.SequentialResultNormal
+import MacroPeg.CBV.SequentialResultZero
+import MacroPeg.CBV.SequentialResultCompiler
+import MacroPeg.CBV.SequentialResultExamples
 import MacroPeg.CBV.FutureCaptureViews
 import MacroPeg.CBV.FutureCapturePruning
 import MacroPeg.CBV.FutureCaptureExamples

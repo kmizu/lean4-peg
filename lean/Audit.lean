@@ -1,3 +1,8 @@
+import MacroPeg.CBV.SequentialResultSyntax
+import MacroPeg.CBV.SequentialResultNormal
+import MacroPeg.CBV.SequentialResultZero
+import MacroPeg.CBV.SequentialResultCompiler
+import MacroPeg.CBV.SequentialResultExamples
 import MacroPeg.CBV.FutureCaptureViews
 import MacroPeg.CBV.FutureCapturePruning
 import MacroPeg.CBV.FutureCaptureExamples
@@ -37139,3 +37144,170 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.FutureCaptureExamples.outer_backtracking_needs_original_values
+
+/-! Result observers for unrestricted first-order Seq programs. -/
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultSyntax.normalArgs_length' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultSyntax.normalArgs_length
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultSyntax.normal_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultSyntax.normal_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultSyntax.normalArgs_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultSyntax.normalArgs_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultSyntax.zero_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultSyntax.zero_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultSyntax.zeroArgs_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultSyntax.zeroArgs_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultSyntax.emptyBody_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultSyntax.emptyBody_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultSyntax.target_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultSyntax.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultSyntax.target_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultSyntax.target_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultSyntax.rule_count' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultSyntax.rule_count
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultNormal.normal_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultNormal.normal_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultNormal.arguments_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultNormal.arguments_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultZero.any_star_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultZero.any_star_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultZero.emptyParameter_eval' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultZero.emptyParameter_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultZero.gate_project' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultZero.gate_project
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultZero.zero_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultZero.zero_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultZero.zero_args_success' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultZero.zero_args_success
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultCompiler.physical_rows' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultCompiler.physical_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultCompiler.physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultCompiler.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultCompiler.positive_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultCompiler.positive_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultCompiler.positive_physical' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultCompiler.positive_physical
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultCompiler.failure_physical' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultCompiler.failure_physical
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultCompiler.positive_success_strict' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultCompiler.positive_success_strict
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultCompiler.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultCompiler.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultCompiler.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultCompiler.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultCompiler.finite_success_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultCompiler.finite_success_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultCompiler.zero_success_language' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultCompiler.zero_success_language
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultExamples.zero_arguments_become_empty_values' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultExamples.zero_arguments_become_empty_values
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultExamples.positive_argument_prevents_zero_call' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultExamples.positive_argument_prevents_zero_call
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultExamples.zero_callee_can_have_consuming_call' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultExamples.zero_callee_can_have_consuming_call
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultExamples.committed_choice_keeps_its_first_success' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultExamples.committed_choice_keeps_its_first_success
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultExamples.invalid_calls_and_parameters_preserve_failure' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultExamples.invalid_calls_and_parameters_preserve_failure
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultExamples.nullable_star_is_not_finite_failure' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultExamples.nullable_star_is_not_finite_failure
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultExamples.cycle_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultExamples.cycle_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultExamples.cycle_undefined' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultExamples.cycle_undefined
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultExamples.skipped_call_divergence_is_preserved' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultExamples.skipped_call_divergence_is_preserved
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialResultExamples.arbitrary_depth_and_fresh_values' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialResultExamples.arbitrary_depth_and_fresh_values

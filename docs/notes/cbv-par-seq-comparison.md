@@ -16,6 +16,55 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 任意の一階Seq文法を、通常評価・ゼロ結果・正の消費へ分ける
+
+`SequentialResultSyntax/Normal/Zero/Compiler` は、**任意の一階 Seq 文法**から
+通常規則とゼロ結果観測規則を生成する。前者は元 arity を保持し、後者は全て nullary。
+規則数は厳密に元の二倍で、変換は入力や runtime の保持値に依存しない。
+source declaration/root の特殊な DSL、一つの self call、covering anchor、有限 word
+palette、alphabet 条件、正規表現引数、停止性の制約は付けていない。
+範囲外の call、arity mismatch、範囲外 parameter の元の有限失敗も保存する。
+
+根拠となる Seq の stationarity と empty-configuration の固定点は、既存の
+`SequentialCaptures` / `SequentialClock` にある。今回の新しい接続は、これらを使い、
+引数つきの一般再帰規則について、実引数評価・実表・本体のゼロ結果観測を同じ
+physical clock で構成する部分である。同じ入力位置で成功した Seq call の実引数は
+全て空語なので、ゼロ結果用 callee は元の全 parameter を空語へ代入した nullary
+規則としてよい。一方、fresh actual の評価は各入れ子の通常/ゼロ observer で扱う。
+元の呼出しが有限成功しなければ先へ進まない full gate を置き、観測しない経路の
+未定義を落とさない。
+
+`SequentialResultCompiler.physical` は任意 E・任意一階式・全入力位置・全 clock で、
+通常評価の完全一致と、ゼロ結果の `EmptyResultObservation.project` 一致を証明する。
+`positive_physical` はゼロ成功だけを落として正の消費の残余を保持し、
+`positive_success_strict` はその成功が必ず入力を進めることを示す。
+`failure_physical` は有限失敗だけで空成功し、元の未定義は未定義のままにする。
+`zero_success_language` は、元の式が元入力を残して成功する文字列集合を、
+`zero(e); any*` による固定 Seq 文法で**同じ元文字列上の全入力消費言語**へ変換する。
+通常 clone は元の受理言語をそのまま保持する。
+
+例では all-empty actual の nullary observer、正の actual を持つ空成功 callee、
+committed choice、無効 call/arity/parameter、nullable star、skip される経路の真の
+再帰未定義を検証。既存の tuple 再捕捉文法についても、任意の初期長と再帰 depth
+で、新しい倍長の値と親復帰を含む全入力の通常/ゼロ/positive 観測を記号的に接続した。
+
+この観測変換は **Seq→Seq** で、一般の Par→Seq 変換そのものではない。未定義を
+有限失敗へ変えていないため、任意プログラムの totalization や、任意の Seq 言語の
+補集合閉包が証明されたとは主張しない。次の全体変換を考えるため、既にある有限
+stationary-state の議論と、ゼロ/positive/failure の実際の文法生成を分けて接続した。
+
+関連研究として、[2019年の原記事](https://kmizu.hatenablog.com/entry/2019/10/24/145039)
+で両 CBV のタグ照合例を再確認した。また Chida–Terauchi の
+[FSCD 2022論文](https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.FSCD.2022.15)
+は、後方参照付き正規表現に先読みを加えた場合の分離を示す。ただし、これはここでの
+再帰 PEG の二つの CBV クラスの同定・分離を与えない。論文自身の Remark 11 でも、
+先読み境界を越える後方参照を許す/許さない場合の比較は別の課題とされている。
+その結果を Par/Seq の分離として流用しない。
+
+全体 `lake build`/Audit は 1,358 jobs を通過。関連 3,493 public 依存報告は標準公理
+3,417 または無公理 76。この追加は五新モジュール・36 guard、PR69 全体は 48 新
+Lean モジュール・418 guard。一般 Par/Seq 言語クラスの一致・分離は未解決。
+
 ## 現在位置以降だけに必要な保持値を残す
 
 `FutureCaptureViews` は既存の global な `CaptureViews.evV_rebind` と異なり、
