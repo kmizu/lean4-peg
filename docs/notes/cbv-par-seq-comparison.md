@@ -16,6 +16,21 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 別の引数parserを共通の成功終端から正規化
+
+`CanonicalProducerCompiler`は、実引数Aと消費前半Dが同じ構文である制約を拡張する。
+元の実bodyが`D;B(w)`なら、`F(A)`を`&A;F(D)`へ変換する。
+AとDが両方成功した際の終端だけを共通のclosed core Cから有限認証し、
+失敗・停止性が同じとは仮定しない。元のAを先に評価し、Dは実引数として残すので、
+Dだけが失敗・発散する場合も保存する。全bodyと開始式を変換して実再帰文法へ接続した。
+
+`EndpointSupport`は実評価での成功からcoreの同終端成功を導く。文字/rangeからanyへの拡張、
+実零幅queryの前置・後置、同coreへ成功する選択、sequenceを有限検査する。
+coreは実再帰calleeを含んでよい。Aは親の保持値を検査するqueryを含んでよい。
+実引数と前半を同じcoreへ接続できない場合や、成功終端そのものが異なる場合は、まだ扱わない。
+生成Seqの規則数はn(n+2)+bのままで、元文字列・全残余・有限失敗・全clock未定義を保存する。
+26規則の実例は親値を検査しながら別の子値を捕捉し、両方を復元する。
+
 ## 実再帰producerと零幅実calleeを混合文法へ接続
 
 `RecursiveProducedCompiler`は、上記producerのcall-free制約を外す。
@@ -30,7 +45,8 @@
 `RecursiveProducedOrigin`はこれを同じ元文法へ組み込み、実sequenceの零幅headerと、
 再帰producerによる消費前半の両方を固定Seqへ接続する。27規則の実例は親子で別の値を捕捉・復元する。
 無制限長a^n bの実引数捕捉、producer/client依存cycle、全入力で発散するproducerも検証した。
-消費前半が実引数とは異なるparserの場合や、一般のPar/Seq一致・分離はなお未解決である。
+実引数と異なる前半については、上記の共通成功終端を有限認証できるケースを接続した。
+一般の消費前半、異なる成功終端、Par/Seq一致・分離はなお未解決である。
 
 ## 実引数と同じproducerを消費するclosed前半を混合文法へ接続
 
@@ -9892,3 +9908,77 @@ fresh parent/child captures, and restoration of the old parent value.
 Replacing the zero header by a consuming character is rejected by the finite
 check. Both frontends thus share one original-language theorem rather than
 requiring the grammar to choose one of the two behaviors globally.
+
+
+## Different argument parsers with certified common success endpoints
+
+`EndpointSupport` and `CanonicalProducerCompiler` lift the matching-parser
+restriction when a finite check certifies a common successful endpoint.
+For an original actual declaration F(w) := D;B(w), the local transformation
+is F(A) -> &A;F(D). Both parsers may have different successful inputs,
+failures or divergence. The check only implies that if A and D both
+succeed, they capture the same input prefix. Original A evaluation remains
+first, and D is retained as the actual canonical argument; its failure and
+divergence are therefore not erased.
+
+The finite support checker derives a successful run of a common closed core
+from each successful parser run on the actual source tables. It supports
+exact syntax, character/range widening to any, actual zero-return wrappers
+before or after a core, sequences of supported components and alternatives
+whose successes share a core. Zero-return facts use ParReturnEffects in the
+original source grammar. The core may itself call real recursive users.
+Actual first-order CBV stabilization and closedness then identify successful
+endpoints across different source clocks and retained environments. This
+is not a semantic equality premise, a word palette, or a totality oracle.
+
+`ProducerArgumentRewrite` proves a same-clock forward refinement and a
+one-round reverse refinement for each changed call. The extra round is
+necessary: moving a failing prefix into argument evaluation can expose a
+failure before the original callee row has been unfolded. A structural
+renderer keeps already canonical calls and inserts the ordered preflight
+at other calls. It leaves canonical producer declarations unexpanded, so
+recursive producers do not cause infinite syntax expansion. Original D
+must be closed and its own immediate call syntax must already satisfy the
+canonical argument condition; called rule bodies may themselves contain
+noncanonical calls and are transformed as part of the same grammar.
+
+Finite checks validate every original body, core annotation, emitted
+canonical source, and emitted body shape against the structural renderer.
+The latter is an AST check, not a hypothesis about evaluation tables.
+A computed sum of body costs supplies the uniform FiniteBodyRewrite delay.
+For body budget d and root cost c, original clock k refines prepared clock k,
+and prepared clock k refines original clock (d+1)k+c. This composes with
+RecursiveProducedCompiler's physical cofinality and fixed Seq backend.
+`checked_language` requires only the finite grammar and root checks and
+preserves the original input string. No rules are added by canonicalization;
+the final target still has n(n+2)+b rules.
+
+The main fixed grammar has a recursive argument C recognizing a^n b (and
+a^n z), and a distinct prefix D consisting of a real zero-return callee
+followed by C. The zero callee succeeds on a, fails on b, and loops on other
+characters. All a^n b argument captures, for every n and suffix, are proved
+as actual DerivesArgsPar judgments; their lengths are unbounded. The child
+argument additionally tests the parent's retained value before running C,
+so caller-dependent predicates are retained in the generated preflight.
+Par and the generated 26-rule Seq grammar execute old/new a-prefix lengths
+(1,4), (4,1), (2,3), restore both values, and reject equal child values and
+short parent copies. The original-language theorem is instantiated.
+
+When C succeeds on z but D loops, the original and generated calls stay
+undefined at every clock for every following suffix. Omitting the producer
+preflight would accept z!zgz. When C fails finitely on X and D loops, the
+ordered preflight preserves the original failure; reversing it stays
+undefined at every clock. A separate example uses distinct consuming
+parsers, a wildcard actual argument and a canonical character a: the same
+captured a is retained and replayed on aa, while bb fails. Omitting the
+gate accepts bb incorrectly. A clock-0 failure versus clock-1 original
+failure proves that the reverse local delay cannot be zero. An argument
+that consumes an extra ! after C is rejected by the endpoint checker.
+These are transformation boundaries, not language-class separation claims.
+
+This closes checked noncanonical producer arguments, including actual
+recursive parsers and caller-dependent query wrappers, in the mixed unary
+schema. It still requires a certified common successful endpoint and a
+closed canonical prefix; arbitrary different endpoints, other prefix or
+continuation forms, independent multiple captures, and general Par/Seq
+class equality or genuine language separation remain unresolved.

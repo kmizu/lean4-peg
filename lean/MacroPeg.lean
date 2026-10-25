@@ -1,3 +1,9 @@
+import MacroPeg.CBV.EndpointSupport
+import MacroPeg.CBV.ProducerArgumentRewrite
+import MacroPeg.CBV.CanonicalProducerCompiler
+import MacroPeg.CBV.CanonicalProducerEvaluation
+import MacroPeg.CBV.CanonicalProducerCorrespondence
+import MacroPeg.CBV.CanonicalProducerExamples
 import MacroPeg.CBV.RecursiveProducedOrigin
 import MacroPeg.CBV.RecursiveProducedOriginExamples
 import MacroPeg.CBV.StablePar
