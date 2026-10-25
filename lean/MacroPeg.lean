@@ -1,3 +1,8 @@
+import MacroPeg.CBV.WordCallUnfolding
+import MacroPeg.CBV.WordPrefixInlining
+import MacroPeg.CBV.ChangedWordPrefix
+import MacroPeg.CBV.ChangedWordPrefixExamples
+import MacroPeg.CBV.ChangedWordPrefixUndefined
 import MacroPeg.CBV.BoundedBodyRewrite
 import MacroPeg.CBV.ExpressionContext
 import MacroPeg.CBV.ForwardedCallUnfolding

@@ -16,6 +16,41 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## prefix入口で新しい語を作る実user呼出し
+
+`ChangedWordPrefix` は保持値転送を `R(w ++ V(w))` へ広げる。
+Vはliteral／parameter／sequenceで作る語式であり、実際のcalleeは新しい語全体を
+捕捉する。親は元のwを保持する。calleeが新しい捕捉全体の再照合から始まる場合、
+その本体を `w; V(w); B[w ++ V(w)]` に展開し、既存の停止検査付き反復回転と
+固定Seq compilerへ接続する。valueの有限paletteや捕捉語の形の注釈は渡さない。
+
+`WordCallUnfolding` は既存 `WordArguments.word_eval` を再利用する。任意Word引数Aと
+任意一階callee本体Bについて、実Par `R(A)` の通常clock k+1は、clock kでの
+`&A; B[param0 := A]` と全partial結果が等しい。代入は実引数の内部まで行い、
+calleeの範囲外parameterは親のparameterへ漏らさず失敗へ写す。引数の新しい語が
+実入力と一致するというpreflightは一般には必要である。
+
+低層の展開は任意のWord引数を扱うが、今回の最終Seq接続はAが親のwから始まる場合に
+限る。`WordPrefixInlining` は新語全体の代入・先頭wのfactor・停止条件を証明し、
+`ChangedWordPrefix.check` が実calleeのarity/bodyと展開後caller本体の一致、VのWord
+構文を有限検査する。既存の構文条件と合わせ、全入力の固定一階Seq元文字列言語、
+有限観測・有限失敗・全clock未定義を保存する。通常clockは元k≤先k、先k≤元2kで対応する。
+
+実例のprefix自体が `R(ww)` または `R(wb)` で新しい保持値を作り、RからFへその
+新語の2倍を再捕捉して相互再帰する。前者は親2文字→R4文字→子F8文字→R16文字→
+子F32文字、後者は親ab→Rのabb→子Fのabbabbとなる。深さ0/1/2の元実行と、
+深さ1の生成Seqを両引数形式について通常clock12で直接実行し、短い新語／親復帰の失敗もkernel検証した。
+空捕捉の倍長prefixは全入力・全通常clockで元／Seqとも未定義である。
+
+Word条件の外では単純代入は誤る。Aが `a / b`、Bが `param0; param0`、入力がabなら、
+元は最初に捕捉したaの2回目が失敗するが、代入先はaのあとbを選び直して成功する。
+この反例とcheckerの拒否も検証した。これは代入手法の限界であり、言語クラスの分離ではない。
+
+検証は全1100 jobs（Auditを含む）、関連995定理の標準Lean公理／公理なしの依存検査、
+新規42guard。入力依存の選択・star・user呼出しを含む任意PEG引数、親のwを先頭に
+持たない新語の最終Seq接続、先頭再照合のないcallee、独立複数捕捉、および一般の
+Par/Seq一致・分離は引き続き未解決である。
+
 ## 保持値を転送する消費user prefixを展開して接続
 
 `R(param0)` は実際の一階Par呼出しであり、現在の保持値を元位置から再捕捉して
@@ -49,7 +84,7 @@ calleeへ渡す。`ForwardedCallUnfolding` は、calleeの自由parameter参照�
 
 検証: 全1095 jobs（Auditを含む）と、関連953定理の標準公理／公理なしの依存検査。
 新規48定理をguardで追加検査した。元・先の通常clockは同一とは限らない。
-保持値転送とcallee先頭の全再照合という条件は残り、別のfresh引数を作るprefixや
+保持値転送だけという条件は上のWord引数変換で一部解消した。任意PEG引数や
 再照合より前に消費する任意callee、および一般Par/Seq一致・分離は未解決である。
 
 ## 長さ可変 scanner を保持値の照合付きで反復する入口

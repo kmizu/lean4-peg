@@ -1,3 +1,8 @@
+import MacroPeg.CBV.WordCallUnfolding
+import MacroPeg.CBV.WordPrefixInlining
+import MacroPeg.CBV.ChangedWordPrefix
+import MacroPeg.CBV.ChangedWordPrefixExamples
+import MacroPeg.CBV.ChangedWordPrefixUndefined
 import MacroPeg.CBV.BoundedBodyRewrite
 import MacroPeg.CBV.ExpressionContext
 import MacroPeg.CBV.ForwardedCallUnfolding
@@ -25491,3 +25496,189 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.FoldedUserPrefixExamples.Nullable.non_replay_callee_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.WordCallUnfolding.word_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordCallUnfolding.word_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.WordCallUnfolding.substitution' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordCallUnfolding.substitution
+
+/-- info: 'Shallot.MacroPeg.CBV.WordCallUnfolding.arguments_substitution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordCallUnfolding.arguments_substitution
+
+/-- info: 'Shallot.MacroPeg.CBV.WordCallUnfolding.one_step' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordCallUnfolding.one_step
+
+/-- info: 'Shallot.MacroPeg.CBV.WordCallUnfolding.context_bounds' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordCallUnfolding.context_bounds
+
+/-- info: 'Shallot.MacroPeg.CBV.WordPrefixInlining.headed_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordPrefixInlining.headed_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.WordPrefixInlining.preflight' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordPrefixInlining.preflight
+
+/-- info: 'Shallot.MacroPeg.CBV.WordPrefixInlining.expanded_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordPrefixInlining.expanded_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.WordPrefixInlining.one_step' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordPrefixInlining.one_step
+
+/-- info: 'Shallot.MacroPeg.CBV.WordPrefixInlining.context_bounds' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordPrefixInlining.context_bounds
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefix.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefix.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefix.rule' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefix.rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefix.related' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefix.related
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefix.source_firstOrder' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefix.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefix.observations' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefix.observations
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefix.language_translation' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefix.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefix.translated_observations' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefix.translated_observations
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefix.undefined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefix.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.checked_dup' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.checked_dup
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.checked_append' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.checked_append
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.valid
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.entry_valid' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.entry_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.raw_rules' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.raw_rules
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.source_dup' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.source_dup
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.source_append' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.source_append
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.direct_targets' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.direct_targets
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.restoration_failures' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.restoration_failures
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.captured_words' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.captured_words
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.changed_call_clock' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.changed_call_clock
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.new_word_preflight_required' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.new_word_preflight_required
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.language' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.language
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.duplicate_language' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.duplicate_language
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.append_language' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.append_language
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.parsing_argument_is_not_a_word' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.parsing_argument_is_not_a_word
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.parameter_scope_preserved' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.parameter_scope_preserved
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.Nullable.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.Nullable.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.Nullable.valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.Nullable.valid
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.Nullable.entry_valid' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.Nullable.entry_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.Nullable.normalized_none' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.Nullable.normalized_none
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.Nullable.source_none' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.Nullable.source_none
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.Nullable.target_none' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.Nullable.target_none
+
+/-- info: 'Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.Nullable.non_word_rejected' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ChangedWordPrefixExamples.Nullable.non_word_rejected
