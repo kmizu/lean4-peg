@@ -1,3 +1,5 @@
+import MacroPeg.CBV.GuardedFinitePrefixExamples
+import MacroPeg.CBV.GuardedFinitePrefix
 import MacroPeg.CBV.GuardedLiteralQueryExamples
 import MacroPeg.CBV.GuardedReplayAlignment
 import MacroPeg.CBV.AlphabetCaptureProfileExamples

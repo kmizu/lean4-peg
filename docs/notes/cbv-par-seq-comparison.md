@@ -448,8 +448,30 @@ profile 列挙のままであり、ここで target のサイズ削減は主張�
 前回衝突した aab／bba は、追加した観測状態では異なる profile になる。
 aabz／bbaz の捕捉後の残余入力が同じ z でも、元位置での literal a の成功／失敗を正しく
 終点へ移す具体例と、任意の実再帰引数成功からの一般 probe 定理を kernel で確認した。
-これは有限 prefix の選択を扱うための観測 primitive であり、生の有限 prefix 原子を
-GuardedReplayControl の反復へ組み込む frontend はまだ実装していない。
+`GuardedReplayControl.literalQuery` は、この観測を seq/alt/not/star の原子へ組み込み、
+`replayQuery` は空消費の保持値 query を表す。実 capture profile ごとの frontier 検査を
+入口検査へ接続したため、観測に使う alphabet state から読めることだけを要求できる。
+旧 universal frontend は alphabet 依存の原子を保守的に拒否し、alphabet-derived frontend は
+生成 domain の有限検査から受理する。内部で完了する literal、空 capture、非周期 capture、
+Total ではない configured frontier、および nullable query 反復を kernel 検証した。
+
+`GuardedFinitePrefix` は、生の有限 capture 依存 prefix `e` を消費する原子
+`raw e; &param0` を、これらの原子からなる制御へ CPS 正規化する。
+`e` は literal、保持値の肯定／否定 query、seq、優先選択、not を任意に入れ子にできる。
+有限の read/finish 検査が、必要な literal query と guarded shift の元文字列を検査し、
+alphabet backend がそれらの metadata 証明書と実捕捉 frontier を検査する。
+選択した出力語を消費する継続は prefix 成功後に commit し、継続の失敗／未定義を理由に
+prefix の別枝へ戻らない。空出力語は `replayQuery` へ送り、nullable 反復の未定義も保存する。
+`compile_eval` は任意 grammar/table/environment 下の partial 結果を示す。
+`normalize_eval` はこの等式を原子の外側の seq/alt/not/star 全体へ持ち上げるので、
+有限 prefix 自体の消費を含む原子を非有界回数反復できる。
+
+source の実 rule 本体を書き換える `SemanticBodyRewrite.Related` から全 physical clock の
+同値を導き、実 recursive plain/product backend、全入力観測、固定一階 Seq 文法による
+元文字列言語、定義性、全 clock 未定義へ接続する。外側の入力を Σ 語へ制限しない。
+一般定理は任意の有限 prefix 構文と有限 metadata 検査に対するもので、例の unary Σ に
+限定しない。ただし metadata の合成自体を任意 prefix から自動化したわけではない。
+
 
 これは各消費原子の後にも全旧値が照合できる guarded step の PEG 制御である。
 任意 PEG prefix、捕捉の照合を保たない一般の依存 step／消費 user 呼出し、全保持値の再照合を
