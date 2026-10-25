@@ -1,3 +1,10 @@
+import MacroPeg.CBV.WordViewSubstitution
+import MacroPeg.CBV.DoublingPrefixCompiler
+import MacroPeg.CBV.DoublingPrefixEvaluation
+import MacroPeg.CBV.DoublingPrefixCalls
+import MacroPeg.CBV.DoublingPrefixCorrespondence
+import MacroPeg.CBV.DoublingPrefixExamples
+import MacroPeg.CBV.DoublingPrefixUndefined
 import MacroPeg.CBV.WordCallUnfolding
 import MacroPeg.CBV.WordPrefixInlining
 import MacroPeg.CBV.ChangedWordPrefix
