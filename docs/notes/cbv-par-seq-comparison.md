@@ -9749,3 +9749,56 @@ machine, and existence of successful finite profile annotations remain
 restrictions. Arbitrary PEG prefixes, integration with other fragment
 compilers, independent multiple source captures, and unrestricted Par/Seq
 class equality or separation remain unresolved.
+
+## Actual zero-return callees before retained parent continuations
+
+`ParReturnEffects` adds a finite return-effect certificate for actual Par
+rules. `dead` excludes success but permits failure and divergence; `zero`
+permits only successes at the original call position; `any` is unrestricted.
+Sequence, ordered choice, predicates, repetition, actual rule lookup and
+arity checks have sound structural transfer rules. Simultaneous induction
+on the real recursive tables closes a checked set of zero/dead rows for
+all inputs, environments and physical clocks. In particular, a non-consuming
+recursive cycle is not replaced by finite failure.
+
+Candidate inference prunes finite sets of rule identifiers, checks the final
+candidate, and falls back to empty sets if validation fails. Soundness does
+not assume that pruning converges or finds every possible certificate. To
+certify an empty-bound call without asserting that the ordinary retained-word
+row is zero width, `emptyEffect` applies the analysis to the existing actual
+nullary-clone specialization. Its previously proved same-clock correspondence
+transfers the result back to the original expression and grammar. Captured
+words have no finite palette, length bound or global empty-value premise.
+
+`CheckedOriginCompiler` interprets source Plan guard sites as real sequences
+`Q;B`, rather than lookahead. It checks that the actual source query Q has a
+zero/dead return effect, then proves `Q = &Q` at the same physical clock on
+the actual source tables. Structural Plan correspondence and a delay-zero
+body rewrite connect the original mutually recursive grammar to the existing
+mixed forwarding/growth/origin compiler. The resulting fixed Seq grammar
+preserves the unchanged input language, all residuals, finite failure and
+all-clock undefinedness. The final language theorem requires only a finite
+check. With n users and b parts its size is n(n+1)+b; physical bounds remain
+source k <= Seq k <= source (n+2)k. The preparatory normalization adds no delay.
+
+The executable example is definitionally a raw Spec grammar whose factor-zero
+parent calls the actual R(empty) before a parent-dependent replaying tail.
+R's ordinary retained-word row consumes input, while its empty clone returns
+at the original position when the next character is a or b, and recurses
+without returning otherwise. Inference certifies clone 3, rejects ordinary
+row 1, and the old syntactic zero checker rejects the real call expression.
+A fixed root captures b;c-star; recursive children capture a;c-star and later
+restore both retained values. Kernel executions verify two different old/new
+capture lengths in a nine-rule Seq grammar and reject a short restoration.
+For every suffix and every clock, the header on X followed by that suffix is
+undefined in the original and compiled grammars. A consuming query fails the
+finite checker; omitting that check changes a concrete residual. This last
+example is a transformation boundary, not a language-class separation.
+
+This closes zero-return actual callees, including recursive empty-bound
+callees, before retained parent continuations within the mixed Plan schema.
+A separate gate still requires growth heads to point to growth users; parts
+must satisfy the existing Closed/replay restrictions. Consuming queries with
+uncertified endpoints, recursive producers, continuations outside these
+control forms, independent multiple captures, and unrestricted Par/Seq class
+equality or genuine language separation remain unresolved.

@@ -1,3 +1,6 @@
+import MacroPeg.CBV.ParReturnEffects
+import MacroPeg.CBV.CheckedOriginCompiler
+import MacroPeg.CBV.CheckedOriginExamples
 import MacroPeg.CBV.ProducedPrefixCompiler
 import MacroPeg.CBV.ProducedPrefixEvaluation
 import MacroPeg.CBV.ProducedPrefixCorrespondence
