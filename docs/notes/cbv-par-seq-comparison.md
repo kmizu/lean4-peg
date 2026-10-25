@@ -16,6 +16,27 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 独立した二つの再帰捕捉の順序を入力から選ぶ
+
+`MaskedScannerAbsorption`は文字集合ごとに消費経路の安全なhelper候補を計算し、
+その集合の閉包を別途有限検査する。実際に消費経路で使うhelperだけに実テーブル不変量を立てるため、
+`{a,b}`と`{a,c}`を読む再帰規則を同じ元文法へ置ける。負の先読みは元の計算を保ち、
+候補生成の収束・helperの停止性・成功終端を入力仮定にはしない。
+
+`MixedScannerPairFusion`は既存の二scanner終端選択を、nullary再帰helperと二引数userが
+混在する固定文法へ拡張する。helper行と二捕捉行の対応を同じphysical clockで閉じた。
+`FrontierPairCaptureCompiler`は元引数の左順先読みを保持する準備から、このbackendへ
+全grammar/rootの有限AST一致検査で接続する。二つの文字集合に包含順序は要求しない。
+入力から選んだ終端順序で二つのchunkを捕捉し、両方の元の値を復元する。
+
+具体例は、`a^n b^n`または先頭a-runを読む引数と、`a^n c^n`または先頭a-runを読む引数。
+それぞれ別の実再帰helperを使い、8規則のSeqへ。n=1,2,4で両順序の実捕捉と元/Seqの実行を検証した。
+親と子で順序が逆になる再帰、子から戻った親の二値復元、空捕捉の子、
+先読み省略による不正個数の誤受理、nullable引数の全入力全clock未定義も検証した。
+全入力の観測・元文字列言語は保存するが、成功捕捉が最大scanner runの終端にある条件は残る。
+元の二捕捉bodyは入力から長い方を選んで先頭再照合する形である。
+任意のPar引数・任意のbodyを扱う一般変換とクラス一致/分離は未解決。
+
 ## 独立した再帰引数を入口の実検査とscanner捕捉に分ける
 
 `FrontierArgumentNormalization`は、各実引数を独立した再帰parserとして書ける入口を追加した。
@@ -10212,3 +10233,62 @@ closed-producer body shape or backend control syntax. In particular, it does
 not derive residual parsers for arbitrary differently stopping Par arguments.
 Unrestricted Par/Seq class equality or a genuine language separation remains
 open.
+
+
+## Independent frontier pairs with opposite runtime orders
+
+The consuming-path checker no longer requires every helper in the declared
+prefix to fit every argument alphabet. MaskedScannerAbsorption computes a
+finite candidate mask by pruning unsafe helper bodies, then independently
+checks its length and closure under consuming nullary calls. Physical row
+safety is proved only for enabled helpers. Inactive helpers keep their actual
+bodies and may still be evaluated under negative queries; queries always
+retain their original semantics. No semantic helper invariant, fixed-point
+convergence or termination premise is supplied to the compiler. Unsafe
+consumption propagates through recursive calls; a safe mutually recursive
+component is retained. The original full helper layout remains checked.
+
+MixedScannerPairFusion extends the existing ScannerFrontier pair algorithm
+to actual grammars mixing nullary recursive helpers and two-argument users.
+Each source entry emits two fixed target slots. Nullary helpers retain zero
+arity and call their translated helper rows; user variants reconstruct the
+two original captures from adjacent chunks, selected by the existing runtime
+first-stopping test. The source helper-row and shifted pair-row relations
+close together over the actual recursive tables at every physical clock.
+This is a whole-grammar theorem, not an assumed user-row contract. All
+residuals, failure and undefinedness are preserved, without alphabet inclusion.
+The existing intersection scan, endpoint-order guard and prefix-view equations
+are reused rather than claimed as new difference-parser algorithms.
+
+FrontierPairCaptureCompiler connects the original recursive-argument
+preflight normalization to this mixed backend by finite equality of the
+whole emitted grammar and rendered root. It produces a fixed first-order
+Seq grammar recognizing the same original strings. Original expressions
+must pass the finite first-order check. All-clock undefinedness is explicit.
+The source pair body retains the existing branch selecting and replaying
+the longer captured value before its tail; no arbitrary body normalization
+is claimed here.
+
+IndependentFrontierExamples installs a shared a-star helper, a recursive
+balanced a/b helper and a separate recursive balanced a/c helper. The two
+argument alphabets are {a,b} and {a,c}, neither included in the other. Their
+checked masks are [true,true,false] and [true,false,true]. Each original
+argument independently attempts its balanced parser with a frontier test,
+then the shared a-star fallback. Both original helpers remain present with
+their actual nullary declarations. At n=1,2,4 actual original argument tuples
+have the a/b capture longer on a^n b^n, and the a/c capture longer on a^n c^n.
+Source and eight-rule Seq executions are checked in both orders. The target
+arities are [0,0,0,0,0,0,2,2]. An additional recursive user obtains a child
+whose endpoint order is the reverse of its parent's, then restores both
+parent values; both directions and an empty-capture child execute directly.
+The all-input source/target observations theorem is instantiated for both
+ordinary and recursive users. A b-count mismatch fails on both sides,
+while removing preflight wrongly accepts a b b and its copy payload.
+A nullable first argument stays undefined on every input and clock in the
+original and generated grammars. Direct access to an unsafe helper, and a
+cycle reaching unsafe consumption, are rejected by finite checks.
+
+This removes uniform helper-alphabet and static endpoint-order conditions
+for this two-capture frontend. Maximal scanner-frontier success endpoints,
+two source captures and the replay-shaped body remain required. The
+unrestricted Par/Seq language-class question remains unresolved.

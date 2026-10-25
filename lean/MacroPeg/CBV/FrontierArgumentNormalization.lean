@@ -1,4 +1,4 @@
-import MacroPeg.CBV.ScannerAbsorption
+import MacroPeg.CBV.MaskedScannerAbsorption
 import MacroPeg.CBV.BoundedBodyRewrite
 import MacroPeg.Properties.MExpEq
 
@@ -35,18 +35,16 @@ theorem safe_checked (size : Nat) (A : List Char) : ∀ e, safeCheck size A e=tr
   | .lam _ _,h | .invoke _ _ _,h | .callParam _ _,h => by cases h
 
 def check (g : MGrammar) (a : Argument) : Bool :=
-  (a.helpers.zipIdx.all (fun (b,i) => match ruleAtM g.rules i with
+  a.helpers.zipIdx.all (fun (b,i) => match ruleAtM g.rules i with
     | some r => decide (r.arity=0) && MExp.beqE r.body b
-    | none => false) && a.helpers.all (safeCheck a.helpers.length a.alphabet)) &&
-    safeCheck a.helpers.length a.alphabet a.parser
+    | none => false) && MaskedScannerAbsorption.check a.helpers a.alphabet a.parser
 
 theorem checked (g : MGrammar) (a : Argument) (hc : check g a=true) :
     RecursiveParserStability.Installed a.helpers g ∧
-      (∀ b∈a.helpers, ScannerAbsorption.Safe a.helpers.length a.alphabet b) ∧
-      ScannerAbsorption.Safe a.helpers.length a.alphabet a.parser := by
-  obtain ⟨hh,hp⟩ := Bool.and_eq_true_iff.mp hc
-  obtain ⟨hi,hb⟩ := Bool.and_eq_true_iff.mp hh
-  refine ⟨?_,fun b hm => safe_checked _ _ b (List.all_eq_true.mp hb b hm),safe_checked _ _ _ hp⟩
+      MaskedScannerAbsorption.Valid a.helpers (MaskedScannerAbsorption.mask a.helpers a.alphabet) a.alphabet ∧
+      MaskedScannerAbsorption.Safe (MaskedScannerAbsorption.mask a.helpers a.alphabet) a.alphabet a.parser := by
+  obtain ⟨hi,hp⟩ := Bool.and_eq_true_iff.mp hc
+  refine ⟨?_,MaskedScannerAbsorption.checked _ _ _ hp⟩
   intro i b hget
   have hm : (b,i)∈a.helpers.zipIdx := List.mem_of_getElem?
     (show a.helpers.zipIdx[i]?=some (b,i) from by simp [List.getElem?_zipIdx,hget])
@@ -74,7 +72,7 @@ theorem success_endpoint (g : MGrammar) (a : Argument) (hc : check g a=true)
     | none => rw [argument,evV_seq_fail he] at hv; cases hv
     | some j =>
       rw [argument,evV_seq_ok he] at hv
-      have hscan := ScannerAbsorption.scan_after_success hh.1 a.alphabet hh.2.1 x s k E a.parser hh.2.2 p j hp he
+      have hscan := MaskedScannerAbsorption.scan_after_success hh.1 _ a.alphabet hh.2.1 x s k E a.parser hh.2.2 p j hp he
       cases ht : evV g x s (tblV g x s k) E (choice a.alphabet) j with
       | none => simp [evV,ht] at hv
       | some v => cases v with

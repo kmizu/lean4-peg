@@ -1,3 +1,7 @@
+import MacroPeg.CBV.MaskedScannerAbsorption
+import MacroPeg.CBV.MixedScannerPairFusion
+import MacroPeg.CBV.FrontierPairCaptureCompiler
+import MacroPeg.CBV.IndependentFrontierExamples
 import MacroPeg.CBV.FrontierArgumentNormalization
 import MacroPeg.CBV.FrontierArgumentCompiler
 import MacroPeg.CBV.FrontierCaptureCompiler
@@ -30090,3 +30094,270 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.ordered_preflight' depends on axioms: [propext] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.ordered_preflight
+
+
+/-- info: 'Shallot.MacroPeg.CBV.MaskedScannerAbsorption.safe_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MaskedScannerAbsorption.safe_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.MaskedScannerAbsorption.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MaskedScannerAbsorption.checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.MaskedScannerAbsorption.evaluator_safe' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MaskedScannerAbsorption.evaluator_safe
+
+
+/-- info: 'Shallot.MacroPeg.CBV.MaskedScannerAbsorption.physical_rows' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MaskedScannerAbsorption.physical_rows
+
+
+/-- info: 'Shallot.MacroPeg.CBV.MaskedScannerAbsorption.scan_after_success' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MaskedScannerAbsorption.scan_after_success
+
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPairFusion.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPairFusion.render_firstOrder
+
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPairFusion.par_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPairFusion.par_rule
+
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPairFusion.seq_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPairFusion.seq_rule
+
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPairFusion.par_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPairFusion.par_firstOrder
+
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPairFusion.seq_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPairFusion.seq_firstOrder
+
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPairFusion.evaluator_of_rows' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPairFusion.evaluator_of_rows
+
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPairFusion.tables_related' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPairFusion.tables_related
+
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPairFusion.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPairFusion.evaluator_eq
+
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedScannerPairFusion.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedScannerPairFusion.observations_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierPairCaptureCompiler.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierPairCaptureCompiler.observations_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierPairCaptureCompiler.undefined_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierPairCaptureCompiler.undefined_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierPairCaptureCompiler.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierPairCaptureCompiler.language_translation
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.left_mask' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.left_mask
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.right_mask' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.right_mask
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.left_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.left_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.right_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.right_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.old_uniform_check_rejects' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.old_uniform_check_rejects
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.non_nested' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.non_nested
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.actual_captures_both_orders' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.actual_captures_both_orders
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.source_executes_both_orders' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.source_executes_both_orders
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.prepared_executes_both_orders' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.prepared_executes_both_orders
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.observations' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.observations
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.direct_unsafe_call_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.direct_unsafe_call_rejected
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.unsafe_cycle_propagates' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.unsafe_cycle_propagates
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.unsafe_cycle_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.unsafe_cycle_rejected
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.safe_mutual_component_kept' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.safe_mutual_component_kept
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.candidate_validation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.candidate_validation
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.pair_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.pair_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.pair_root_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.pair_root_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.seq_layout' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.seq_layout
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.seq_executes_both_orders' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.seq_executes_both_orders
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.seq_observations' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.seq_observations
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.unbalanced_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.unbalanced_rejected
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.missing_preflight_accepts_unbalanced' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.missing_preflight_accepts_unbalanced
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.nullable_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.nullable_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.nullable_root_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.nullable_root_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.nullable_source' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.nullable_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.nullable_seq' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.nullable_seq
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.recursive_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.recursive_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.recursive_root_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.recursive_root_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.recursive_source' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.recursive_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.recursive_seq' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.recursive_seq
+
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentFrontierExamples.recursive_observations' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentFrontierExamples.recursive_observations

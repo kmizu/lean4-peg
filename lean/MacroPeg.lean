@@ -1,3 +1,7 @@
+import MacroPeg.CBV.MaskedScannerAbsorption
+import MacroPeg.CBV.MixedScannerPairFusion
+import MacroPeg.CBV.FrontierPairCaptureCompiler
+import MacroPeg.CBV.IndependentFrontierExamples
 import MacroPeg.CBV.FrontierArgumentNormalization
 import MacroPeg.CBV.FrontierArgumentCompiler
 import MacroPeg.CBV.FrontierCaptureCompiler
