@@ -1,3 +1,5 @@
+import MacroPeg.CBV.UniversalCaptureProfileExamples
+import MacroPeg.CBV.UniversalCaptureProfiles
 import MacroPeg.CBV.SelectedFragmentArgumentExamples
 import MacroPeg.CBV.FragmentPrefixQueryExamples
 import MacroPeg.CBV.FragmentPrefixQuery
@@ -22353,3 +22355,160 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SelectedFragmentArgumentExamples.origin_masks_loop
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UniversalCaptureProfiles.compose_mem' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UniversalCaptureProfiles.compose_mem
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UniversalCaptureProfiles.product_all' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UniversalCaptureProfiles.product_all
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UniversalCaptureProfiles.rounds_all' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UniversalCaptureProfiles.rounds_all
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UniversalCaptureProfiles.closure_all' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UniversalCaptureProfiles.closure_all
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UniversalCaptureProfiles.effects_all' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UniversalCaptureProfiles.effects_all
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UniversalCaptureProfiles.entry_sound' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UniversalCaptureProfiles.entry_sound
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UniversalCaptureProfiles.scanner_checked' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UniversalCaptureProfiles.scanner_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UniversalCaptureProfiles.header_all' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UniversalCaptureProfiles.header_all
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UniversalCaptureProfiles.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UniversalCaptureProfiles.checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UniversalCaptureProfiles.grammar_checked' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UniversalCaptureProfiles.grammar_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UniversalCaptureProfiles.expression_checked' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UniversalCaptureProfiles.expression_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UniversalCaptureProfiles.bodies_checked' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UniversalCaptureProfiles.bodies_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UniversalCaptureProfiles.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UniversalCaptureProfiles.language_translation
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UniversalCaptureProfiles.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UniversalCaptureProfiles.evaluator_eq
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UniversalCaptureProfiles.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UniversalCaptureProfiles.observations_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UniversalCaptureProfiles.defined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UniversalCaptureProfiles.defined_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UniversalCaptureProfiles.undefined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UniversalCaptureProfiles.undefined_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UniversalCaptureProfileExamples.checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UniversalCaptureProfileExamples.checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UniversalCaptureProfileExamples.automatic_certificates' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UniversalCaptureProfileExamples.automatic_certificates
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UniversalCaptureProfileExamples.raw_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UniversalCaptureProfileExamples.raw_rule
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UniversalCaptureProfileExamples.source_recursive_samples' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UniversalCaptureProfileExamples.source_recursive_samples
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UniversalCaptureProfileExamples.target_recursive_samples' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UniversalCaptureProfileExamples.target_recursive_samples
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UniversalCaptureProfileExamples.target_direct' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UniversalCaptureProfileExamples.target_direct
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UniversalCaptureProfileExamples.language' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UniversalCaptureProfileExamples.language
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UniversalCaptureProfileExamples.nullable_source' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UniversalCaptureProfileExamples.nullable_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UniversalCaptureProfileExamples.nullable_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UniversalCaptureProfileExamples.nullable_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UniversalCaptureProfileExamples.invalid_entries' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UniversalCaptureProfileExamples.invalid_entries

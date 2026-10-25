@@ -200,8 +200,38 @@ kernel 検証した。先頭引数自身が失敗する a#a#a では後続候補
 固定開始式2つに全入力の言語変換を適用し、nullable な先頭候補は全入力全 clock で
 後続候補と有限失敗の終点検査を遮断し、元位置の失敗はその nullable 候補を遮断すると証明した。
 
-これで固定 literal に限らず、この入力依存で非有界の区切り scanner prefix に進んだ。
-実引数は G/H で選択する codeword＋a-fragment family とその有限優先選択閉包に限定し、prefix も A に限定する。
+別の経路として、`UniversalCaptureProfiles` は完全な固定 shift／直接再照合の
+入口制御木に対し、実引数の形と手動 profile 注釈の制約を外した。
+`CaptureViews` の全捕捉再構成だけでは本体入口の位置差は解消しないため、ここでは
+既存の finite-state 残余機械による入口対応へ直接合成する。各 user の入力／出力候補を
+observer の全有限 profile に自動設定する。有限 profile は連結の合成で閉じ、star の候補
+計算も同じ有限集合内に留まることを証明した。これにより scanner／user の全 summary
+検査、実引数内の全 nested call 検査、全 rule 本体検査を、元の呼出し番号の scope と
+入口の構文検査だけから導く。成功する注釈の発見を利用者の仮定にしない。
+
+元 user は unary、入口は replay または完全な回転残余機械を持つ shift と、それらの
+有限 alt／正負 guard の制御木である。この入口制約の下で、実引数と本体の継続は
+literal・param・user・seq・alt・notP・star の全構文を許す。連結後の捕捉は全体の
+有限 transition profile を合成して扱い、引数の部分ごとの有限文字列 palette を要求しない。
+任意の個数の連結、入力依存で非有界の反復、同 user／相互再帰と親の全値再利用を
+含め、既存の生成固定一階 Seq の全入力 SObs・元文字列言語・定義／全 clock 未定義へ
+合成した。補助行が安定した共有 user clock では全 partial 結果が一致するが、
+この経路は source と target の生 physical clock が等しいとは主張しない。
+一般 scanner 入口は全 profile では安全でないため、新しい自動検査では拒否する。
+既存の精密 profile による scanner 変換はそのまま利用できる。
+
+`UniversalCaptureProfileExamples` の元規則は `!(a;param0);param0` の入口に続き、
+旧値を二倍にする実引数 `param0;param0` で同じ user へ入り、子から戻って親の値を
+もう一度照合する。初期引数は `b*;a` で、a-fragment family 外の実捕捉を使う。
+同じ固定開始式の複数入力で、捕捉長と再帰深さを変えた実行を kernel 検証し、
+生成 Seq の生実行も直接確認した。一般の全入力言語保存の実例とし、nullable 引数の
+全入力全 clock 未定義、および不完全 shift／無条件 scanner の有限拒否も証明する。
+これは制限された入口の文法 family 全体に対する注釈不要の変換であり、任意 PEG prefix
+や複数の独立 source capture を含む一般 Par→Seq 変換ではない。
+
+断片経路は固定 literal に限らず、入力依存で非有界の区切り scanner prefix を扱う。
+この経路の実引数は G/H で選択する codeword＋a-fragment family とその有限優先選択閉包に限定し、prefix も A に限定する。
+自動 profile 経路は実引数の形を制限せず、対応する入口 family を完全固定 shift／replay 制御木に限定する。
 有限状態 scanner compiler との任意混在、任意 PEG prefix／実引数、独立複数捕捉、および
 一般 Par/Seq 一致・分離は依然未解決である。
 

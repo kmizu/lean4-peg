@@ -1,3 +1,5 @@
+import MacroPeg.CBV.UniversalCaptureProfileExamples
+import MacroPeg.CBV.UniversalCaptureProfiles
 import MacroPeg.CBV.SelectedFragmentArgumentExamples
 import MacroPeg.CBV.FragmentPrefixQueryExamples
 import MacroPeg.CBV.FragmentPrefixQuery
