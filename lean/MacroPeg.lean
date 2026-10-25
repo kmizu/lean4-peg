@@ -898,3 +898,10 @@ import MacroPeg.CBV.DelimitedPatternEvaluation
 import MacroPeg.CBV.DelimitedPatternCompiler
 import MacroPeg.CBV.DelimitedPatternExamples
 import MacroPeg.CBV.DelimitedPatternCaptureProofs
+
+import MacroPeg.CBV.DelimitedPatternCallTransfer
+import MacroPeg.CBV.RecursivePatternSyntax
+import MacroPeg.CBV.RecursivePatternCorrespondence
+import MacroPeg.CBV.RecursivePatternCompiler
+import MacroPeg.CBV.RecursivePatternExamples
+import MacroPeg.CBV.RecursivePatternStreamProofs

@@ -1,3 +1,9 @@
+import MacroPeg.CBV.DelimitedPatternCallTransfer
+import MacroPeg.CBV.RecursivePatternSyntax
+import MacroPeg.CBV.RecursivePatternCorrespondence
+import MacroPeg.CBV.RecursivePatternCompiler
+import MacroPeg.CBV.RecursivePatternExamples
+import MacroPeg.CBV.RecursivePatternStreamProofs
 import MacroPeg.CBV.DelimitedWordPattern
 import MacroPeg.CBV.DelimitedPatternPasses
 import MacroPeg.CBV.DelimitedPatternEvaluation
@@ -34296,3 +34302,253 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.DelimitedPatternCaptureProofs.three_unbounded
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedPatternCallTransfer.arguments_congr' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedPatternCallTransfer.arguments_congr
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedPatternCallTransfer.physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedPatternCallTransfer.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternSyntax.renderArgs_eq_map' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternSyntax.renderArgs_eq_map
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternSyntax.renderArgs_length' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternSyntax.renderArgs_length
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternSyntax.render_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternSyntax.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternSyntax.renderArgs_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternSyntax.renderArgs_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternSyntax.source_closed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternSyntax.source_closed
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternSyntax.sourceArgs_closed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternSyntax.sourceArgs_closed
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternSyntax.source_installed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternSyntax.source_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternSyntax.source_user' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternSyntax.source_user
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternSyntax.target_user' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternSyntax.target_user
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternSyntax.source_copy' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternSyntax.source_copy
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternSyntax.target_copy' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternSyntax.target_copy
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternSyntax.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternSyntax.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternSyntax.target_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternSyntax.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternSyntax.args_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternSyntax.args_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternSyntax.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternSyntax.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternCorrespondence.expression_physical' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternCorrespondence.expression_physical
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternCorrespondence.arguments_physical' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternCorrespondence.arguments_physical
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternCorrespondence.tables_related' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternCorrespondence.tables_related
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternCorrespondence.physical' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternCorrespondence.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternCorrespondence.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternCorrespondence.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternCompiler.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternCompiler.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternCompiler.firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternCompiler.firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternCompiler.physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternCompiler.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternCompiler.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternCompiler.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternCompiler.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternCompiler.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternCompiler.defined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternCompiler.defined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternCompiler.undefined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternCompiler.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternExamples.checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternExamples.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternExamples.source_arities' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternExamples.source_arities
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternExamples.target_arities' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternExamples.target_arities
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternExamples.source_streams' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternExamples.source_streams
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternExamples.target_streams' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternExamples.target_streams
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternExamples.callback_actual_words' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternExamples.callback_actual_words
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternExamples.callback_residual' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternExamples.callback_residual
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternExamples.later_block_controls_current_actual' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternExamples.later_block_controls_current_actual
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternExamples.nested_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternExamples.nested_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternExamples.direct_copy_inside_actual' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternExamples.direct_copy_inside_actual
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternExamples.client_body_is_transformed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternExamples.client_body_is_transformed
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternExamples.independent_library_rejects_callbacks' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternExamples.independent_library_rejects_callbacks
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternExamples.loop_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternExamples.loop_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternExamples.loop_rows' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternExamples.loop_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternExamples.callback_loop_source' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternExamples.callback_loop_source
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternExamples.callback_loop_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternExamples.callback_loop_target
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternExamples.later_loop_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternExamples.later_loop_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternExamples.later_loop_source' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternExamples.later_loop_source
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternExamples.later_loop_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternExamples.later_loop_target
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternExamples.preflight_is_required' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternExamples.preflight_is_required
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternExamples.wrong_arity_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternExamples.wrong_arity_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternExamples.out_of_scope_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternExamples.out_of_scope_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternExamples.separator_capture_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternExamples.separator_capture_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternExamples.wrong_source_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternExamples.wrong_source_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternExamples.same_physical_clock' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternExamples.same_physical_clock
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternStreamProofs.source_block_and_actuals' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternStreamProofs.source_block_and_actuals
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePatternStreamProofs.source_and_target_all_streams' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePatternStreamProofs.source_and_target_all_streams
