@@ -179,8 +179,29 @@ H の正 query は同じ元 user を新しい空捕捉で呼び、その後外�
 省いた素朴な呼出しだけが誤成功する。clock 0 の実未定義、nullable H の全入力全 clock
 未定義、非空継続や replay-kind を copy として指定した場合の有限拒否も kernel で確認する。
 
+実引数の family を、fragment 引数の任意の有限な優先選択木へ拡張した。
+`FragmentMixedRecursive` の3つの表面 template は before / choices / after を表す。
+choices の `seq G H` は一つの fragment 引数を指定する葉、`alt` は候補間の優先選択である。
+ここでの seq は template の組であり、実引数二つの連結ではない。元の実 call は引き続き
+unary で、引数は `&before; (arg1 / arg2 / …); &after` となる。
+`ArgumentGuard.choice_call_eq` は任意の実 table・環境で、成功した引数の枝を固定してから
+本体へ入る全 partial 恒等式を証明する。本体の失敗／未定義で別の捕捉へ戻らない。
+終点検査も選択木全体の後に置き、その失敗を引数候補の失敗と混同しない。
+生成 Seq は選ばれた引数を同じ位置・同じ table で再検査し、従来の fragment leaf 変換へ渡す。
+相互再帰する renderer・選択木の対応を既存の physical 段数帰納に組み込み、
+実 G/H と before/after の内部から同 user を呼ぶ場合も含めて、元の全入力観測・
+固定一階 Seq 元文字列言語・全 physical partial 結果を保存する。新しい行 oracle は不要。
+
+`SelectedFragmentArgumentExamples` では aa#aa#a 上で先頭候補が aa#aa を捕捉し、
+本体の query が有限失敗する。後の aa#a 候補なら成功するが、正しい変換は選び直さない。
+呼出しを選択肢へ素朴に分配した Seq だけが誤成功する。終点検査で同じ誤りが起こる例も
+kernel 検証した。先頭引数自身が失敗する a#a#a では後続候補へ進み、aa#aa#aa では
+先頭候補のまま成功する。ネストした選択木の H は同じ raw query user を空捕捉で呼ぶ。
+固定開始式2つに全入力の言語変換を適用し、nullable な先頭候補は全入力全 clock で
+後続候補と有限失敗の終点検査を遮断し、元位置の失敗はその nullable 候補を遮断すると証明した。
+
 これで固定 literal に限らず、この入力依存で非有界の区切り scanner prefix に進んだ。
-実引数は既存の G/H で選択する codeword＋a-fragment family に限定し、prefix も A に限定する。
+実引数は G/H で選択する codeword＋a-fragment family とその有限優先選択閉包に限定し、prefix も A に限定する。
 有限状態 scanner compiler との任意混在、任意 PEG prefix／実引数、独立複数捕捉、および
 一般 Par/Seq 一致・分離は依然未解決である。
 

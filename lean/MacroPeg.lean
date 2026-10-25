@@ -1,3 +1,4 @@
+import MacroPeg.CBV.SelectedFragmentArgumentExamples
 import MacroPeg.CBV.FragmentPrefixQueryExamples
 import MacroPeg.CBV.FragmentPrefixQuery
 import MacroPeg.CBV.PrefixCaptureQueryExamples
