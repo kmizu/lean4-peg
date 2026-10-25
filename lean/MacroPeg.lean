@@ -1,3 +1,11 @@
+import MacroPeg.CBV.AutomaticFiniteOriginExamples
+import MacroPeg.CBV.AutomaticFiniteOrigin
+import MacroPeg.CBV.AlphabetOriginControl
+import MacroPeg.CBV.AutomaticFinitePrefixExamples
+import MacroPeg.CBV.AutomaticFinitePrefix
+import MacroPeg.CBV.FinitePrefixMachines
+import MacroPeg.CBV.GuardedFinitePrefixExamples
+import MacroPeg.CBV.GuardedFinitePrefix
 import MacroPeg.CBV.GuardedLiteralQueryExamples
 import MacroPeg.CBV.GuardedReplayAlignment
 import MacroPeg.CBV.AlphabetCaptureProfileExamples

@@ -448,8 +448,78 @@ profile 列挙のままであり、ここで target のサイズ削減は主張�
 前回衝突した aab／bba は、追加した観測状態では異なる profile になる。
 aabz／bbaz の捕捉後の残余入力が同じ z でも、元位置での literal a の成功／失敗を正しく
 終点へ移す具体例と、任意の実再帰引数成功からの一般 probe 定理を kernel で確認した。
-これは有限 prefix の選択を扱うための観測 primitive であり、生の有限 prefix 原子を
-GuardedReplayControl の反復へ組み込む frontend はまだ実装していない。
+`GuardedReplayControl.literalQuery` は、この観測を seq/alt/not/star の原子へ組み込み、
+`replayQuery` は空消費の保持値 query を表す。実 capture profile ごとの frontier 検査を
+入口検査へ接続したため、観測に使う alphabet state から読めることだけを要求できる。
+旧 universal frontend は alphabet 依存の原子を保守的に拒否し、alphabet-derived frontend は
+生成 domain の有限検査から受理する。内部で完了する literal、空 capture、非周期 capture、
+Total ではない configured frontier、および nullable query 反復を kernel 検証した。
+
+`GuardedFinitePrefix` は、生の有限 capture 依存 prefix `e` を消費する原子
+`raw e; &param0` を、これらの原子からなる制御へ CPS 正規化する。
+`e` は literal、保持値の肯定／否定 query、seq、優先選択、not を任意に入れ子にできる。
+有限の read/finish 検査が、必要な literal query と guarded shift の元文字列を検査し、
+alphabet backend がそれらの metadata 証明書と実捕捉 frontier を検査する。
+選択した出力語を消費する継続は prefix 成功後に commit し、継続の失敗／未定義を理由に
+prefix の別枝へ戻らない。空出力語は `replayQuery` へ送り、nullable 反復の未定義も保存する。
+`compile_eval` は任意 grammar/table/environment 下の partial 結果を示す。
+`normalize_eval` はこの等式を原子の外側の seq/alt/not/star 全体へ持ち上げるので、
+有限 prefix 自体の消費を含む原子を非有界回数反復できる。
+
+source の実 rule 本体を書き換える `SemanticBodyRewrite.Related` から全 physical clock の
+同値を導き、実 recursive plain/product backend、全入力観測、固定一階 Seq 文法による
+元文字列言語、定義性、全 clock 未定義へ接続する。外側の入力を Σ 語へ制限しない。
+一般定理は任意の有限 prefix 構文と有限 metadata 検査に対するもので、例の unary Σ に
+限定しない。
+
+`FinitePrefixMachines` と `AutomaticFinitePrefix` は、この有限 metadata の手動割当てを除く。
+`support` は成功出力だけでなく、選択の失敗枝や not の内部、連結で可能な全 literal offset を
+構文から集める。その語の suffix を literal 観測状態へ、循環回転を shift 観測状態へ変換し、
+重複を除いた有限状態列から machine・read・finish を生成する。空 literal 状態は完成済み
+literal の記憶と alphabet frontier を兼ねる。全長回転が元の語へ戻ること、suffix／回転の
+遷移先が生成集合内にあること、および各有限 label／完全性／alphabet 検査の成功を証明した。
+
+注釈なし `Control` は有限 prefix 原子、retain、seq/alt/not/star を持ち、source の実 rule は
+`rawControl` から直接記述する。`certificates` は、生成した metadata と各生成 capture profile の
+frontier を一般定理から導く。さらに alphabet も prefix、実 recursive body、root の literal から
+自動収集する。`automatic_check`／`automatic_language_translation` の仮定は source の user 参照が
+範囲内にあるという実行可能な構文検査だけであり、機械、状態番号、残余ラベル、成功行、保持値形の
+注釈を受け取らない。元文字列全入力の固定 Seq 言語と、既存の観測／定義性／全 clock 未定義へ接続する。
+生成 target は従来の全 profile 行キーを使うので、サイズ縮小や実用的な変換コストは主張しない。
+`AutomaticFinitePrefixExamples` は手書き metadata なしで、3状態 unary と5状態 binary の観測器を
+生成し、実再帰捕捉・親復帰の source 実行から固定 Seq 全入力言語へ接続する。unary では生成 Seq を
+clock8／実 product 行 clock3で直接 kernel 実行し、空捕捉と全 clock nullable 未定義も検証する。
+binary では ab／aba の非可換残余 ba、長い捕捉内で完成した literal の EOF query、Total ではない
+configured frontier を検証する。否定内部の probe や選択後の全連結 offset の収集、範囲外 user と
+不完全 alphabet の拒否も有限検査する。
+
+`AlphabetOriginControl` は、caller-origin の Plan 正規化を alphabet-derived backend へ接続する。
+`normalize_literal` は実引数の preflight、閉 leaf へ渡す空捕捉、選択／否定／guard を通して
+source literal 条件が保存されることを示す。各 leaf の header と実生成 profile frontier の有限検査から
+`coreEntries`／`coreBodies` の検査を導き、元の実 Plan 文法の全入力観測・固定 Seq 元文字列言語・
+定義性／全 clock 未定義へつなぐ。旧 universal frontend が拒否する literalQuery 原子を含められる。
+
+`AutomaticFiniteOrigin` は、注釈なし有限prefix control と recursive Arg 本体を持つ dependent leaf、
+または保持値から独立した closed leaf を、Plan の選択／否定／guard で組む実 source 文法を定義する。
+source rule の leaf は `rawControl; param0; body` または closed body そのものなので、
+whole user 本体は捕捉終点以後に終わる形へ限定しない。機械／read／finish／alphabet を構文から生成し、
+生の leaf の全 partial 評価を任意環境／table 下で正規化して全 physical clock の rule-body 同値へ上げる。
+その後の caller-origin 正規化と alphabet backend へ合成する。
+`automatic_language_translation` の仮定は、Plan／user 参照範囲と closed leaf の構造的 capture 独立性、
+root の参照範囲という実行可能な source 検査だけである。新しい成功行／capture 形の注釈は要求しない。
+否定は捕捉前の元位置へ、独立 leaf は捕捉終点より前の消費終点へ返ることができる。ただし dependent
+leaf 内の消費原子は依然として retained query を伴い、その header は全保持値を再照合する。
+任意の全再照合なし依存継続を扱えたという主張ではない。
+`AutomaticFiniteOriginExamples` は実再帰で捕捉長1／4／10と親復帰を検証し、loop leaf の失敗を
+否定すると、alphabet 外の X を含む入力で whole user が元位置へ空成功で戻る例を示す。
+独立 leaf が捕捉4文字に対して1文字だけ消費する場合は、生成 Seq を通常 clock8で直接検証する。
+単純な loop／原点復帰は通常 clock2で実行し、独立 leaf の user 呼出しを実引数とする product ケースは
+行対応から同じ生成 Seq の通常 clock 実行の存在を導く。全 profile 文法を kernel で直接展開する大きい
+product 実行検査は、この環境のメモリ消費が大きいため完了していない。nullable loop の否定／代替枝も
+全 clock で未定義のままで、初期引数の有限失敗は空成功へ変わらない。引数 preflight を省くと誤受理する
+対照と、closed 依存／範囲外 Plan の拒否も kernel 検証した。
+
+
 
 これは各消費原子の後にも全旧値が照合できる guarded step の PEG 制御である。
 任意 PEG prefix、捕捉の照合を保たない一般の依存 step／消費 user 呼出し、全保持値の再照合を
