@@ -16,6 +16,42 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 保持値を転送する消費user prefixを展開して接続
+
+`R(param0)` は実際の一階Par呼出しであり、現在の保持値を元位置から再捕捉して
+calleeへ渡す。`ForwardedCallUnfolding` は、calleeの自由parameter参照が0だけという
+有限構文条件から、通常clock k+1のその呼出しと、clock kの `&param0; body(R)` の
+全partial結果が等しいことを証明する。任意のcaller環境を先頭保持値だけのcallee
+環境へ射影できることを、実引数評価も含めて構文帰納で示す。bodyが独立でも、
+引数preflightは一般には省けない。
+
+`BoundedBodyRewrite` は、このように呼出し段数を消す規則変換を扱う。
+元の通常clock kの実表は先のclock k以下、先のclock kの実表は元のclock 2k以下となる。
+同clockの表一致を仮定せず、全有限観測・有限失敗・全clock未定義を保存する。
+`ExpressionContext` はsequence／優先選択／否定／starの下へ情報順序の対応を持ち上げ、
+途中の位置の妥当性を実物の表のrange不変量から導く。
+
+`ReplayCallInlining` と `FoldedUserPrefix` は、calleeが全保持値の再照合から始まる
+場合を、実規則のarity・body一致・parameter範囲を調べる有限検査で扱う。
+`R(w) := w; B(w)` を呼ぶ元本体 `(R(w))*; w; tail` は、
+`(w; B(w))*; w; tail` へ展開できる。既存の `LeadingReplayStar` の
+`(w B)* w = w (B w)* !B` という停止検査付き回転と、再帰continuation compilerへ
+接続する。Bは単なるscannerではなく、fresh引数を捕捉する実user再帰・相互再帰と
+親の保持値再利用を含められる。calleeがcallerへ戻る呼出しも許し、非再帰性や
+意味論的な成功・行oracleを仮定しない。最終Seq文法は固定され、入力文字列を変更しない。
+
+実例ではFの反復中にRへ保持値abを転送し、RからFへ新しいababを渡す。
+さらに深さ0/1/2/3で保持値長2/4/8/16を使い、各親へ全保持値を再照合して復帰する。
+生成Seqの相互再帰を通常clock12で直接kernel実行し、短い子・親の再照合失敗も確認した。
+展開前がclock1で未定義、展開後が同clockで成功する例を持つため、同clock表一致では
+このpassを正当化できない。nullableな実user prefixは全入力・全clockで元／Seqとも
+未定義であり、非replay callee、不正parameter範囲・同一caller/calleeのfoldを拒否する。
+
+検証: 全1095 jobs（Auditを含む）と、関連953定理の標準公理／公理なしの依存検査。
+新規48定理をguardで追加検査した。元・先の通常clockは同一とは限らない。
+保持値転送とcallee先頭の全再照合という条件は残り、別のfresh引数を作るprefixや
+再照合より前に消費する任意callee、および一般Par/Seq一致・分離は未解決である。
+
 ## 長さ可変 scanner を保持値の照合付きで反復する入口
 
 `Entry.scannerIterate q` は、実補助 scanner を呼ぶ生の入口

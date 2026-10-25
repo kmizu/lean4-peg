@@ -1,3 +1,10 @@
+import MacroPeg.CBV.BoundedBodyRewrite
+import MacroPeg.CBV.ExpressionContext
+import MacroPeg.CBV.ForwardedCallUnfolding
+import MacroPeg.CBV.ReplayCallInlining
+import MacroPeg.CBV.FoldedUserPrefix
+import MacroPeg.CBV.FoldedUserPrefixExamples
+import MacroPeg.CBV.FoldedUserPrefixUndefined
 import MacroPeg.CBV.ScannerLoopCaptureExamples
 import MacroPeg.CBV.ScannerLoopUndefined
 import MacroPeg.CBV.ScannerLoopExamples
