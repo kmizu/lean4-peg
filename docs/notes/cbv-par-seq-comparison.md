@@ -8617,3 +8617,60 @@ calls. Replacing those checks with entry-indexed recursive capture safety,
 while tracking retained values through every consuming call, remains open.
 No broader all-input compiler theorem or class equality/separation is claimed
 from the local frontier results.
+
+
+## Checked profile sets close state-specific recursive capture safety
+
+`RecursiveCaptureProfiles` and `ProfileCheckedScannerCorrespondence` close
+the entry-indexed recursive argument-check gap described above. They reuse
+the same actual source and generated target grammars, with a different
+finite certification path. No Total M condition is used for captured words
+or incoming retained values in this path.
+
+Finite annotations describe possible scanner output profiles H(q), possible
+user output profiles C(i,P) for each actual argument profile P, and admitted
+user input profiles A(i). `scannerCheck` checks identity and closure under
+every actual scanner arc. `grammarCheck` checks actual user bodies for every
+finite input profile; parameters use their full actual profile, sequence
+composes output sets, choice takes their union, and queries output identity
+while retaining their actual computations. Stars use a finite candidate
+closure with an explicit identity/composition check. If that check fails,
+the abstract result conservatively falls back to the finite profile universe;
+no convergence or termination assumption enters soundness.
+
+Structural argument induction and user-round induction derive actual new
+capture profile membership from these finite checks. In particular,
+`frozen_rows` and `capture` do not take a semantic recursive-row or
+argument-success oracle as an input. Captures may vary across iterations,
+include nested stars, and invoke positive parameterized or mutually recursive
+users. Source headers have their actual original-position behavior.
+
+The call checker requires every possible argument profile to be admitted by
+the callee and to satisfy that callee's exact `entryCheck`. Body checks only
+need the admitted profiles; every nested call, including calls inside
+queries, retains its own check. Actual profile accuracy connects these finite
+checks to the source captures. The resulting simultaneous plain/product row
+correspondence preserves every finite observation on every unchanged original
+input, supplies one fixed first-order Seq grammar for the entire language,
+and preserves physical definedness and all-clock undefinedness. The final
+theorems require only the finite scanner, grammar, body, and root checks.
+Annotations are checked finite sets, not assumed semantic invariants; no
+completeness or automatic discovery of successful annotations is claimed.
+
+A partial machine reads a from both states and b only from state 1. Its
+state-1 whole scanner language fails the old all-state certificate. The new
+finite checks nevertheless certify positive parameterized scanner calls:
+an a/b star is captured as ab, the parent ab plus fresh b is passed into
+another scanner inside an argument and captured as abb, and both complete
+values are reused after return. The initial capture is input-dependent and
+unbounded. The star's a and b operands have different full profiles. Kernel
+examples verify the real physical source execution, generated target
+acceptance, four short-copy failures, and all-input/all-clock nullable
+argument divergence. The grammar instantiates the all-input language theorem.
+
+This closes the state-specific safety integration for this compiler family.
+Unary source users, the stated syntax, replay/scanner headers, one common
+machine, and existence of successful finite profile annotations remain
+restrictions. Arbitrary PEG prefixes, integration with other fragment
+compilers, independent multiple source captures, and unrestricted Par/Seq
+class equality or separation remain unresolved.
