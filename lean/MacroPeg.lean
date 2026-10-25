@@ -1,3 +1,7 @@
+import MacroPeg.CBV.ForwardingPrefixCycles
+import MacroPeg.CBV.ForwardingPrefixTrace
+import MacroPeg.CBV.ForwardingCycleElimination
+import MacroPeg.CBV.ForwardingCycleExamples
 import MacroPeg.CBV.RepeatedWordArguments
 import MacroPeg.CBV.MultiplyingPrefixCompiler
 import MacroPeg.CBV.MultiplyingPrefixEvaluation
