@@ -16,6 +16,51 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 一つの無制限保持語と他の有限viewを同時に運ぶ全体変換
+
+`SubstringCaptureView`と`RetainedViewFusionSyntax/Declarations/Atoms/Dispatch/Evaluation/Correspondence/Compiler`は、
+有限viewへの値消去だけでなく、**長さに上限のない最初の保持語を実文字列としてSeq側へ運ぶ**。
+この語の直接再照合`param_0`には有限suffix guardを要求しない。実引数内の再照合・否定・反復、
+parameterized user呼出しにも使え、子が新しい語を捕捉しても親の語は復帰後に残る。
+他の保持語は引き続き有限suffix領域でのみ参照し、有限viewへ消去する。
+
+入力は有限のseed語列、arityと残余本体からなる規則列、開始式である。
+seedのsuffix閉包を`R`、そのprefix集合（seedの全連続部分語）を観測辞書とする。
+元の正arity規則は実宣言が`param_0;残余本体`であることを要求する。
+nullary規則は`eps;残余本体`で、混在・相互再帰を許す。
+残余本体・実引数はseq/alt/not/star/文字/range/any/literal、無guardの最初の保持語参照、
+`guard(R);param_i`、任意arity user呼出しからなる。実引数は親依存・actual内userを含め任意で、
+最初の捕捉が最長、scanner frontier、共通producer、捕捉長やアルファベットの上限は要求しない。
+この規則頭の形は一般Par文法の正規形だとは主張しない。
+
+通常結果と候補語DFA出力を同時に生成し、各実引数のviewを元の順序で観測する。
+観測後も最初のactualは実parserとして残し、実捕捉語を単一引数へ渡す。
+途中のPar文法はすべて`param_0;生成残余本体`というunary規則で、
+既存`ReplayFusion`を合成して、Seq側のactual消費と元の先頭再照合を合わせる。
+最終Seqも固定unary文法で、元のparameterized表や入力符号化は使わない。
+原開始式は空環境の特殊化を通常のliteral代入で閉じ、規則追加やclockの追加をしない。
+実Par/生成Seqの同physical clock対応、全残余・有限失敗・有限実行存在・全clock未定義と
+同じ元文字列言語を、全宣言・開始式の有限AST検査から保存する。
+
+`SubstringCaptureView.advance_observe`は、任意の実保持語を候補DFAの任意状態から読んだ結果を
+部分語viewだけで復元する。候補外の語はsinkへ着くが、**実payloadは消さない**。
+prefixだけの観測では候補`ab`に対する`b`/`c`を同じOtherにしてしまい、
+中間状態1からは`b`だけが受理状態2へ進む。この実反例と生成フィルタの直接実行で部分語閉包の必要性を確認した。
+
+主例の元arityは`[2,0,1]`、生成Seqは固定182規則・全arity1。
+親の`a^n`から、actual内のunary userを通して`a^(n+1)`を新捕捉し、
+別の同原点actualはnullary userの後で`a`を捕捉する。親子はともにOther viewでも実payloadが異なる。
+`(n,深さ)=(1,0),(2,1),(4,2)`を元・生成ともclock8でkernel直接実行し、
+親`aa`→子`aaa`の実捕捉、復帰後の親コピー、子payload漏出・空payload置換の誤りも検証した。
+有限`R`の外で長さ2/4/7の実保持語を消費する例が通る。
+最初の捕捉が長さ1、別の捕捉が長さ2/4という元・生成双方の受理も確認し、最長条件は使っていない。
+任意n・任意clockで、同原点の実捕捉`[a^(n+1),a]`を証明した。
+無guardの空payload反復は全入力・全clock未定義を保存し、先頭再照合を欠く実宣言は有限検査が拒否する。
+
+一般の逆包含・分離は引き続き未解決である。
+このbackendで残る制限は、正arity規則の先頭再照合と、最初以外の保持語の有限suffix参照である。
+任意位置で複数の独立した無制限保持語を再照合する一般のPar文法はまだ変換できていない。
+
 ## 親依存actualの出力観測を含む有限suffix文法の全体変換
 
 `FiniteSuffixObservedSyntax/Declarations/Atoms/Dispatch/Evaluation/Correspondence/Compiler`は、
@@ -11050,3 +11095,41 @@ on a source-accepted example; this remains an operational contrast, not language
 
 The finite remaining-suffix replay guard is still essential to this construction. Unrestricted
 retained-word replay and the general Par/Seq class equality or separation remain unresolved.
+
+
+## Carrying an unbounded retained word alongside finite views
+
+SubstringCaptureView and the RetainedViewFusion modules retain the actual first captured word
+in a fixed unary Seq grammar while erasing the other values into finite metadata. Raw replay of
+the first word has no finite-suffix guard and may occur in arbitrary control or dependent actuals.
+Source declarations of positive arity must start with param_0 followed by the residual body;
+nullary declarations start with eps. Mixed arities, mutual recursion and users inside actuals are
+allowed. Every other direct retained reference still uses guard(R);param_i, where R is the suffix
+closure of fixed seed words. This source shape is not claimed to normalize all Par grammars.
+
+All seed substrings form the finite observation dictionary. A substring view determines every
+state transition of each strict candidate-word DFA, including transitions from intermediate
+states; words outside the dictionary reach a sink but remain real payloads for raw replay.
+Normal/filter generation observes all actuals in the original order, then retains the first
+actual parser as a real unary argument. The intermediate Par rules have the form param_0;tail.
+Composing ReplayFusion removes that leading replay in Seq, matching actual consumption at the
+call boundary. Root specialization is closed by literal substitution. All physical-clock results,
+original-string observations/languages, residuals, finite failure and all-clock undefinedness are
+preserved after finite raw-declaration/root checks, without semantic helper or termination inputs.
+
+The source arities are [2,0,1] and the fixed target has 182 unary rules. Direct kernel source/target
+runs at clock8 for (initial length, nesting depth)=(1,0),(2,1),(4,2) check a parent a^n, a newly
+captured child a^(n+1) through a parameterized call inside an actual, another overlapping actual
+through a nullary user, restoration and replay of the parent after return. Parent aa and child aaa
+have equal Other metadata but different real payloads. Leaking the child or replacing the payload
+by empty changes the result. Raw replay consumes lengths 2/4/7 outside the finite suffix region.
+Another accepted source/target example retains length1 while the other actual captures lengths2/4,
+so no longest-first or scanner-frontier condition is needed. Symbolic scanner evidence proves the
+actual tuple [a^(n+1),a] for every n and clock. Nullable raw-payload repetition stays undefined on
+every input at every clock, and missing leading replay is rejected by the complete checker.
+Prefix-only b/c metadata for candidate ab is shown insufficient at intermediate state1; the actual
+composed a;payload filter succeeds with the correct substring view and fails with the wrong Other.
+
+The remaining restrictions are the leading first-word replay in positive-arity source rules and
+finite-suffix references to other captured words. Arbitrary replay of multiple independent
+unbounded retained words, and general original-string Par/Seq equality or separation, remain open.

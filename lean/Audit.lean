@@ -1,3 +1,12 @@
+import MacroPeg.CBV.RetainedViewFusionAtoms
+import MacroPeg.CBV.RetainedViewFusionCompiler
+import MacroPeg.CBV.RetainedViewFusionCorrespondence
+import MacroPeg.CBV.RetainedViewFusionDeclarations
+import MacroPeg.CBV.RetainedViewFusionDispatch
+import MacroPeg.CBV.RetainedViewFusionEvaluation
+import MacroPeg.CBV.RetainedViewFusionExamples
+import MacroPeg.CBV.RetainedViewFusionSyntax
+import MacroPeg.CBV.SubstringCaptureView
 import MacroPeg.CBV.FiniteSuffixObservedAtoms
 import MacroPeg.CBV.FiniteSuffixObservedCompiler
 import MacroPeg.CBV.FiniteSuffixObservedCorrespondence
@@ -32991,3 +33000,389 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.FiniteSuffixObservedExamples.missing_guard_rejected' depends on axioms: [propext] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.FiniteSuffixObservedExamples.missing_guard_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionAtoms.state_views' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionAtoms.state_views
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionAtoms.advance_mem' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionAtoms.advance_mem
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionAtoms.retained_eval' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionAtoms.retained_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionAtoms.retained_word' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionAtoms.retained_word
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionAtoms.retained_correct' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionAtoms.retained_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionAtoms.head_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionAtoms.head_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionAtoms.retainedReplay_eval' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionAtoms.retainedReplay_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionAtoms.replay_word' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionAtoms.replay_word
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionAtoms.not_word' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionAtoms.not_word
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionCompiler.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionCompiler.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionCompiler.physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionCompiler.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionCompiler.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionCompiler.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionCompiler.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionCompiler.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionCompiler.defined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionCompiler.defined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionCompiler.undefined_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionCompiler.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionCorrespondence.mode_evaluation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionCorrespondence.mode_evaluation
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionCorrespondence.prefix_project' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionCorrespondence.prefix_project
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionCorrespondence.tables_related' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionCorrespondence.tables_related
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionCorrespondence.root_firstOrder' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionCorrespondence.root_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionCorrespondence.physical' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionCorrespondence.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionCorrespondence.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionCorrespondence.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionCorrespondence.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionCorrespondence.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionCorrespondence.defined_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionCorrespondence.defined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionCorrespondence.undefined_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionCorrespondence.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.mode_mem' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.mode_mem
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.key_mem' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.key_mem
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.tail_rule' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.tail_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.intermediate_rule' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.intermediate_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.source_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.source_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.atom_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.atom_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.character_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.character_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.retained_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.retained_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.retainedFilter_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.retainedFilter_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.choose_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.choose_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.gather_firstOrder' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.gather_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.emit_firstOrder' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.emit_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.render_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.renderArgs_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.renderArgs_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.tails_firstOrder' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.tails_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.intermediate_firstOrder' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.intermediate_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.target_firstOrder' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.target_unary' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.target_unary
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.originalArgs_length' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionDeclarations.originalArgs_length
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionDispatch.choose_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionDispatch.choose_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionDispatch.select_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionDispatch.select_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionDispatch.gather_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionDispatch.gather_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionEvaluation.first_capture' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionEvaluation.first_capture
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionEvaluation.call_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionEvaluation.call_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionEvaluation.evaluation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionEvaluation.evaluation
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionExamples.checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionExamples.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionExamples.source_arities' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionExamples.source_arities
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionExamples.target_layout' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionExamples.target_layout
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionExamples.source_runs' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionExamples.source_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionExamples.generated_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionExamples.generated_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionExamples.actual_growing_capture' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionExamples.actual_growing_capture
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionExamples.other_payloads_remain_distinct' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionExamples.other_payloads_remain_distinct
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionExamples.unguarded_payload_beyond_region' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionExamples.unguarded_payload_beyond_region
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionExamples.leaking_child_payload_is_wrong' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionExamples.leaking_child_payload_is_wrong
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionExamples.no_unbounded_payload_replacement' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionExamples.no_unbounded_payload_replacement
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionExamples.same_clock' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionExamples.same_clock
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionExamples.original_language' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionExamples.original_language
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionExamples.unchanged_source_seq_fails' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionExamples.unchanged_source_seq_fails
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionExamples.substring_metadata_needed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionExamples.substring_metadata_needed
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionExamples.finite_metadata_does_not_erase_payload' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionExamples.finite_metadata_does_not_erase_payload
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionExamples.main_need_not_be_longest' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionExamples.main_need_not_be_longest
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionExamples.equal_short_other_changes_result' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionExamples.equal_short_other_changes_result
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionExamples.actual_filter_needs_substring_view' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionExamples.actual_filter_needs_substring_view
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionExamples.scan_prefix' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionExamples.scan_prefix
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionExamples.actual_captures_all_lengths' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionExamples.actual_captures_all_lengths
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionExamples.nullable_payload_rows' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionExamples.nullable_payload_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionExamples.nullable_payload_source' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionExamples.nullable_payload_source
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionExamples.nullable_payload_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionExamples.nullable_payload_target
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedViewFusionExamples.missing_head_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedViewFusionExamples.missing_head_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.SubstringCaptureView.mem_dictionary' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SubstringCaptureView.mem_dictionary
+
+/-- info: 'Shallot.MacroPeg.CBV.SubstringCaptureView.substring_closed' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SubstringCaptureView.substring_closed
+
+/-- info: 'Shallot.MacroPeg.CBV.SubstringCaptureView.outside_run_sink' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SubstringCaptureView.outside_run_sink
+
+/-- info: 'Shallot.MacroPeg.CBV.SubstringCaptureView.advance_observe' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SubstringCaptureView.advance_observe

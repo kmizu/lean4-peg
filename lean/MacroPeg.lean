@@ -865,3 +865,13 @@ import MacroPeg.CBV.FiniteSuffixObservedDispatch
 import MacroPeg.CBV.FiniteSuffixObservedEvaluation
 import MacroPeg.CBV.FiniteSuffixObservedExamples
 import MacroPeg.CBV.FiniteSuffixObservedSyntax
+
+import MacroPeg.CBV.RetainedViewFusionAtoms
+import MacroPeg.CBV.RetainedViewFusionCompiler
+import MacroPeg.CBV.RetainedViewFusionCorrespondence
+import MacroPeg.CBV.RetainedViewFusionDeclarations
+import MacroPeg.CBV.RetainedViewFusionDispatch
+import MacroPeg.CBV.RetainedViewFusionEvaluation
+import MacroPeg.CBV.RetainedViewFusionExamples
+import MacroPeg.CBV.RetainedViewFusionSyntax
+import MacroPeg.CBV.SubstringCaptureView
