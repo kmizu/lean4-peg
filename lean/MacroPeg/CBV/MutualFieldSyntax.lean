@@ -1,8 +1,10 @@
 import MacroPeg.CBV.RecursiveFieldSyntax
 
 /-! Multiple mutually recursive Par headers with independent arities and
-covering field orders. Every fresh call recaptures its own separate tuple.
-Covering delimiter anchors and checked delimiter-free actuals are required. -/
+field orders covering the parameters read by their continuations. Every
+source actual is still preflighted, including values not recaptured.
+Empty anchors are allowed when the continuation reads no incoming parameter.
+Actual captures are checked delimiter-free. -/
 namespace Shallot.MacroPeg.CBV.MutualFieldSyntax
 
 structure Header where
@@ -56,17 +58,17 @@ def target (bodies : List MExp) (headers : List Header) (d : Char) : MGrammar :=
     TupleFieldTransfer.rules s.arity d s.pattern (emit bodies.length headers d s.body))⟩
 
 def headerCheck (helpers : Nat) (headers : List Header) (d : Char) (s : Header) : Bool :=
-  decide (0<s.arity ∧ s.pattern≠[]) && s.pattern.all (fun i => decide (i<s.arity)) &&
-    (List.range s.arity).all (fun i => decide (i∈s.pattern)) && exprCheck helpers headers s.arity d s.body
+  decide (0<s.arity) && s.pattern.all (fun i => decide (i<s.arity)) &&
+    UsedFieldCapture.check s.arity s.pattern (emit helpers headers d s.body) &&
+    exprCheck helpers headers s.arity d s.body
 def check (bodies : List MExp) (headers : List Header) (d : Char) (root : MExp) : Bool :=
   bodies.all (DelimitedCopySyntax.lexicalCheck bodies.length) &&
     headers.all (headerCheck bodies.length headers d) && exprCheck bodies.length headers 0 d root
 
 structure HeaderValid (helpers : Nat) (headers : List Header) (d : Char) (s : Header) : Prop where
   positive : 0<s.arity
-  nonempty : s.pattern≠[]
   scope : ∀ i∈s.pattern, i<s.arity
-  cover : ∀ i, i<s.arity → i∈s.pattern
+  used : ParameterSupport.Supports (UsedFieldCapture.Allowed s.arity s.pattern) (emit helpers headers d s.body)
   body : exprCheck helpers headers s.arity d s.body=true
 structure Valid (bodies : List MExp) (headers : List Header) (d : Char) : Prop where
   library : RecursiveParserStability.Valid bodies
@@ -75,10 +77,10 @@ structure Valid (bodies : List MExp) (headers : List Header) (d : Char) : Prop w
 theorem header_checked (helpers : Nat) (headers : List Header) (d : Char) (s : Header)
     (hc : headerCheck helpers headers d s=true) : HeaderValid helpers headers d s := by
   simp only [headerCheck,Bool.and_eq_true] at hc
-  obtain ⟨⟨⟨hn,hs⟩,hv⟩,hb⟩ := hc
+  obtain ⟨⟨⟨hn,hs⟩,hu⟩,hb⟩ := hc
   have hn := of_decide_eq_true hn
-  exact ⟨hn.1,hn.2,(by intro i hi; exact of_decide_eq_true (List.all_eq_true.mp hs i hi)),
-    (by intro i hi; exact of_decide_eq_true (List.all_eq_true.mp hv i (List.mem_range.mpr hi))),hb⟩
+  exact ⟨hn,(by intro i hi; exact of_decide_eq_true (List.all_eq_true.mp hs i hi)),
+    UsedFieldCapture.checked _ _ _ hu,hb⟩
 
 theorem checked (bodies : List MExp) (headers : List Header) (d : Char) (root : MExp)
     (hc : check bodies headers d root=true) :
@@ -151,5 +153,16 @@ theorem emitArgs_get (helpers : Nat) (headers : List Header) (d : Char) : ∀ ar
     (emitArgs helpers headers d args)[i]'(by rw [emitArgs_length]; exact hi)=emit helpers headers d args[i]
   | a::as,0,_ => rfl
   | a::as,i+1,hi => emitArgs_get helpers headers d as i (by simpa using hi)
+
+/-- Every previously accepted fully covering header still passes the
+weaker reference-sensitive check. The generated syntax is unchanged. -/
+theorem header_check_of_cover (helpers : Nat) (headers : List Header) (d : Char) (s : Header)
+    (hn : 0<s.arity) (hs : ∀ i∈s.pattern, i<s.arity)
+    (cover : ∀ i, i<s.arity → i∈s.pattern) (hb : exprCheck helpers headers s.arity d s.body=true) :
+    headerCheck helpers headers d s=true := by
+  have hu := UsedFieldCapture.check_complete s.arity s.pattern (emit helpers headers d s.body)
+    (UsedFieldCapture.of_cover _ _ _ (emit_firstOrder _ _ _ _) cover)
+  simp only [headerCheck,Bool.and_eq_true]
+  exact ⟨⟨⟨by simp [hn],List.all_eq_true.mpr (by intro i hi; exact decide_eq_true (hs i hi))⟩,hu⟩,hb⟩
 
 end Shallot.MacroPeg.CBV.MutualFieldSyntax

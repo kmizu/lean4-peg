@@ -16,6 +16,49 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 継続が読む値だけを再捕捉し、全く読まないときはanchorを空にする
+
+`ParameterSupport` は、式が実際に構文上参照する parameter だけで view の一致を
+要求する。任意の同じ戦略・再帰表について、seq/alt/not/star と両方式の実引数評価を
+通じて、substitution 後の評価が一致することを証明する。predicate 内・反復内・
+callee actual 内の参照も含める。既存 `CaptureViews.evV_rebind` と二つの arguments
+API は、この一般補題の全 parameter を許可する特殊化として維持した。
+
+`UsedFieldCapture` は、arity 内で**継続が参照する** index だけが再照合 pattern に
+現れれば、実 field tuple からその継続を評価できることを証明する。
+arity 外の parameter の元の有限失敗も保存する。欠けた field を空文字に置き換えない。
+欠けた index の view は実際に範囲外となり失敗するが、読まれないので継続へ影響しない。
+空の元捕捉を predicate や nullable star が読むときは、その参照も cover が必要である。
+
+`TupleFieldTransfer.physical_using` と `MutualFieldSyntax.headerCheck/HeaderValid` を
+この条件へ一般化した。検査対象は生成された本体なので、再帰 call に付く preflight
+や actual 内の元の参照も検査する。全 tuple の cover は不要になり、従来の fully
+covering header が引き続き通ることも `header_check_of_cover` で証明した。
+規則数と field 捕捉方式は入力や runtime の語に依存しない。
+
+さらに pattern が空で、継続が arity 内の parameter を一つも読まない場合を許可する。
+`physical_empty` は、全 actual を元順に zero-width preflight した後、元の入力位置で
+nullary entry を呼ぶ。この場合は入力上の再照合 anchor がなく、保持語を消費しない。
+非空 pattern と空 pattern の双方について、相互呼出しの実 clock 帰納で本体の仮定を外し、
+既存 `MutualFieldCompiler` の全入力・全 clock 評価、有限観測、元文字列言語、
+全 clock 未定義の保存をそのまま拡張した。正 arity と actual の区切り自由性の検査は残る。
+
+例は source arity `[3,2]`、target arity `[1,1,1,2,1,1,2]` で、どちらの規則も一値だけを
+再捕捉する。不要な最初の payload は任意として、本体の結果が不変であることを証明し、
+必要な語 `a^n` の倍長捕捉・相互再帰・親復帰を全 n/depth/後続文字列へ接続する。
+固定 scanner root と固定 Seq target は、全 n/depth の実入力を clock `2*depth+1` で受理する。
+unused actual が失敗する入力も失敗し、nullable actual の未定義は全元入力・全 clock で
+保存する。全 parameter が unused の例では、入力 `a` を再照合 anchor なしに受理する。
+空 anchor の左再帰が全入力・全 clock で未定義のままであることも証明した。
+
+静的な参照検査であり、到達不能枝まで意味解析する最小 live 集合ではない。
+任意の Par 文法のこの規則形への正規化も未証明。**実際に読む捕捉値を anchor なしで
+任意位置へ渡す一般変換、および Par/Seq 言語クラス全体の一致・分離は依然未解決**である。
+
+今回 4 新 modules・37 新 guard。全 1,388 jobs/Audit と関連 3,717 公開依存
+（標準 Lean 公理 3,636、無公理 81）を検証。PR69 は新 Lean 78 modules・642 guard。
+新しい sorry/axiom/native_decide は置いていない。
+
 ## 異なる捕捉タプルを渡す、複数headerの相互再帰をParからSeqへ
 
 `MutualFieldSyntax/Layout/Correspondence/Compiler` は、従来の一つの自己再帰 header
@@ -52,8 +95,9 @@ clock `2*depth+1` で成立する。有限 kernel 例に加えて、子の値で
 入力の拒否、不完全な cover・不正 scope/arity・異なる元宣言の拒否、nullable body の
 全 clock 未定義を source/target 両方で証明した。
 
-**条件は、各 header が先頭で全 tuple を覆う区切りつき anchor を再照合することと、
-actual の実捕捉が区切りを含まないこと。** actual の消費部分は literal/parameter と
+当初の条件は、各 header の先頭で全 tuple を覆う区切りつき anchor を再照合し、
+actual の実捕捉が区切りを含まないことだった。上の参照検査への一般化により、
+現在は継続が読む値だけの cover と、parameter-free 継続の空 anchor を許可する。 actual の消費部分は literal/parameter と
 通常制御の検査対象で、正に消費する一般 user call は未対応。零幅 query 内には
 検査済みの相互 call も置ける。任意の Par 文法がこの形へ正規化できるとは主張せず、
 anchor のない一般 live capture と、Par/Seq 全言語クラスの一致・分離は未解決である。

@@ -42,45 +42,62 @@ mutual
               simpa only [exprCheck,if_neg hi,hs] using he)
           have ha : args.length=s.arity := of_decide_eq_true hh.1
           have hvalid := hv.headers s (List.mem_of_getElem? hs)
+          have hsource : ruleAtM (source bodies headers d).rules i=
+              some ⟨args.length,TupleFieldTransfer.sourceBody d s.pattern s.body⟩ := by
+            simpa only [show bodies.length+(i-bodies.length)=i by omega,ha] using
+              source_row bodies headers d (i-bodies.length) s hs
+          have htarget : TupleFieldTransfer.Installed (target bodies headers d)
+              (address bodies.length headers (i-bodies.length)) args.length d s.pattern
+              (emit bodies.length headers d s.body) := by
+            simpa only [ha] using target_rows bodies headers d (i-bodies.length) s hs
+          have used : ParameterSupport.Supports (UsedFieldCapture.Allowed args.length s.pattern)
+              (emit bodies.length headers d s.body) := by simpa only [ha] using hvalid.used
+          have hb : ∀ m, m<k → ∀ W : List (List Char), W.length=args.length →
+              (∀ n, (hn : n<W.length) → DelimitedCopyProjection.Free d W[n]) → ∀ q, q≤x.length →
+              evV (source bodies headers d) x .callByValuePar (tblV (source bodies headers d) x .callByValuePar m) W s.body q=
+                evV (target bodies headers d) x .callByValueSeq (tblV (target bodies headers d) x .callByValueSeq m) W
+                  (emit bodies.length headers d s.body) q := by
+            intro m hm W hlen hfree q hq
+            apply hbody m hm (i-bodies.length) s hs W (by omega)
+            · intro w hw
+              obtain ⟨n,hn,heq⟩ := List.mem_iff_getElem.mp hw
+              rw [←heq]
+              exact hfree n hn
+            · exact hq
+          have hemit : ∀ n, (hn : n<args.length) →
+              evV (source bodies headers d) x .callByValuePar (tblV (source bodies headers d) x .callByValuePar k) E args[n] p=
+                evV (target bodies headers d) x .callByValueSeq (tblV (target bodies headers d) x .callByValueSeq k) E
+                  ((emitArgs bodies.length headers d args)[n]'(by rw [emitArgs_length]; exact hn)) p := by
+            intro n hn
+            rw [emitArgs_get]
+            exact arguments_physical bodies headers d hv x k hbody scope args hh.2 n hn E hE p hp
+          have hfree : ∀ n, (hn : n<args.length) → ∀ q,
+              evV (source bodies headers d) x .callByValuePar (tblV (source bodies headers d) x .callByValuePar k) E args[n] p=some (some q) →
+                DelimitedCopyProjection.Free d (pre x p q) := by
+            intro n hn q hq
+            exact DelimitedValueSafety.captured_free d _ x .callByValuePar _ E hE args[n]
+              (args_checked _ _ _ _ args hh.2 n hn).2 p q hp hq
+          simp only [emit,if_neg hi,hs]
+          rw [show TupleFieldTransfer.head (address bodies.length headers (i-bodies.length)) s.arity d s.pattern
+              (emitArgs bodies.length headers d args)=
+            TupleFieldTransfer.head (address bodies.length headers (i-bodies.length)) args.length d s.pattern
+              (emitArgs bodies.length headers d args) by rw [ha]]
           cases hpat : s.pattern with
-          | nil => exact False.elim (hvalid.nonempty hpat)
+          | nil =>
+            simp only [hpat] at hsource htarget used
+            exact TupleFieldTransfer.physical_empty (source bodies headers d) (target bodies headers d)
+              i (address bodies.length headers (i-bodies.length)) d s.body (emit bodies.length headers d s.body)
+              args (emitArgs bodies.length headers d args) (emitArgs_length _ _ _ _) used
+              hsource htarget x E k p hp hb hemit hfree
           | cons j js =>
-            simp only [emit,if_neg hi,hs]
-            rw [hpat]
-            rw [show TupleFieldTransfer.head (address bodies.length headers (i-bodies.length)) s.arity d (j::js)
-                (emitArgs bodies.length headers d args)=
-              TupleFieldTransfer.head (address bodies.length headers (i-bodies.length)) args.length d (j::js)
-                (emitArgs bodies.length headers d args) by rw [ha]]
-            have hsource : ruleAtM (source bodies headers d).rules i=
-                some ⟨args.length,TupleFieldTransfer.sourceBody d (j::js) s.body⟩ := by
-              simpa only [show bodies.length+(i-bodies.length)=i by omega,ha,hpat] using
-                source_row bodies headers d (i-bodies.length) s hs
-            have htarget : TupleFieldTransfer.Installed (target bodies headers d)
-                (address bodies.length headers (i-bodies.length)) args.length d (j::js)
-                (emit bodies.length headers d s.body) := by
-              simpa only [ha,hpat] using target_rows bodies headers d (i-bodies.length) s hs
-            apply TupleFieldTransfer.physical_at (source bodies headers d) (target bodies headers d)
+            simp only [hpat] at hsource htarget used
+            exact TupleFieldTransfer.physical_using (source bodies headers d) (target bodies headers d)
               i (address bodies.length headers (i-bodies.length)) d j js s.body
-              (emit bodies.length headers d s.body) (emit_firstOrder _ _ _ _)
-              args (emitArgs bodies.length headers d args) (emitArgs_length _ _ _ _)
+              (emit bodies.length headers d s.body) args (emitArgs bodies.length headers d args) (emitArgs_length _ _ _ _)
               (by rw [ha]; exact hvalid.positive)
               (by intro n hn; rw [ha]; exact hvalid.scope n (by simpa [hpat] using hn))
-              (by intro n hn; simpa only [hpat] using hvalid.cover n (by omega))
-              hsource htarget (source_firstOrder_grammar bodies headers d hv)
-              (args_firstOrder _ _ _ _ args hh.2) x E k p hp
-            · intro m hm W hlen hfree q hq
-              apply hbody m hm (i-bodies.length) s hs W (by omega)
-              · intro w hw
-                obtain ⟨n,hn,heq⟩ := List.mem_iff_getElem.mp hw
-                rw [←heq]
-                exact hfree n hn
-              · exact hq
-            · intro n hn
-              rw [emitArgs_get]
-              exact arguments_physical bodies headers d hv x k hbody scope args hh.2 n hn E hE p hp
-            · intro n hn q hq
-              exact DelimitedValueSafety.captured_free d _ x .callByValuePar _ E hE args[n]
-                (args_checked _ _ _ _ args hh.2 n hn).2 p q hp hq
+              used hsource htarget (source_firstOrder_grammar bodies headers d hv)
+              (args_firstOrder _ _ _ _ args hh.2) x E k p hp hb hemit hfree
     | scope,.seq a b,he,E,hE,p,hp => by
       have ha := expression_of_bodies bodies headers d hv x k hbody scope a (Bool.and_eq_true_iff.mp he).1 E hE p hp
       simp only [emit]
