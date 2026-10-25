@@ -16,6 +16,38 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 入力位置の再帰と有限な空呼出し閉包で、元のSeq評価を再構成する
+
+`FiniteResultClosure` と `SequentialLocalClosure/Order/Correctness` は、厳密に
+小さい残余長の行を固定し、現在位置の空引数環境の結果だけを反復する。
+状態は元規則ごとの `Res` 一つで、規則数 N なら N 回で最小固定点へ到達する。
+`None` は未定義、`some none` は既知の有限失敗であり、両者を同一視しない。
+保持文字列の候補集合や引数タプルの列挙は不要で、arity に依存した状態数を置かない。
+
+`saturated_eq_source` はこの局所閉包と元の実規則行との完全一致を証明する。
+`expression_eq_source` は任意の incoming 環境と式へ持ち上げる。小さい残余長では
+任意の実保持値の組を扱い、現在位置の空環境と混同しない。局所単調性と行一致は
+実際に到達可能な有効 arity の行だけを比較する。
+
+`SequentialPositionEvaluator.column/run/decide` は、小さい残余長を自分自身の
+再帰で計算する実行可能な評価器である。定義中に元の `tblV` や canonical 表を
+oracle として呼ばず、式評価エンジンに自身の下位行と局所閉包を渡す。
+`decide_eq_standard`、`observations_iff`、`undefined_iff` は任意の一階 Seq
+文法・開始式・元文字列で、元の成功残余・有限失敗・全 clock 未定義を保存する。
+規則数回が必要な鎖、fallback/否定を含む真の循環、nullable star、正の実引数、
+25 引数で一規則の例、不正 call/arity/parameter を kernel 検証した。
+新しい倍長値と親復帰を含む任意初期長・任意再帰深さの既存文法にも接続した。
+
+これは Lean の停止する評価器であり、未定義は返り値 `None` として表す。
+未定義を有限失敗へ変える固定 Seq 文法生成、一般の補集合閉包、一般 Par→Seq
+翻訳はまだ証明していない。密な入力位置のリストと再計算を含むため、既存の
+時間・空間上界を改善したとも主張しない。既存の stationary/clock 定理を再利用し、
+凍結下位行の局所最小固定点の同定と、自前の位置再帰評価器を接続した結果である。
+
+検証は全 1,364 jobs/Audit 成功、関連公開定理 3,542 件の依存は標準 Lean 公理
+3,464 件または無公理 78 件。今回の追加は 6 modules・49 guard。
+PR69 全体は新規 Lean 54 modules・467 guard。一般の言語クラス比較は未解決。
+
 ## 任意の一階Seq文法を、通常評価・ゼロ結果・正の消費へ分ける
 
 `SequentialResultSyntax/Normal/Zero/Compiler` は、**任意の一階 Seq 文法**から

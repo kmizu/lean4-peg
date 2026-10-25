@@ -1,3 +1,9 @@
+import MacroPeg.CBV.FiniteResultClosure
+import MacroPeg.CBV.SequentialLocalClosure
+import MacroPeg.CBV.SequentialLocalOrder
+import MacroPeg.CBV.SequentialLocalCorrectness
+import MacroPeg.CBV.SequentialPositionEvaluator
+import MacroPeg.CBV.SequentialLocalExamples
 import MacroPeg.CBV.SequentialResultSyntax
 import MacroPeg.CBV.SequentialResultNormal
 import MacroPeg.CBV.SequentialResultZero

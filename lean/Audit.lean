@@ -1,3 +1,9 @@
+import MacroPeg.CBV.FiniteResultClosure
+import MacroPeg.CBV.SequentialLocalClosure
+import MacroPeg.CBV.SequentialLocalOrder
+import MacroPeg.CBV.SequentialLocalCorrectness
+import MacroPeg.CBV.SequentialPositionEvaluator
+import MacroPeg.CBV.SequentialLocalExamples
 import MacroPeg.CBV.SequentialResultSyntax
 import MacroPeg.CBV.SequentialResultNormal
 import MacroPeg.CBV.SequentialResultZero
@@ -37311,3 +37317,234 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialResultExamples.arbitrary_depth_and_fresh_values
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteResultClosure.count_le' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteResultClosure.count_le
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteResultClosure.count_mono' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteResultClosure.count_mono
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteResultClosure.eq_of_count_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteResultClosure.eq_of_count_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteResultClosure.rounds_step' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteResultClosure.rounds_step
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteResultClosure.plateau_exists' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteResultClosure.plateau_exists
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteResultClosure.plateau_persists' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteResultClosure.plateau_persists
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteResultClosure.fixed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteResultClosure.fixed
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteResultClosure.least' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteResultClosure.least
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalClosure.overlay_lower' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalClosure.overlay_lower
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalClosure.overlay_here' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalClosure.overlay_here
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalClosure.overlay_mono' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalClosure.overlay_mono
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalClosure.step_mono' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalClosure.step_mono
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalClosure.fixed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalClosure.fixed
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalClosure.least' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalClosure.least
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalClosure.overlay_descending' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalClosure.overlay_descending
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalClosure.rounds_descending' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalClosure.rounds_descending
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalClosure.empty_rule_equation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalClosure.empty_rule_equation
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalClosure.overlay_lower_agree' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalClosure.overlay_lower_agree
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalClosure.rounds_lower_agree' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalClosure.rounds_lower_agree
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalClosure.expression_lower_agree' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalClosure.expression_lower_agree
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalOrder.table_outside' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalOrder.table_outside
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalOrder.mix_descending' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalOrder.mix_descending
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalOrder.table_le_mix' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalOrder.table_le_mix
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalOrder.mix_agrees' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalOrder.mix_agrees
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalOrder.expression_mono' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalOrder.expression_mono
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalCorrectness.canonical_from' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalCorrectness.canonical_from
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalCorrectness.stage_le_canonical' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalCorrectness.stage_le_canonical
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalCorrectness.canonical_unfold' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalCorrectness.canonical_unfold
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalCorrectness.overlay_canonical_agrees' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalCorrectness.overlay_canonical_agrees
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalCorrectness.canonical_is_local_fixed' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalCorrectness.canonical_is_local_fixed
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalCorrectness.saturated_le_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalCorrectness.saturated_le_source
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalCorrectness.stages_le_saturated' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalCorrectness.stages_le_saturated
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalCorrectness.saturated_eq_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalCorrectness.saturated_eq_source
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalCorrectness.expression_eq_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalCorrectness.expression_eq_source
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPositionEvaluator.column_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPositionEvaluator.column_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPositionEvaluator.column_descending' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPositionEvaluator.column_descending
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPositionEvaluator.lower_descending' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPositionEvaluator.lower_descending
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPositionEvaluator.column_correct' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPositionEvaluator.column_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPositionEvaluator.run_correct' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPositionEvaluator.run_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPositionEvaluator.decide_eq_standard' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPositionEvaluator.decide_eq_standard
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPositionEvaluator.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPositionEvaluator.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPositionEvaluator.undefined_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPositionEvaluator.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalExamples.rule_count_rounds_can_be_needed' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalExamples.rule_count_rounds_can_be_needed
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalExamples.failure_and_undefined_are_distinct' depends on axioms: [propext,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalExamples.failure_and_undefined_are_distinct
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalExamples.positive_call_uses_its_actual_incoming_value' depends on axioms: [propext,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalExamples.positive_call_uses_its_actual_incoming_value
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalExamples.local_vector_does_not_enumerate_parameter_tuples' depends on axioms: [propext,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalExamples.local_vector_does_not_enumerate_parameter_tuples
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalExamples.invalid_calls_still_fail' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalExamples.invalid_calls_still_fail
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalExamples.lower_data_at_the_current_position_is_ignored' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalExamples.lower_data_at_the_current_position_is_ignored
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLocalExamples.arbitrary_depth_and_fresh_words' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLocalExamples.arbitrary_depth_and_fresh_words
