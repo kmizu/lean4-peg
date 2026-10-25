@@ -1,3 +1,10 @@
+import MacroPeg.CBV.RecursiveProducedOrigin
+import MacroPeg.CBV.RecursiveProducedOriginExamples
+import MacroPeg.CBV.StablePar
+import MacroPeg.CBV.RecursiveProducedCompiler
+import MacroPeg.CBV.RecursiveProducedSimulation
+import MacroPeg.CBV.RecursiveProducedCorrespondence
+import MacroPeg.CBV.RecursiveProducedExamples
 import MacroPeg.CBV.ParReturnEffects
 import MacroPeg.CBV.CheckedOriginCompiler
 import MacroPeg.CBV.CheckedOriginExamples

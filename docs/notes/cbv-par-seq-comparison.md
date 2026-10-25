@@ -16,6 +16,22 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 実再帰producerと零幅実calleeを混合文法へ接続
+
+`RecursiveProducedCompiler`は、上記producerのcall-free制約を外す。
+実引数と前半で同じclosed parser Dを評価する条件の下で、Dは実再帰userや、
+前半を変換するclient自身を呼んでよい。実引数評価で得た成功から捕捉条件を導き、
+元と正規化先の実安定テーブルへの双方向の帰納で、全残余・有限失敗・全clock未定義を保存する。
+ここでは同clock一致を主張せず、入力依存の実有限安定化上界を使う。
+生成Seq文法は入力非依存で、n(n+2)+b規則のままである。
+
+`ParReturnEffects`と`CheckedOriginCompiler`は、実calleeの成功が零幅であることを有限検査から
+全入力・全clockへ証明する。普通の保持値rowが消費しても、実empty-bound cloneだけを認証できる。
+`RecursiveProducedOrigin`はこれを同じ元文法へ組み込み、実sequenceの零幅headerと、
+再帰producerによる消費前半の両方を固定Seqへ接続する。27規則の実例は親子で別の値を捕捉・復元する。
+無制限長a^n bの実引数捕捉、producer/client依存cycle、全入力で発散するproducerも検証した。
+消費前半が実引数とは異なるparserの場合や、一般のPar/Seq一致・分離はなお未解決である。
+
 ## 実引数と同じproducerを消費するclosed前半を混合文法へ接続
 
 `ParserPrefixFusion`には既に、同じclosed parserを引数とPar本体の前半で評価する単独の
@@ -54,8 +70,9 @@ clock1では未定義、clock2で成功し、生成Seqはclock1で成功する�
 これは変換の検査条件の必要性を示し、言語クラスの分離ではない。
 
 この前半が消費する終端は、検査した引数Dの実捕捉終端と一致する。
-それと異なる位置へ返る一般のconsuming closed prefix、recursive producer、
-検査外の呼出し・複数独立捕捉、一般のPar/Seq一致・分離は未解決である。
+同じDを実再帰で計算する場合は、上記`RecursiveProducedCompiler`で接続した。
+それと異なる位置へ返る一般のconsuming closed prefix、検査外の呼出し・複数独立捕捉、
+一般のPar/Seq一致・分離は未解決である。
 
 ## 親の保持値を使う後続を成功復帰の位置に応じて接続
 
@@ -9802,3 +9819,76 @@ must satisfy the existing Closed/replay restrictions. Consuming queries with
 uncertified endpoints, recursive producers, continuations outside these
 control forms, independent multiple captures, and unrestricted Par/Seq class
 equality or genuine language separation remain unresolved.
+
+## Recursive producers: reusing the actual argument evaluation
+
+`RecursiveProducedCompiler` removes the call-free `Pure D` restriction from
+the mixed producer compiler. A produced client still has the original Par
+body `D;B(w)` and every call to it must syntactically use D as its argument.
+D must be closed with respect to its caller environment, but may contain
+arbitrary first-order calls allowed by the checked source family. In
+particular, it may invoke recursive users, other produced clients, or the
+very client whose prefix is being normalized. A finite check validates
+closedness, source bodies, all nested call arguments, and the existing mixed
+backend. No separate producer grammar, termination premise, or successful
+recursive-row oracle is supplied.
+
+The proof uses actual finite stabilization rather than same-clock equality.
+`StablePar` derives fixed-row unfolding and information-order bounds from the
+existing first-order CBV decision procedure. Row unfolding is restricted to
+actual substring-valued environments, the exact domain of that proof.
+`RecursiveProducedSimulation` transports conditional rows through ordinary
+expressions, choice, negation and consuming repetition. At a produced call,
+the structural argument induction supplies an actual successful evaluation
+of D; the capture invariant is established there, rather than assumed for
+the whole grammar. Ordinary rows and conditional producer rows then close
+simultaneously over real recursive tables in both directions.
+
+For the forward direction, any successful original prefix and actual
+argument capture agree at the original stable table, by closedness and
+determinism. For the reverse direction, the already evaluated source
+argument supplies the prefix that was removed. These facts prove equality
+of the original and normalized stable results and connect to the existing
+fixed mixed Seq backend. They preserve the original string language, all
+residuals, finite failure and all-clock undefinedness. Explicit physical
+cofinality uses the existing input-dependent finite bounds: any source
+clock refines target clock iterBoundV(normalized,x), and any target clock
+refines source clock iterBoundV(source,x). These bounds are proof devices;
+no input-specific table or bound is installed in the generated grammar.
+The target size remains n(n+2)+b.
+
+A real recursive producer R(empty) recognizes every a^n b. Its arbitrary
+length argument captures are proved as actual DerivesArgsPar judgments for
+every n and every following suffix, in one fixed source grammar. A
+sixteen-rule Seq grammar also executes a retained-word growth client and
+recursive produced clients with old/new lengths (0,3), (3,0) and (1,2),
+restoring both values and rejecting a short parent copy. Another example
+has R call the transformed produced client itself, so this is not just
+closure over disjoint unchanged helpers. Direct source/target executions
+and the full original-language theorem are instantiated for that cycle.
+A non-consuming recursive producer stays undefined on every input at every
+clock after compilation. A successful small example differs at clock 1
+and agrees after the original prefix spends another call level; therefore
+same-clock equality would be false here. Wrong producer arguments and open
+producer expressions are rejected, and a concrete wrong-argument example
+shows why the argument check is necessary.
+
+This closes recursive closed producers with matching actual arguments in
+the mixed schema, including producer/client dependency cycles. It does not
+yet cover a consuming prefix different from the captured argument parser,
+a prefix depending on the old caller environment outside the existing
+replay forms, unrestricted continuation/control forms, or independent
+multiple captures. The existing growth-head and Closed/replay backend
+conditions remain. General Par/Seq class equality or genuine language
+separation remains unresolved.
+
+`RecursiveProducedOrigin` composes this normalization with certified actual
+zero-return queries in the same original grammar. Its origin guard sites
+start as real sequences, and effects are checked in that raw source grammar,
+including its produced clients. A delay-zero rewrite prepares those sites
+before recursive-producer normalization. A 27-rule Seq execution combines
+a real recursive consuming producer, a real recursive zero-return header,
+fresh parent/child captures, and restoration of the old parent value.
+Replacing the zero header by a consuming character is rejected by the finite
+check. Both frontends thus share one original-language theorem rather than
+requiring the grammar to choose one of the two behaviors globally.
