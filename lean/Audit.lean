@@ -1,3 +1,8 @@
+import MacroPeg.CBV.ProducedPrefixCompiler
+import MacroPeg.CBV.ProducedPrefixEvaluation
+import MacroPeg.CBV.ProducedPrefixCorrespondence
+import MacroPeg.CBV.ProducedPrefixHeaders
+import MacroPeg.CBV.ProducedPrefixExamples
 import MacroPeg.CBV.OriginTailPlan
 import MacroPeg.CBV.OriginTailParts
 import MacroPeg.CBV.OriginTailEvaluation
@@ -28281,3 +28286,219 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.OriginTailExamples.raw_observations' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.OriginTailExamples.raw_observations
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixCompiler.pure_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixCompiler.pure_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixCompiler.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixCompiler.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixCompiler.source_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixCompiler.source_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixCompiler.old_lookup' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixCompiler.old_lookup
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixCompiler.produced_lookup' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixCompiler.produced_lookup
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixCompiler.old_plan_eq' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixCompiler.old_plan_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixCompiler.normalized_rule' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixCompiler.normalized_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixCompiler.rule_count' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixCompiler.rule_count
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixEvaluation.producer_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixEvaluation.producer_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixEvaluation.evaluator' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixEvaluation.evaluator
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixCorrespondence.tables_rows' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixCorrespondence.tables_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixCorrespondence.normalization_evaluator_eq' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixCorrespondence.normalization_evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixCorrespondence.normalization_observations' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixCorrespondence.normalization_observations
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixCorrespondence.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixCorrespondence.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixCorrespondence.undefined_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixCorrespondence.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixCorrespondence.physical_bounds' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixCorrespondence.physical_bounds
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixCorrespondence.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixCorrespondence.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixHeaders.original_rule' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixHeaders.original_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixHeaders.checked_header' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixHeaders.checked_header
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixHeaders.pure_closed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixHeaders.pure_closed
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixHeaders.body_bounds' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixHeaders.body_bounds
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixHeaders.related' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixHeaders.related
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixHeaders.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixHeaders.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixHeaders.physical_bounds' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixHeaders.physical_bounds
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixHeaders.undefined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixHeaders.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixHeaders.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixHeaders.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixExamples.checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixExamples.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixExamples.root_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixExamples.root_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixExamples.inline_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixExamples.inline_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixExamples.firstOrder' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixExamples.firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixExamples.simple_source' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixExamples.simple_source
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixExamples.simple_target' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixExamples.simple_target
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixExamples.nested_source' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixExamples.nested_source
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixExamples.nested_target' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixExamples.nested_target
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixExamples.origin_short_result' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixExamples.origin_short_result
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixExamples.wrong_capture_rejected' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixExamples.wrong_capture_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixExamples.wrong_header_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixExamples.wrong_header_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixExamples.missing_header_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixExamples.missing_header_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixExamples.nested_bad_argument_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixExamples.nested_bad_argument_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixExamples.private_helpers' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixExamples.private_helpers
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixExamples.arity_before_argument' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixExamples.arity_before_argument
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixExamples.fixed_target' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixExamples.fixed_target
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixExamples.observations' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixExamples.observations
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixExamples.tiny_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixExamples.tiny_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixExamples.clock_gap' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixExamples.clock_gap
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixExamples.nullable_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixExamples.nullable_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixExamples.nullable_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixExamples.nullable_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixExamples.nullable_root_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixExamples.nullable_root_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixExamples.nullable_source' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixExamples.nullable_source
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixExamples.nullable_target' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixExamples.nullable_target

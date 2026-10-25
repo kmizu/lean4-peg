@@ -1,3 +1,8 @@
+import MacroPeg.CBV.ProducedPrefixCompiler
+import MacroPeg.CBV.ProducedPrefixEvaluation
+import MacroPeg.CBV.ProducedPrefixCorrespondence
+import MacroPeg.CBV.ProducedPrefixHeaders
+import MacroPeg.CBV.ProducedPrefixExamples
 import MacroPeg.CBV.OriginTailPlan
 import MacroPeg.CBV.OriginTailParts
 import MacroPeg.CBV.OriginTailEvaluation

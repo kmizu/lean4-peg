@@ -16,6 +16,47 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 実引数と同じproducerを消費するclosed前半を混合文法へ接続
+
+`ParserPrefixFusion`には既に、同じclosed parserを引数とPar本体の前半で評価する単独の
+融合証明がある。`ProducedPrefixCompiler`から`ProducedPrefixCorrespondence`はその
+`Pure`とparser独立性の証明を再利用し、正倍率成長・forwarding・origin制御と
+相互に呼び合う実文法へ接続する。前半のparser Dはcall/parameterを持たない任意のPEG式で、
+選択・先読み・反復を許す。nullable反復も拒否せず、その未定義を保存する。
+
+追加entryは`produced D B`で、元のPar本体は`D; B(w)`である。
+そのentryへの全実呼出しが構文的に`F(D)`であることを、元の全bodyと開始式について
+有限`conforms`で検査する。引数が同じDであることから、実捕捉の終端と本体でDを
+再評価した消費終端が一致する。これにより本体を`param0; B(w)`へ正規化できる。
+捕捉語の長さや有限集合を仮定せず、Dの実成功結果からその都度捕捉値を導く。
+他のgrowth/origin entryへの引数は従来どおり動的な一階式でよい。
+
+この書換えは任意の環境Eでは正しくないため、無条件のbody同値を仮定しない。
+`tables_rows`はproducer行だけを実捕捉に条件付け、他の行は全保持環境で対応させる。
+実引数の有限検査から各producer呼出しの条件を導き、全再帰行を同じ通常clockで閉じる。
+origin Planの元leaf範囲も検査し、追加partsへの不正aliasを防ぐ。正規化後の実混合文法は
+既存`MixedForwardingCompiler`へ渡す。全観測・失敗・全clock未定義を元文字列上で保存し、
+targetはn(n+2)+b規則、inline source clock k ≤ Seq clock k ≤ source clock (n+2)kである。
+
+`ProducedPrefixHeaders`は、元の前半を実`H(empty)`呼出しとして保持する。
+Hの実宣言がarity1で、bodyが指定producer Dと一致することを有限検査し、先に一段展開する。
+この元Par文法からも全観測と言語を保存し、source clock k ≤ Seq clock k ≤ source clock
+2((n+2)k)を得る。callee行の意味を外から与える仮定はない。
+
+`ProducedPrefixExamples`のDは`a*;b`で、実closed calleeが捕捉終端まで消費したあとに
+親wを使う。親wを3倍化する規則、新しい位置で同じproducerから別のvを捕捉する再帰、
+`c*`を渡すorigin規則を経て、growth側のwとproducer側のwをそれぞれ復元する。
+直接例はwのa部分長0/1/4、新捕捉vのa部分長4/0/2で、27規則のSeqを実行する。
+originの早い復帰、誤引数と誤callee宣言の拒否、arity検査、helper privacy、
+nullable producerの全入力全clock未定義も検証する。実calleeを含む小さい例は、元source
+clock1では未定義、clock2で成功し、生成Seqはclock1で成功する。
+引数をD以外へ変えると元sourceだけ受理する実反例があり、`conforms`はこれを拒否する。
+これは変換の検査条件の必要性を示し、言語クラスの分離ではない。
+
+この前半が消費する終端は、検査した引数Dの実捕捉終端と一致する。
+それと異なる位置へ返る一般のconsuming closed prefix、recursive producer、
+検査外の呼出し・複数独立捕捉、一般のPar/Seq一致・分離は未解決である。
+
 ## 親の保持値を使う後続を成功復帰の位置に応じて接続
 
 `OriginTailPlan`から`OriginTailInlining`は、下記でClosedに制限していた親tailを拡張する。
@@ -51,7 +92,8 @@ query失敗と引数preflightをkernel検証する。別の元文法では、零
 `w; C(w)`へ接続する。nullableなqueryの全入力・全clock未定義もsource/targetで証明する。
 元のSpec文法で親の保持値を使う後続を持つ例にも、全入力観測定理を適用する。
 
-入力を消費するclosed成功から親の保持値を使う後続へ戻る一般の場合、成功復帰の上記条件を
+入力を消費するclosed成功から親の保持値を使う後続へ戻る場合は、上記で実捕捉と同じ
+producerの消費終端へ返るケースを接続した。一般の場合、成功復帰の上記条件を
 満たさないPlan、複数headの自動閉包展開、一般PEG prefix、独立複数捕捉、
 一般のPar/Seq一致・分離は未解決である。
 
