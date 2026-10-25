@@ -1,3 +1,5 @@
+import MacroPeg.CBV.RotatedGuardedReplayExamples
+import MacroPeg.CBV.GuardedReplayRotation
 import MacroPeg.CBV.GuardedReplayExamples
 import MacroPeg.CBV.GuardedReplayCompiler
 import MacroPeg.CBV.GuardedReplayIteration
@@ -21407,7 +21409,7 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 #print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductCompiler.entry_checked
 
 
-/-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductCompiler.targetHeader_firstOrder' depends on axioms: [propext] -/
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductCompiler.targetHeader_firstOrder' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductCompiler.targetHeader_firstOrder
 
@@ -23190,3 +23192,144 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.GuardedReplayExamples.zero_step_residual
+
+
+/-- info: 'Shallot.MacroPeg.CBV.GuardedReplayIteration.literal_length' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.GuardedReplayIteration.literal_length
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.raw_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.raw_rule
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.actual_phases' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.actual_phases
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.recursive_source_samples' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.recursive_source_samples
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.recursive_target_samples' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.recursive_target_samples
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.target_direct' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.target_direct
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.zero_iteration_samples' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.zero_iteration_samples
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.product_argument' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.product_argument
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.language' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.language
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.nonperiodic_language' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.nonperiodic_language
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.committed_failure' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.committed_failure
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.parent_copy_required' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.parent_copy_required
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.empty_capture' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.empty_capture
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.nullable_source' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.nullable_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.nullable_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.nullable_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.looping_tail_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.looping_tail_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.looping_tail_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.looping_tail_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.incomplete_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.incomplete_rejected
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.empty_step_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RotatedGuardedReplayExamples.empty_step_rejected
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlFilter.seq_transfer' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlFilter.seq_transfer
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductHeader.iteration_header' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductHeader.iteration_header
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductHeader.iteration_filter' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductHeader.iteration_filter

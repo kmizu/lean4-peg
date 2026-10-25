@@ -1,3 +1,4 @@
+import MacroPeg.CBV.GuardedReplayRotation
 import MacroPeg.CBV.ScannerReplayResidual
 import MacroPeg.CBV.CaptureInputSafety
 import MacroPeg.CBV.ScannerLanguageSafety
@@ -20,13 +21,14 @@ inductive Entry (n : Nat) where
   | safeReplay
   | scan (q : Fin n)
   | shift (q : Fin n) (residuals : ScannerReplayResidual.Labels n)
+  | iterate (q : Fin n) (residuals : ScannerReplayResidual.Labels n)
   | alt (left right : Entry n)
   | guard (positive : Bool) (test tail : Entry n)
 
 abbrev Entries (n : Nat) := Nat → Entry n
 
 def Entry.inputSafe {n : Nat} : Entry n → Bool
-  | .replay => false
+  | .replay | .iterate _ _ => false
   | .safeReplay | .scan _ | .shift _ _ => true
   | .alt a b | .guard _ a b => a.inputSafe || b.inputSafe
 
@@ -34,12 +36,14 @@ def sourceHeader {n : Nat} : Entry n → MExp
   | .replay | .safeReplay => .param 0
   | .scan q => .call q.val []
   | .shift q R => .seq (.lit ((R q).getD [])) (.param 0)
+  | .iterate q R => GuardedReplayIteration.header ((R q).getD [])
   | .alt a b => .alt (sourceHeader a) (sourceHeader b)
   | .guard positive a b => .seq (if positive then .andP (sourceHeader a) else .notP (sourceHeader a)) (sourceHeader b)
 
 /-- Finite layout validation for each actual user entry. -/
 def headerCheck {n : Nat} (M : Machine n) : Entry n → Bool
   | .shift q R => ScannerReplayResidual.entryCheck M R q
+  | .iterate q R => ScannerReplayResidual.entryCheck M R q && ScannerReplayResidual.completeCheck M R
   | .alt a b | .guard _ a b => headerCheck M a && headerCheck M b
   | _ => true
 
@@ -140,6 +144,22 @@ def shiftedBody {n : Nat} (M : Machine n) (q : Fin n) (R : ScannerReplayResidual
           (RegularCaptureProduct.run (observer M) (state M P ⟨a,ha⟩).val ((R r).getD [])) z)
       else MExp.failAlways
 
+/-- The real capture profile chooses the rotated repetition operand.
+An unreadable capture permits precisely zero guarded iterations. -/
+def iterationArg {n : Nat} (P : List Nat) (q : Fin n)
+    (R : ScannerReplayResidual.Labels n) : Arg :=
+  match DynamicScannerBinding.resume P q with
+  | none => .lit []
+  | some r => .star (.lit ((R r).getD []))
+
+def iteratedBody {n : Nat} (M : Machine n) (q : Fin n) (R : ScannerReplayResidual.Labels n)
+    (bodies : List Arg) (P : List Nat) (mode : Mode) (b : Arg) : MExp :=
+  match mode with
+  | none => plain M bodies [P] (.seq (iterationArg P q R) b)
+  | some (a,z) => if ha : a<(observer M).width then
+      filter M bodies [P] (.seq (iterationArg P q R) b) (state M P ⟨a,ha⟩).val z
+    else MExp.failAlways
+
 /-- Plain residual header, used to preserve the original choice before
 running a continuation that may fail or remain undefined. -/
 def targetHeader {n : Nat} (M : Machine n) (P : List Nat) : Entry n → MExp
@@ -148,6 +168,7 @@ def targetHeader {n : Nat} (M : Machine n) (P : List Nat) : Entry n → MExp
     | none => MExp.failAlways | some r => .call r.val []
   | .shift q R => match DynamicScannerBinding.resume P q with
     | none => MExp.failAlways | some r => .lit ((R r).getD [])
+  | .iterate q R => sourceExpr M (iterationArg P q R)
   | .alt a b => .alt (targetHeader M P a) (targetHeader M P b)
   | .guard positive a b => .seq
       (if positive then .andP (targetHeader M P a) else .notP (targetHeader M P a)) (targetHeader M P b)
@@ -159,6 +180,7 @@ def targetBody {n : Nat} (M : Machine n) (entry : Entry n) (bodies : List Arg)
   match entry with
   | .scan q => scannerBody M q bodies P mode b
   | .shift q R => shiftedBody M q R bodies P mode b
+  | .iterate q R => iteratedBody M q R bodies P mode b
   | .alt a c => RootObservation.branch (.andP (targetHeader M P a))
       (targetBody M a bodies P mode b) (targetBody M c bodies P mode b)
   | .guard positive a c => .seq
@@ -300,6 +322,7 @@ theorem sourceHeader_firstOrder {n : Nat} (entry : Entry n) :
     (sourceHeader entry).FirstOrder := by
   induction entry with
   | replay | safeReplay | scan _ | shift _ _ => trivial
+  | iterate q R => exact ⟨⟨True.intro,True.intro⟩,True.intro⟩
   | alt a b ha hb => exact ⟨ha,hb⟩
   | guard positive a b ha hb => cases positive <;> exact ⟨ha,hb⟩
 
@@ -309,6 +332,7 @@ theorem targetHeader_firstOrder {n : Nat} (M : Machine n) (P : List Nat) (entry 
   | replay | safeReplay => trivial
   | scan q => simp only [targetHeader]; split <;> trivial
   | shift q R => simp only [targetHeader]; split <;> trivial
+  | iterate q R => exact sourceExpr_firstOrder M _
   | alt a b ha hb => exact ⟨ha,hb⟩
   | guard positive a b ha hb => cases positive <;> exact ⟨ha,hb⟩
 
@@ -330,6 +354,15 @@ theorem targetBody_firstOrder {n : Nat} (M : Machine n) (entry : Entry n) (bodie
         split
         · exact ⟨True.intro,filter_firstOrder M bodies [P] b _ _⟩
         · trivial
+  | iterate q R =>
+    cases mode with
+    | none => exact plain_firstOrder M bodies [P] _
+    | some pair =>
+      obtain ⟨a,z⟩ := pair
+      simp only [targetBody,iteratedBody]
+      split
+      · exact filter_firstOrder M bodies [P] _ _ _
+      · trivial
   | replay | safeReplay =>
     cases mode with
     | none => exact plain_firstOrder M bodies [P] b

@@ -225,6 +225,7 @@ theorem scanner_profiles {n : Nat} (M : Machine n) (H : ScannerSummary n)
 
 def headerEffects {n : Nat} (M : Machine n) (H : ScannerSummary n) (entry : Entry n) (P : List Nat) : List (List Nat) :=
   match entry with
+  | .iterate _ _ => profiles (observer M)
   | .scan q => H q
   | .shift q R => product [profile (observer M) ((R q).getD [])] [P]
   | .replay | .safeReplay => [P]
@@ -276,6 +277,15 @@ theorem header_shape {n : Nat} (M : Machine n) (entries : Entries n) (bodies : L
         (.lit v) p=some (some q) := by simpa only [sourceHeader,evV,List.getElem?_cons_zero] using h
     obtain ⟨hq,hs⟩ := literal_shape _ x .callByValuePar _ [v] v p q hp hl
     exact ⟨hq,v,by simp [headerEffects],hs⟩
+  | iterate start R =>
+    have hs := DependentCaptureFilter.success_prefix (by decide)
+      (ClockFreezing.frozen_sound (source_firstOrder M entries bodies) x .callByValuePar (by decide) _ _ k)
+      [v] _ (sourceHeader_firstOrder _) p q hp h
+    have hle : q≤p := by
+      have hl := congrArg List.length hs.2
+      rw [List.length_append,length_sfx x hp,length_sfx x hs.1] at hl
+      omega
+    exact ⟨hle,pre x p q,profile_mem _ (valid M) _,hs.2⟩
   | shift start R =>
     let u := (R start).getD []
     have he := WordArguments.word_eval (source M entries bodies) x .callByValuePar

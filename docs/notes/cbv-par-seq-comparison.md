@@ -334,20 +334,54 @@ capture-origin 本体書換えを導き、既存の元位置制御・自動 prof
 全入力全 clock 未定義、成功した反復／再照合後の nullable tail の全 clock 未定義、
 不正 tail link の拒否も証明した。generic な残余補題は ab/aba の非可換例で v=ba を使い、
 元の ab をそのまま再開すると誤ることと、空 step の全入力での未定義を確認する。
-この multi-byte 例は補題の検証であり、完成した新 compiler の反復 step は一文字 c である。
+この例単独は補題の検証であり、`GuardedReplayCompiler` 自体の反復 step は一文字 c である。
+次の共通 compiler の入口拡張で、複数文字の step を実文法変換へ接続する。
 
 架空の保持値 b を aba の元位置に与えると、元反復本体は ab だけ消費する一方、
 無条件に正規化すると最後の a も消費する。これは同じ元位置から b を捕捉できない行であり、
 捕捉不変条件を外した body 書換えが実際に誤る反例として kernel 検証した。
 この証明を任意 table の全環境一致と取り違えない。
 
-非有界の prefix 消費はこの一文字・正の保持値 query 付き反復 family で接続した。
-任意 PEG prefix、保持値に依存する一般の反復／消費 user 呼出し、全保持値の再照合を伴わない
-一般の依存継続、独立複数 source capture、および一般 Par/Seq 一致／分離は未解決である。
+この一文字 frontend に続き、`RecursiveScannerProductCompiler.Entry.iterate q R` は
+`(lit u; &param0)*; param0` を直接の source header として扱う。u は開始状態の
+固定ラベルであり、一文字には制限しない。有限 `headerCheck` は residual machine の
+sound-label 検査、開始ラベルの存在、完全性を検査する。成功する捕捉の可読性や形を
+注釈として要求せず、実際の捕捉全体の profile が到達状態を決める。
+
+捕捉 w が読めるなら、実残余ラベル v と `u ++ w = w ++ v` を導き、捕捉終点で
+`lit v` を貪欲反復する。読めないなら、実捕捉 prefix と完全性から最初の `u;param0` が
+有限失敗すると導き、元 header の0反復＋全 w 再照合を、捕捉終点の空消費へ移す。
+可読性の失敗を header 全体の失敗に置き換えない。`iteration_header` は任意の文法・
+strategy・table 間で、この対応を全 partial 結果について証明する。従来の汎用回転補題は
+import cycle を避ける低層 `GuardedReplayRotation` へ移し、名前空間と既存 API を保った。
+
+plain 行に加え、反復残余を読む実 inline filter と継続の product 行も接続した。
+`ControlFilter.seq_transfer` は異なる実文法・table 間の連結 filter 対応を合成する。
+反復 header の出力集合は全有限 profile の保守的な集合とし、実元規則の成功からの
+出力包含を証明した。自動 profile 検査、同じ user-clock の全 partial 対応、元位置 Plan
+正規化、固定一階 Seq 文法の全入力観測・元文字列言語・physical 定義／全 clock 未定義
+へ既存の定理を接続する。Arg 継続・実引数の seq/alt/not/star と実 user 再帰を制限しない。
+入口は有限 alt／正負 guard にも入れ子にできる。
+
+`RotatedGuardedReplayExamples` は二状態の ab 周期機械と、同じ user を再帰的に呼ぶ
+実元規則を使う。親の捕捉 aba の残余は ba、子の abab と次の ababab の残余は ab であり、
+子から戻ると親の全値を再利用する。反復回数1/2/4と深さ0/1/2を独立に変えた source 成功と
+生成 Seq の成功、および通常 clock8での Seq 実行を kernel 検証した。別の root は
+非有界 `a;b*;a` を実捕捉し、周期に非可読な値の0反復を保つ。再帰 user 全体を別 user の
+実引数にする root は新しい product 行を実際に通る。2つの固定開始式の全入力言語変換、
+継続失敗時の反復確定、親コピー不足での未消費残り、空捕捉成功、nullable 実引数の
+全入力全 clock 未定義、反復成功後の nullable 継続の全 clock 未定義、必要 arc 不足と
+空 step の有限拒否も検証する。
+
+これは、完全な有限回転ラベル機械を持つ固定語の正 query 付き反復 family である。
+任意 PEG prefix、各反復で異なる一般の依存 step／消費 user 呼出し、全保持値の再照合を
+伴わない一般の依存継続、独立複数 source capture、および一般 Par/Seq 一致／分離は
+引き続き未解決である。
 
 断片経路は固定 literal に限らず、入力依存で非有界の区切り scanner prefix を扱う。
 この経路の実引数は G/H で選択する codeword＋a-fragment family とその有限優先選択閉包に限定し、prefix も A に限定する。
-自動 profile 経路は実引数の形を制限せず、対応する入口 family を完全固定 shift／replay 制御木に限定する。
+自動 profile 経路は実引数の形を制限せず、対応する入口 family を完全固定 shift／replay／
+正 query 付き固定語反復とその有限入口制御木に限定する。
 有限状態 scanner compiler との任意混在、任意 PEG prefix／実引数、独立複数捕捉、および
 一般 Par/Seq 一致・分離は依然未解決である。
 
