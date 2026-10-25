@@ -1,3 +1,4 @@
+import MacroPeg.CBV.ParameterSupport
 import MacroPeg.CBV.CommonOriginCaptures
 
 /-! Cumulative views of a disjoint runtime environment can replace overlapping
@@ -58,94 +59,31 @@ theorem prefixExpr_eval (g : MGrammar) (x : List Char) (s : Strategy)
     rw [ht,List.flatten_append]
     simp only [List.flatten_cons,List.flatten_nil,List.append_nil]
 
-mutual
-  /-- Rebinding parameters by observationally equal views preserves every
-first-order expression, including either argument convention and recursion
-through the same arbitrary table. -/
-  theorem evV_rebind {g : MGrammar} {x : List Char} {s : Strategy} {T : Nat → List (List Char) → Val}
-      {E : List (List Char)} (P : List MExp) (W : List (List Char))
-      (hparam : ∀ k p, evV g x s T E (MExp.subst P (.param k)) p = evV g x s T W (.param k) p) :
-      ∀ (b : MExp), b.FirstOrder → ∀ p, evV g x s T E (MExp.subst P b) p = evV g x s T W b p
-    | .eps, _, _ | .any, _, _ | .chr _, _, _ | .range _ _, _, _ | .lit _, _, _ => by simp only [MExp.subst, evV]
-    | .param k, _, p => hparam k p
-    | .call j ms, hb, p => by
-      simp only [MExp.subst]
-      cases hr : ruleAtM g.rules j with
-      | none => simp only [evV, hr]
-      | some r =>
-        by_cases ha : r.arity = ms.length
-        · have ha' : r.arity = (MExp.substArgs P ms).length := by rw [length_substArgs]; exact ha
-          by_cases hs : s = .callByValueSeq
-          · subst hs
-            rw [evV_call_seq hr ha', evV_call_seq hr ha, evSeqArgs_rebind P W hparam ms hb]
-          · rw [evV_call_par hr ha' hs, evV_call_par hr ha hs, evParArgs_rebind P W hparam ms hb]
-        · have ha' : ¬ r.arity = (MExp.substArgs P ms).length := by rw [length_substArgs]; exact ha
-          simp only [evV, hr, if_neg ha, if_neg ha']
-    | .seq a c, hb, p => by
-      simp only [MExp.subst]
-      have ha := evV_rebind (g := g) (x := x) (s := s) (T := T) (E := E) P W hparam a hb.1 p
-      cases h : evV g x s T W a p with
-      | none => rw [evV_seq_none (ha.trans h), evV_seq_none h]
-      | some r =>
-        cases r with
-        | none => rw [evV_seq_fail (ha.trans h), evV_seq_fail h]
-        | some j => rw [evV_seq_ok (ha.trans h), evV_seq_ok h]; exact evV_rebind P W hparam c hb.2 j
-    | .alt a c, hb, p => by
-      simp only [MExp.subst]
-      have ha := evV_rebind (g := g) (x := x) (s := s) (T := T) (E := E) P W hparam a hb.1 p
-      cases h : evV g x s T W a p with
-      | none => rw [evV_alt_none (ha.trans h), evV_alt_none h]
-      | some r =>
-        cases r with
-        | none => rw [evV_alt_fail (ha.trans h), evV_alt_fail h]; exact evV_rebind P W hparam c hb.2 p
-        | some j => rw [evV_alt_ok (ha.trans h), evV_alt_ok h]
-    | .notP a, hb, p => by
-      simp only [MExp.subst]
-      have ha := evV_rebind (g := g) (x := x) (s := s) (T := T) (E := E) P W hparam a hb p
-      cases h : evV g x s T W a p with
-      | none => rw [evV_not_none (ha.trans h), evV_not_none h]
-      | some r =>
-        cases r with
-        | none => rw [evV_not_fail (ha.trans h), evV_not_fail h]
-        | some j => rw [evV_not_ok (ha.trans h), evV_not_ok h]
-    | .star a, hb, p => by
-      simp only [MExp.subst]
-      rw [evV_star, evV_star]
-      exact evStar_congr p (fun q _ => evV_rebind P W hparam a hb q)
-    | .dbg _, hb, _ | .lam _ _, hb, _ | .callParam _ _, hb, _ | .invoke _ _ _, hb, _ => absurd hb id
+/-- The original all-parameter interface is the unrestricted-support case
+of ParameterSupport.evV_rebind. -/
+theorem evV_rebind {g : MGrammar} {x : List Char} {s : Strategy} {T : Nat → List (List Char) → Val}
+    {E : List (List Char)} (P : List MExp) (W : List (List Char))
+    (hparam : ∀ k p, evV g x s T E (MExp.subst P (.param k)) p=evV g x s T W (.param k) p)
+    (b : MExp) (hb : b.FirstOrder) (p : Nat) :
+    evV g x s T E (MExp.subst P b) p=evV g x s T W b p :=
+  ParameterSupport.evV_rebind (fun _ => True) P W (fun k _ p => hparam k p) b
+    (ParameterSupport.all_of_firstOrder b hb) p
 
-  theorem evParArgs_rebind {g : MGrammar} {x : List Char} {s : Strategy} {T : Nat → List (List Char) → Val}
-      {E : List (List Char)} (P : List MExp) (W : List (List Char))
-      (hparam : ∀ k p, evV g x s T E (MExp.subst P (.param k)) p = evV g x s T W (.param k) p) :
-      ∀ (ms : List MExp), MExp.FirstOrderArgs ms → ∀ p,
-        evParArgs g x s T E (MExp.substArgs P ms) p = evParArgs g x s T W ms p
-    | [], _, p => by simp only [MExp.substArgs, evPar_nil]
-    | m :: ms, hm, p => by
-      simp only [MExp.substArgs]
-      have hh := evV_rebind (g := g) (x := x) (s := s) (T := T) (E := E) P W hparam m hm.1 p
-      cases h : evV g x s T W m p with
-      | none => rw [evPar_cons_none (hh.trans h), evPar_cons_none h]
-      | some r =>
-        cases r with
-        | none => rw [evPar_cons_fail (hh.trans h), evPar_cons_fail h]
-        | some j => rw [evPar_cons_ok (hh.trans h), evPar_cons_ok h, evParArgs_rebind P W hparam ms hm.2 p]
+theorem evParArgs_rebind {g : MGrammar} {x : List Char} {s : Strategy} {T : Nat → List (List Char) → Val}
+    {E : List (List Char)} (P : List MExp) (W : List (List Char))
+    (hparam : ∀ k p, evV g x s T E (MExp.subst P (.param k)) p=evV g x s T W (.param k) p)
+    (ms : List MExp) (hm : MExp.FirstOrderArgs ms) (p : Nat) :
+    evParArgs g x s T E (MExp.substArgs P ms) p=evParArgs g x s T W ms p :=
+  ParameterSupport.evParArgs_rebind (fun _ => True) P W (fun k _ p => hparam k p) ms
+    (ParameterSupport.all_args_of_firstOrder ms hm) p
 
-  theorem evSeqArgs_rebind {g : MGrammar} {x : List Char} {s : Strategy} {T : Nat → List (List Char) → Val}
-      {E : List (List Char)} (P : List MExp) (W : List (List Char))
-      (hparam : ∀ k p, evV g x s T E (MExp.subst P (.param k)) p = evV g x s T W (.param k) p) :
-      ∀ (ms : List MExp), MExp.FirstOrderArgs ms → ∀ p,
-        evSeqArgs g x s T E (MExp.substArgs P ms) p = evSeqArgs g x s T W ms p
-    | [], _, p => by simp only [MExp.substArgs, evSeq_nil]
-    | m :: ms, hm, p => by
-      simp only [MExp.substArgs]
-      have hh := evV_rebind (g := g) (x := x) (s := s) (T := T) (E := E) P W hparam m hm.1 p
-      cases h : evV g x s T W m p with
-      | none => rw [evSeq_cons_none (hh.trans h), evSeq_cons_none h]
-      | some r =>
-        cases r with
-        | none => rw [evSeq_cons_fail (hh.trans h), evSeq_cons_fail h]
-        | some j => rw [evSeq_cons_ok (hh.trans h), evSeq_cons_ok h, evSeqArgs_rebind P W hparam ms hm.2 j]
-end
+theorem evSeqArgs_rebind {g : MGrammar} {x : List Char} {s : Strategy} {T : Nat → List (List Char) → Val}
+    {E : List (List Char)} (P : List MExp) (W : List (List Char))
+    (hparam : ∀ k p, evV g x s T E (MExp.subst P (.param k)) p=evV g x s T W (.param k) p)
+    (ms : List MExp) (hm : MExp.FirstOrderArgs ms) (p : Nat) :
+    evSeqArgs g x s T E (MExp.substArgs P ms) p=evSeqArgs g x s T W ms p :=
+  ParameterSupport.evSeqArgs_rebind (fun _ => True) P W (fun k _ p => hparam k p) ms
+    (ParameterSupport.all_args_of_firstOrder ms hm) p
 
 private theorem argAt_prefix : ∀ (control : List Nat) (k : Nat),
     argAt (control.map prefixExpr) k = (control[k]?).map prefixExpr

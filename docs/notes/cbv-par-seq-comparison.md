@@ -16,6 +16,597 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 継続が読む値だけを再捕捉し、全く読まないときはanchorを空にする
+
+`ParameterSupport` は、式が実際に構文上参照する parameter だけで view の一致を
+要求する。任意の同じ戦略・再帰表について、seq/alt/not/star と両方式の実引数評価を
+通じて、substitution 後の評価が一致することを証明する。predicate 内・反復内・
+callee actual 内の参照も含める。既存 `CaptureViews.evV_rebind` と二つの arguments
+API は、この一般補題の全 parameter を許可する特殊化として維持した。
+
+`UsedFieldCapture` は、arity 内で**継続が参照する** index だけが再照合 pattern に
+現れれば、実 field tuple からその継続を評価できることを証明する。
+arity 外の parameter の元の有限失敗も保存する。欠けた field を空文字に置き換えない。
+欠けた index の view は実際に範囲外となり失敗するが、読まれないので継続へ影響しない。
+空の元捕捉を predicate や nullable star が読むときは、その参照も cover が必要である。
+
+`TupleFieldTransfer.physical_using` と `MutualFieldSyntax.headerCheck/HeaderValid` を
+この条件へ一般化した。検査対象は生成された本体なので、再帰 call に付く preflight
+や actual 内の元の参照も検査する。全 tuple の cover は不要になり、従来の fully
+covering header が引き続き通ることも `header_check_of_cover` で証明した。
+規則数と field 捕捉方式は入力や runtime の語に依存しない。
+
+さらに pattern が空で、継続が arity 内の parameter を一つも読まない場合を許可する。
+`physical_empty` は、全 actual を元順に zero-width preflight した後、元の入力位置で
+nullary entry を呼ぶ。この場合は入力上の再照合 anchor がなく、保持語を消費しない。
+非空 pattern と空 pattern の双方について、相互呼出しの実 clock 帰納で本体の仮定を外し、
+既存 `MutualFieldCompiler` の全入力・全 clock 評価、有限観測、元文字列言語、
+全 clock 未定義の保存をそのまま拡張した。正 arity と actual の区切り自由性の検査は残る。
+
+例は source arity `[3,2]`、target arity `[1,1,1,2,1,1,2]` で、どちらの規則も一値だけを
+再捕捉する。不要な最初の payload は任意として、本体の結果が不変であることを証明し、
+必要な語 `a^n` の倍長捕捉・相互再帰・親復帰を全 n/depth/後続文字列へ接続する。
+固定 scanner root と固定 Seq target は、全 n/depth の実入力を clock `2*depth+1` で受理する。
+unused actual が失敗する入力も失敗し、nullable actual の未定義は全元入力・全 clock で
+保存する。全 parameter が unused の例では、入力 `a` を再照合 anchor なしに受理する。
+空 anchor の左再帰が全入力・全 clock で未定義のままであることも証明した。
+
+静的な参照検査であり、到達不能枝まで意味解析する最小 live 集合ではない。
+任意の Par 文法のこの規則形への正規化も未証明。**実際に読む捕捉値を anchor なしで
+任意位置へ渡す一般変換、および Par/Seq 言語クラス全体の一致・分離は依然未解決**である。
+
+今回 4 新 modules・37 新 guard。全 1,388 jobs/Audit と関連 3,717 公開依存
+（標準 Lean 公理 3,636、無公理 81）を検証。PR69 は新 Lean 78 modules・642 guard。
+新しい sorry/axiom/native_decide は置いていない。
+
+## 異なる捕捉タプルを渡す、複数headerの相互再帰をParからSeqへ
+
+`MutualFieldSyntax/Layout/Correspondence/Compiler` は、従来の一つの自己再帰 header
+という制約を外し、**任意個の正 arity の parameterized header と任意の相互呼出し**を
+一つの固定 Seq 文法へ変換する。各 header の arity と再照合 field の順序・重複は
+別々に指定できる。raw 本体・root の seq/alt/not/star、各 parameter の独立利用、
+新 actual を持つ自己/相互呼出しを有限検査し、元の全宣言と root 自体との一致も検査する。
+実行時の語や入力長を compiler へ渡さず、保持語の有限 palette は置かない。
+
+元の規則番号 `helpers+i` と、生成先の projection block の先頭
+`helpers+Σ(j<i)(arity_j+1)` を分離した。`TupleFieldTransfer.physical_at` は
+この異なる二つの配置で実評価を対応させる。既存の `physical_of_body` API は同じ
+番号を渡す特殊化として維持した。各 target block は元 arity 個の unary projection
+と、一つの実 field 捕捉 entry からなる。entry は field ごとの word/separator を
+別々に受け取り、元の各 parameter の view を復元する。
+規則数は `helpers+Σ(arity_i+1)` で、arity の異なる callee も正しく配置される。
+
+`MutualFieldCorrespondence.physical` は、全 header の全ての新しい保持環境について
+実 physical table の clock に強帰納する。call の source/target actual 評価、区切り
+自由性、本体の一致を接続し、recursive-body の仮定を全て外す。
+`MutualFieldCompiler.physical/observations_iff/language_translation/undefined_iff`
+は、有限な宣言検査だけから、**全元入力・全 physical clock の一致、全有限観測、
+同じ元文字列言語、全 clock 未定義**を保存する。
+独立 nullary helper の再帰・未定義も、元と同じ実 helper 行で扱う。
+
+例は source arity `[2,1]` から target arity `[1,1,6,1,2]` へ変換する。
+二引数側の実捕捉 `[a^n,a^n b]` から、一引数側へ新しく `a^(2n)` を捕捉し、
+さらに二引数側へ `[a^(2n),a^(2n)b]` を捕捉する。子から戻った後は、一引数側が
+自分の `a^(2n)` を使い、二引数側は元の `a^n b` と `a^n` を独立に再利用する。
+`MutualFieldProofs.f_rows_all_depths/g_rows_all_depths/source_and_target_all_trees`
+は、**任意初期長 n（空捕捉を含む）・任意再帰 depth・任意の後続文字列**について
+この実評価を記号的に証明する。固定 scanner root と固定 target の全入力受理は
+clock `2*depth+1` で成立する。有限 kernel 例に加えて、子の値で親を置き換えた
+入力の拒否、不完全な cover・不正 scope/arity・異なる元宣言の拒否、nullable body の
+全 clock 未定義を source/target 両方で証明した。
+
+当初の条件は、各 header の先頭で全 tuple を覆う区切りつき anchor を再照合し、
+actual の実捕捉が区切りを含まないことだった。上の参照検査への一般化により、
+現在は継続が読む値だけの cover と、parameter-free 継続の空 anchor を許可する。 actual の消費部分は literal/parameter と
+通常制御の検査対象で、正に消費する一般 user call は未対応。零幅 query 内には
+検査済みの相互 call も置ける。任意の Par 文法がこの形へ正規化できるとは主張せず、
+anchor のない一般 live capture と、Par/Seq 全言語クラスの一致・分離は未解決である。
+2019年の[原記事](https://kmizu.hatenablog.com/entry/2019/10/24/145039)も両方式の
+タグ照合を示しているが、個別の書き換えとクラス全体の変換を区別する。
+
+検証は全 1,384 jobs/Audit、関連公開依存 3,680 件（標準 Lean 公理 3,599、
+無公理 81）。今回 6 新 modules・46 新 guard、PR69 全体は 74 新 Lean modules・
+605 guard。新しい sorry/axiom/native_decide は置いていない。
+
+## 任意の一階Seq文法の全域化と、元文字列上の補集合閉包
+
+`SequentialTotalSyntax/FirstOrder/Arguments/Routes/Calls/Layout/Atoms/Expression/Stages/
+Correctness/Compiler/Language` は、**任意の一階 Seq 文法・開始式の全域化**を証明した。
+入力・入力長・保持語を引数に取らず、元の N 規則から厳密に `4*N*(N+2)` 規則を生成する。
+各元規則に arity を保持する success/zero/positive/failure の四規則と、段階 0..N の
+空環境用 nullary 四規則を置く。source の停止性、有限 word palette、alphabet、
+call graph、delimiter/anchor、actual の構文について追加条件を置かない。
+相互 parameterized recursion、actual 内の call、任意 incoming 環境、不正 index/
+arity/parameter の有限失敗も扱う。
+
+`SequentialTotalCorrectness.position/expression` は、任意入力の任意の有効位置と
+任意保持環境で、四 mode の実 target canonical 表を元の実 source 結果へ同定する。
+元の成功残余は保持し、元の有限失敗と未定義は success flag の有限失敗へ移す。
+failure flag は**元が有限失敗した場合だけ**空成功し、元が未定義なら有限失敗する。
+そのため source の undefined choice/not/star を誤った正常制御へ変えない。
+`total_at` は target の実 physical clock
+`(4*N*(N+2)+1)*(x.length+1)` で、全 mode が必ず `some result` を返すことを示す。
+`total_observation` はこれを元の実 `SObs` の有限観測へ接続する。
+これは既存の Seq clock 上界を用いた全域性で、時間・空間計算量を改善した主張ではない。
+
+一般 call の実引数は最初の正の消費箇所ごとに経路を作る。そこまでの actual は zero、
+その一つは positive、その後は full-stage success で評価する。
+`full_success/routes_correct` は**各捕捉文字列の全リストと最後の残余位置**を保存し、
+callee continuation が失敗・未定義でも別のタプルを選ばないことを証明する。
+全 actual が空なら empty helper を使い、段階 0 では全 flag が有限失敗する。
+段階 j+1 の helper は元本体へ空語を代入して段階 j で変換する。
+正の消費後は小さい残余長へ移るため full-stage に戻せる。
+`position` は残余長の強帰納と段階の帰納で、Calls/Expression の全 row 仮定を外す。
+source の位置ごとの `rounds_j` と、生成文法の実 row を接続した証明である。
+
+連接・優先選択・否定・反復の制御法則は `SequentialTotalControl` にある。
+反復は positive parser の star の後に元の finite-failure flag を要求する。
+これにより nullable/undefined な停止点が反復の正常終了に化けない。
+`successes_iff/recognizes/language_translation` は、全入力の成功残余と、
+**同じ元文字列の全入力消費言語**を固定 Seq 文法で保存する。
+
+`SequentialTotalLanguage.complementStart` は
+`!(start(g,e); !any); any*` を生成する。EOF を含む全入力受理を否定するので、元の
+途中までの消費成功も補集合へ入る。`complement_recognizes` は任意 `List Char` で
+この固定 target の受理が元の非受理と同値であることを証明する。
+`Shallot.PegSeparation.firstOrder_seq_complement` は
+`IsFirstOrderCBVPEL .callByValueSeq L → IsFirstOrderCBVPEL .callByValueSeq (¬L)`
+を、実文法生成と実 `SObs` によって示す。元の無限未定義による非受理も含む。
+
+15 個の example 定理では、空呼出し鎖、fallback/否定を含む循環、nullable 反復、
+複数 actual の個別捕捉、正消費後の引数有限失敗と未定義、保持値を使う再帰と親への
+backtracking、相互 parameterized call、不正 call preflight、補集合の EOF 判定を
+kernel 検証した。さらに、実循環の補集合が全元文字列を認識することと、既存の
+fresh doubled tuple/parent-return 文法について**全初期長・全再帰深さ**で新 target が
+全入力を受理することを記号的に証明した。一般定理はこれらの具体例に依存しない。
+
+今回の追加は 10 modules・56 guard。全 1,378 jobs/Audit と関連 3,634 公開定理の
+依存検査を通過（標準 Lean 公理 3,553、無公理 81）。PR69 全体は新規 Lean
+68 modules・559 guard。新しい axiom/sorry/native_decide は置いていない。
+
+この結果は Seq→Seq の全域化と補集合閉包であり、**一般 Par→Seq の文法変換や、
+Par/Seq 言語クラスの一致・分離を証明したものではない**。元の同じ位置から評価した
+一般 Par actual の live な捕捉値を Seq へ移す問題が残る。
+
+## 入力位置の再帰と有限な空呼出し閉包で、元のSeq評価を再構成する
+
+`FiniteResultClosure` と `SequentialLocalClosure/Order/Correctness` は、厳密に
+小さい残余長の行を固定し、現在位置の空引数環境の結果だけを反復する。
+状態は元規則ごとの `Res` 一つで、規則数 N なら N 回で最小固定点へ到達する。
+`None` は未定義、`some none` は既知の有限失敗であり、両者を同一視しない。
+保持文字列の候補集合や引数タプルの列挙は不要で、arity に依存した状態数を置かない。
+
+`saturated_eq_source` はこの局所閉包と元の実規則行との完全一致を証明する。
+`expression_eq_source` は任意の incoming 環境と式へ持ち上げる。小さい残余長では
+任意の実保持値の組を扱い、現在位置の空環境と混同しない。局所単調性と行一致は
+実際に到達可能な有効 arity の行だけを比較する。
+
+`SequentialPositionEvaluator.column/run/decide` は、小さい残余長を自分自身の
+再帰で計算する実行可能な評価器である。定義中に元の `tblV` や canonical 表を
+oracle として呼ばず、式評価エンジンに自身の下位行と局所閉包を渡す。
+`decide_eq_standard`、`observations_iff`、`undefined_iff` は任意の一階 Seq
+文法・開始式・元文字列で、元の成功残余・有限失敗・全 clock 未定義を保存する。
+規則数回が必要な鎖、fallback/否定を含む真の循環、nullable star、正の実引数、
+25 引数で一規則の例、不正 call/arity/parameter を kernel 検証した。
+新しい倍長値と親復帰を含む任意初期長・任意再帰深さの既存文法にも接続した。
+
+これは Lean の停止する評価器であり、未定義は返り値 `None` として表す。
+この評価器単独では固定 Seq 文法を生成しない。上の全域化・補集合閉包の文法生成と
+区別する。一般 Par→Seq 翻訳は未解決。密な入力位置のリストと再計算を含むため、既存の
+時間・空間上界を改善したとも主張しない。既存の stationary/clock 定理を再利用し、
+凍結下位行の局所最小固定点の同定と、自前の位置再帰評価器を接続した結果である。
+
+検証は全 1,364 jobs/Audit 成功、関連公開定理 3,542 件の依存は標準 Lean 公理
+3,464 件または無公理 78 件。今回の追加は 6 modules・49 guard。
+PR69 全体は新規 Lean 54 modules・467 guard。一般の言語クラス比較は未解決。
+
+## 任意の一階Seq文法を、通常評価・ゼロ結果・正の消費へ分ける
+
+`SequentialResultSyntax/Normal/Zero/Compiler` は、**任意の一階 Seq 文法**から
+通常規則とゼロ結果観測規則を生成する。前者は元 arity を保持し、後者は全て nullary。
+規則数は厳密に元の二倍で、変換は入力や runtime の保持値に依存しない。
+source declaration/root の特殊な DSL、一つの self call、covering anchor、有限 word
+palette、alphabet 条件、正規表現引数、停止性の制約は付けていない。
+範囲外の call、arity mismatch、範囲外 parameter の元の有限失敗も保存する。
+
+根拠となる Seq の stationarity と empty-configuration の固定点は、既存の
+`SequentialCaptures` / `SequentialClock` にある。今回の新しい接続は、これらを使い、
+引数つきの一般再帰規則について、実引数評価・実表・本体のゼロ結果観測を同じ
+physical clock で構成する部分である。同じ入力位置で成功した Seq call の実引数は
+全て空語なので、ゼロ結果用 callee は元の全 parameter を空語へ代入した nullary
+規則としてよい。一方、fresh actual の評価は各入れ子の通常/ゼロ observer で扱う。
+元の呼出しが有限成功しなければ先へ進まない full gate を置き、観測しない経路の
+未定義を落とさない。
+
+`SequentialResultCompiler.physical` は任意 E・任意一階式・全入力位置・全 clock で、
+通常評価の完全一致と、ゼロ結果の `EmptyResultObservation.project` 一致を証明する。
+`positive_physical` はゼロ成功だけを落として正の消費の残余を保持し、
+`positive_success_strict` はその成功が必ず入力を進めることを示す。
+`failure_physical` は有限失敗だけで空成功し、元の未定義は未定義のままにする。
+`zero_success_language` は、元の式が元入力を残して成功する文字列集合を、
+`zero(e); any*` による固定 Seq 文法で**同じ元文字列上の全入力消費言語**へ変換する。
+通常 clone は元の受理言語をそのまま保持する。
+
+例では all-empty actual の nullary observer、正の actual を持つ空成功 callee、
+committed choice、無効 call/arity/parameter、nullable star、skip される経路の真の
+再帰未定義を検証。既存の tuple 再捕捉文法についても、任意の初期長と再帰 depth
+で、新しい倍長の値と親復帰を含む全入力の通常/ゼロ/positive 観測を記号的に接続した。
+
+この観測変換は **Seq→Seq** で、一般の Par→Seq 変換そのものではない。未定義を
+有限失敗へ変えていないため、任意プログラムの totalization や、任意の Seq 言語の
+補集合閉包をこの観測変換単独から主張しない。別の `SequentialTotal*` が上記の一般
+全域化・補集合閉包を証明する。既にある有限
+stationary-state の議論と、ゼロ/positive/failure の実際の文法生成を分けて接続した。
+
+関連研究として、[2019年の原記事](https://kmizu.hatenablog.com/entry/2019/10/24/145039)
+で両 CBV のタグ照合例を再確認した。また Chida–Terauchi の
+[FSCD 2022論文](https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.FSCD.2022.15)
+は、後方参照付き正規表現に先読みを加えた場合の分離を示す。ただし、これはここでの
+再帰 PEG の二つの CBV クラスの同定・分離を与えない。論文自身の Remark 11 でも、
+先読み境界を越える後方参照を許す/許さない場合の比較は別の課題とされている。
+その結果を Par/Seq の分離として流用しない。
+
+全体 `lake build`/Audit は 1,358 jobs を通過。関連 3,493 public 依存報告は標準公理
+3,417 または無公理 76。この追加は五新モジュール・36 guard、PR69 全体は 48 新
+Lean モジュール・418 guard。一般 Par/Seq 言語クラスの一致・分離は未解決。
+
+## 現在位置以降だけに必要な保持値を残す
+
+`FutureCaptureViews` は既存の global な `CaptureViews.evV_rebind` と異なり、
+現在の残余長 bound 以下の位置で parameter view が一致すればよいとする。
+任意の一階式・入れ子の Par/Seq actual・任意の sound な再帰表で成立し、
+実 physical table では文法の一階性から soundness を自動的に得る。
+成功した評価は残余長を増やせないため、継続は切断点より前の入力へ戻らない。
+元/変換後はこの補題では同じ文法・同じ戦略を使う。
+
+`FutureCapturePruning.mask` は bound より長い保持語の payload を空にし、
+対応する parameter view を必ず `failAlways` にする。他の index と空の元捕捉は
+保存する。単に空語へ置き換えるだけでは失敗が空成功になるため不正である。
+全 payload 長が bound 以下になり、変換した任意の本体・新 actual 評価は、
+元の保持値を使った評価と全 physical clock で一致する。
+`after_prefix` は任意の一階 prefix が実際に進めた位置へこの操作を接続する。
+prefix や本体に covering anchor の構文条件はない。
+
+`forget_iff` はさらに、**任意の一階継続と全 future 位置について一括して**
+全環境を忘れてよい必要十分条件を与える。それは、どの保持語も、その残余の
+どの suffix とも一致できないこと (`DeadAfter`) である。`deadCheck` は現入力と
+保持値からこの条件を有限判定し、長さだけでは見落とす内容依存の死活も扱う。
+特定の一つの本体で値を忘れられる必要条件、と主張しているわけではない。
+元の空語は常に照合できるので、nullable star の未定義を保つためにも残す。
+
+忘却はこの継続の内部に限る。外側の選択フレームが切断点より前へ backtrack
+する可能性があれば、親側の元 binding は依然必要である。実入力 `aaaa!aaa` で、
+枝内で死んだ `aaaa` を親まで消すと、外側 fallback の成功が失敗になることも証明した。
+
+例では同じ原点の任意長 `a^(n+4)`、短い `a`、空語の tuple を扱い、長い prefix
+の後の `aaa` 上では最初の payload だけを消す固定 view が、任意の一階本体・
+再帰・全 clock で正しいことを証明した。再帰 actual、空語による反復未定義、
+view を付けない空置換の誤り、切断点より前へ pruning を適用する誤りも kernel
+検証した。
+
+これは現在の保持値と bound に依存する**評価上の表現・忘却定理**であり、入力に
+依存しない固定 Seq 文法を生成する新 compiler ではない。既存の anchor 条件を
+compiler から除けたとは主張しない。値を忘れられる条件を明確にし、残す必要のある
+live な値を anchor なしで扱う問題と分けた。一般の Par/Seq 一致・分離は未解決。
+
+全体 `lake build`/Audit は 1,353 jobs を通過。関連 3,457 public 依存報告は標準公理
+3,381 または無公理 76。この追加は三新モジュール・26 guard、PR69 全体は 43 新
+Lean モジュール・382 guard。
+
+## 個別の保持値を渡す、多引数の自己再帰まで
+
+`RecursiveFieldSyntax/Correspondence/Compiler` は、個別 field 再捕捉を
+parameterized self call の本体まで接続する。元文法は独立 nullary helper prefix と、
+任意正 arity の一つの自己再帰 header `H(W) <- P(W); body(W)` を持つ。
+`body` は raw 一階 `MExp` の通常制御、各 parameter の個別使用、helper 呼出し、
+新 actual を持つ `H` 呼出しを組み合わせられる。開始式も一般の検査済み raw 式である。
+
+各呼出しは元順序の actual preflight と先頭 `P` の検証を行い、その呼出しで新しく
+得た各値を実 Seq 引数へ捕捉する。`TupleFieldTransfer.physical_of_body` は異なる
+元/変換後本体を許す局所 interface に一般化した。
+`RecursiveFieldCorrespondence.physical` はこれを実 physical clock の帰納法で
+閉じる。再帰先本体の同値や eventual table の一致を外部仮定として残さず、全ての
+新 tuple と入力位置で、同じ clock の元/変換後式の評価一致を証明する。
+
+`DelimitedValueSafety` は fresh actual が separator を含まないことを証明する。
+正に消費する actual は保持 parameter、separator-free literal、通常の選択/反復/
+連接を用いる。否定 query 内には任意の構文検査済み再帰 call を許し、その部分的
+計算を保持する。正に消費する actual 内の call はこの検査ではまだ拒否する。
+各 call の arity/scope、pattern の非空・全成分 coverage、helper 閉包、本体と開始式、
+実 source declaration/root 全体を有限検査し、元文字列言語・残余・失敗・全 clock
+未定義の保存へ接続した。
+
+`RecursiveFieldProofs.source_and_target_all_trees` は任意の n と再帰 depth で、
+元の二保持語 `aⁿ`, `aⁿb` から child の `a^(2n)`, `a^(2n)b` を実際に新捕捉し、child から
+戻ったら親の long/short を個別に再利用する入力族を認識する。`row_all_trees` は
+任意の外側入力・残余でも成立する。Seq 文法は常に arities `[1,1,6]` の三規則で、
+元の一規則 `[2]` と同じ `depth+1` clock で動く。静的な有限 word palette や
+子の値を親へ漏らす代入ではない。初期捕捉と fresh doubled capture も記号的に証明。
+
+kernel 実行では初期長 0/1/2 と depth 0/1/2/3、誤った親復帰の拒否、source declaration
+改変・coverage・actual separator・未検証の正の producer call の拒否を確認した。
+部分的な actual は全入力・全 clock で両戦略とも未定義になり、空の保持語が生む
+nullable star の未定義も伝播する。
+
+全体 `lake build`/Audit は 1,350 jobs を通過。関連 3,431 public 依存報告は標準公理
+3,355 または無公理 76。六新モジュールと局所 interface の追加で 44 guard、PR69
+全体は 40 新 Lean モジュール・356 guard。必須 covering anchor、separator-free
+actual、単一 parameterized self-recursive header という条件は残る。任意の複数
+parameterized callee 間の相互再帰、正の actual 内の一般 producer call、anchor-free
+文法の一般変換、Par/Seq 全言語クラスの一致・分離は未解決である。
+
+## 検証した先頭ブロックから、元の各保持語を個別に捕捉し直す
+
+`CopyFieldCapture` と `TupleFieldControl/Transfer/Compiler` は、必須の先頭
+`P(W) = W[j₀];d;W[j₁];d;…` が全成分を含む場合、その実入力上の各語と
+区切り文字を別々の Seq 引数へ捕捉する。生成する引数は各出現につき
+`[gap(d), chr(d)]` の二つで、実捕捉値は `[W[j₀], [d], W[j₁], [d], …]`。
+元の Par 引数の捕捉範囲が重なっていても、先頭ブロック中のコピーを実際に
+消費して取り直す。語の値を生成構文へ埋め込まず、仮想入力も使わない。
+
+`CopyFieldCapture.expression_view` は、元の各 parameter を対応する偶数位置へ
+代入すると、任意の一階式・任意の戦略/再帰表・任意の後続位置で評価が一致すると
+証明する。この値の表現定理は引数つき呼出しも含む。範囲外の元 parameter は
+失敗のままで、追加の区切り文字用/重複用引数が漏れ出さない。
+`scan_encoded` と `entry` が、この環境を実 Seq 引数評価で生成して実規則へ
+入ることを証明する。
+
+戦略間の変換は別に検証する。`TupleFieldControl` の本体は各成分を個別に使う
+raw `MExp` で、任意の通常の選択・否定・反復を許す。内部の呼出しは独立した
+nullary 再帰 helper に限る。`TupleFieldTransfer.physical` は任意の caller 環境と
+元/変換後 actual の局所対応を仮定し、元 actual の preflight、先頭一致確認、
+各語の再捕捉、本体評価を同じ physical clock で接続する。先頭が不一致のときは
+有限失敗し、actual や本体の未定義も保存する。
+
+`TupleFieldCompiler.check` は helper 閉包、原 actual の通常構文とアルファベット
+効果、区切り文字不在、先頭 pattern の scope/全成分 coverage、本体 scope を
+有限検査する。helper prefix と一つの parameterized header からなる実文法を
+生成し、閉じた actual を持つ開始呼出しについて、全入力の残余・失敗・元文字列
+言語・全 clock 未定義の保存を証明した。以前の parameterized recursive client
+frontend への接続は、この追加ではまだ行っていない。
+
+`TupleFieldExamples` は任意の n で、同じ位置から重ねて捕捉した `aⁿ` と `aⁿb`
+を `[1,0,1]` の先頭ブロックから六つの実引数へ取り直し、後続の `aⁿ!aⁿb` を
+個別再照合で受理することを証明する。後続は常に先頭ブロック全体より短く、
+その位置で opaque なブロック全体の再照合は失敗する。元一規則 `[2]` から
+固定三規則 `[1,1,6]` を生成する。先頭一致確認の省略による実誤受理、coverage/
+区切り文字/parameter scope 検査、個別語の反復と否定、再帰 helper の正確な
+clock、nullable star の全 clock 未定義も kernel 検証した。
+
+全体 `lake build` と Audit は 1,344 jobs を通過。関連 3,387 public 依存報告は
+標準公理 3,312 または無公理 75。この追加は五モジュール・52 guard、PR69 全体は
+34 新 Lean モジュール・312 guard。必須で全成分を含む先頭ブロックなしの変換、
+本体内の任意の parameterized call、既存再帰 client との接続、一般 Par/Seq
+一致または分離は未解決。一般の値表現定理と、この制限つき戦略変換を区別する。
+
+## 固定ブロック後の一般制御で、一周ごとに消費語が変わる反復へ
+
+`CopyPeriodControl` と `ControlledPeriodTransfer/Syntax/Correspondence/Compiler` は、
+固定の非空 delimited parameter 列 `P(W)` の後に制御 `T` を持つ本体
+
+```
+H(W) <- (P(W); T[P(W)])*
+```
+
+を元文字列上の Seq へ翻訳する。`T` は block atom、空成功、any/chr/range/literal、
+独立 nullary helper 呼出し、連接、優先選択、否定、反復からなる有限構文である。
+block atom は常に元の `P(W)` 全体を再照合する。helper は prefix 内で再帰してよく、
+一周の後半が消費する文字数・語・選択経路は入力に応じて変わる。
+後半には消費する `star` も許し、有限個の反復回数や出力語を列挙しない。
+元捕捉の区切り自由性は捕捉値に対する条件であり、入力全体の文字集合は制限しない。
+
+元順の actual preflight と初回の `P(W)` 検査の後、最初の固定ブロックを実入力から `B` として捕捉する。
+別の unary probe 規則がその捕捉値で `T[B]` を評価する。
+後半が失敗すれば、既に照合した最初のブロックも含めて一周全体を取り消し、元位置で零周成功する。
+後半が未定義なら未定義のまま伝播する。成功時は実行用 unary 規則
+
+```
+Run(B) <- T[B]; (param_0; T[B])*
+```
+
+へ同じブロックを捕捉し直して入る。Seq actual が先頭 `P(W)` を消費済みなので、
+この本体はその後半と後続の各周を正しい位置から実行する。
+初回ブロックが失敗した場合には後半を評価しない。
+probe と実行規則は同じ physical clock の sibling call であり、後半の helper 行は
+元の source 本体と同じ一段前の実表を使う。停止性の oracle や追加 clock の余裕を仮定しない。
+
+`CopyPeriodControl.physical/iteration` は元 tuple での `T[P(W)]` と新しい単語環境 `[B]` での `T[B]` を対応させる。
+helper prefix の閉じた有限構文検査から実 recursive row の一致を導き、各制御文脈へ持ち上げる。
+先頭ブロックが非空で、後半の実成功は suffix を返すことから、外側反復の成功は常に厳密に消費する。
+nullable な内側反復の未定義を拒否・空成功へ置き換えない。
+`ControlledPeriodTransfer.physical` は任意の caller 環境・元/変換後 actual・全 clock の実呼出し一致を示す。
+raw 宣言/root、period scope、後半の helper scope、元 actual の捕捉効果、親条件と戻り値効果閉包を有限検査し、
+client 実表の同時帰納へ接続する。元文字列言語、残余、有限失敗、定義性、全 clock 未定義性を保存する。
+
+例の後半は `(+;block) / ~`。各周は `B+B` または `B~` を入力で選ぶ。
+`source_and_target_all_trees n flags depth` は任意の親語長、任意の非空 Bool 選択列、任意の再帰深さでの
+source/target 受理を証明する。子語を倍化して捕捉し、帰還後の親語を復帰させる。
+source 5 規則 `[0,0,1,1,4]` は固定 Seq 10 規則 `[0,0,1,1,1,1,1,1,1,1]` となる。
+消費する内側反復 `( +;block )*;~`、保持値の否定による周全体の rollback、
+committed choice 後半の失敗、probe を省いた誤失敗も kernel で確認した。
+独立 helper の実再帰が異なる長さの balanced word を消費した後にも元ブロックを再照合できる。
+helper の clock 1 未定義/clock 2 成功と、後半 `eps*` の全 clock 未定義を保存する。
+
+残る制約は、各周が同じ固定ブロックで始まること、後半の保持値利用がそのブロック全体であること、
+後半の呼出しが独立 nullary helper であること。後半からの parameterized client 呼出しや
+元 tuple の各成分の独立利用、先頭 anchor のない任意の反復はまだ扱えていない。
+既存の unary client の先頭再照合・共通 arity/pattern/後半・元捕捉の区切り自由性も残る。
+一般 Par/Seq 言語クラスの一致・分離は引き続き未解決である。
+
+## 一周分の実入力を再捕捉し、消費反復の任意の停止位置を保存する
+
+`RecapturedCopyBlock/Transfer` と `RecapturedCopySyntax/Correspondence/Compiler` は、
+非空の固定 parameter index 列 `js` の消費反復
+
+```
+H(w_0,...,w_(n-1)) <- ((param_js[0];d); ...; (param_js[last];d))*
+```
+
+を EOF なしで固定 Seq 文法へ翻訳する。各元保持語は区切り `d` を含まず、空語でもよい。
+引数個数・出現順・重複、実捕捉語の長さ、反復回数、停止後の入力と後続は一般である。
+一周の消費語は実 tuple が決まれば `B=encode d W js` という一つの語に固定される。
+
+まず元順の全 actual preflight を行い、元位置から従来の有限 pattern projections で最初の一周を照合する。
+一周目が失敗すれば、元の `star` と同じく元位置で空成功する。一周目が成功すれば、
+区切りだけを読む固定 skeleton scanner でその**一周分の実入力区間を丸ごと新しい一語として捕捉**し、
+新しい unary Seq 規則 `Loop(B) <- (param_0)*` を呼ぶ。
+Seq 引数が一周目を既に消費しているため、本体では残りの周回だけ照合する。
+`B` は区切りを含み、元の個々の捕捉値より大きくてもよい。値を連結して作った架空の入力ではなく、
+`evSeqArgs` が元文字列上で実際に捕捉した値である。
+
+`source_run/star_literal` は元の一周とその反復が `B` の literal 照合と等しいことを証明し、
+`skeleton_run` は元保持語の区切り自由性から scanner の実終点が同じ一周末尾になることを証明する。
+`recapture_call` が scanner から得られる実 capture を `pre_eq` で `B` に同定し、
+新しい Seq 呼出しと元反復の**任意の停止残余**を対応させる。非空 pattern は `B≠[]` を保証する。
+独立した各投影の停止位置を比較する演算も、最大値を返す PEG primitive も必要ない。
+
+`RecapturedCopyTransfer.physical` は元 actual と変換後 actual を任意 caller 環境で評価し、
+全 clock の実呼出し一致を示す。先頭 pattern query が clock 0 で未定義なので、空入力や零周の場合も
+元の user-call 境界を保ち、この backend に別の nullary 初期化 gate は不要である。
+outer preflight が、actual 自体の失敗を零周成功と混同することを防ぐ。
+全 raw 宣言/root、scope、元捕捉の alphabet 条件、親条件と実再帰の戻り値効果を有限検査し、
+既存の client 実表対応と同時帰納して、任意の seq/choice/not/star 文脈と recursive actual を翻訳する。
+元文字列言語、残余、有限失敗、定義性と全 clock 未定義性を保存する。
+
+以前の停止位置反例 `ab#a#ab#b#` と `ab#a#x#a#` は、新しい実 Seq 文法で残余5文字・4文字を正しく返し、
+それぞれの後続を消費して成功する。Seq が実捕捉する語は `ab#a#` である。
+零周入力 `ab#b#` でも元位置を返す。先頭照合を省くと全消費へ誤り、outer preflight を省くと
+actual 失敗を空成功へ誤る実反例を検証した。
+
+親を持つ例は source 5 規則 `[0,0,1,1,4]` から Seq 9 規則 `[0,0,1,1,1,1,1,1,1]` となる。
+`source_and_target_all_trees n count depth` は任意の親語長、任意の正の一階層ごとの反復回数、
+任意の再帰深さを扱い、子語の倍化捕捉と帰還後の親語の復帰を証明する。
+空親を持つ producer の実再帰、空 actual での区切り消費と途中停止、真の cycle の全入力・全 clock 未定義も確認した。
+
+**一周ごとに消費語が変わる任意の PEG 反復は、まだ対象外である。**
+この backend は固定された `param_i;d` の有限列を一周とする。独立 nullary helper、
+親を先頭で再照合する unary client と共通 arity/pattern/d、元保持語の区切り自由性は残る。
+任意の本体・消費 prefix・複数親・先頭再照合なし、および一般 Par/Seq 言語クラスの一致・分離は未解決である。
+
+## 反復全体の成功判定だけでは停止位置を選べない
+
+`FrontierStatusSelector` は、二つの実 unary projection を probe とする有限 selector を定義し、
+実 `MExp` へコンパイルする。guard は probe 全体への先読み、空成功・失敗、連接、優先選択、否定、
+零幅反復を任意に組み合わせられる。selector はこれらの guard で分岐し、最後に一方の projection を
+消費するか、失敗・未定義となる。判定木の深さや query の反復回数に構文上の固定上限は置かない。
+追加の再帰 selector 規則や、元入力の文字を直接調べる guard はこの構文の対象外である。
+
+`guard_physical` と `render_physical` は、すべての probe が成功する入力では、
+guard が返せる情報が成功/失敗/未定義のどれかだけで、個別の返す残余位置を区別しないことを示す。
+nullable な guard 反復の未定義も保存し、単純な二値モデルへ落としていない。
+有限の選択制御全体は `selected tree` という、入力に依存しない同じ最終選択へ帰着する。
+
+`FrontierSelectorObstruction.no_status_selector` は、保持語 `a/ab` と周期 `[1,0]` の実 Seq projection
+について、**すべてのこの形の有限 selector** が `ab#a#ab#b#` または `ab#a#x#a#` の
+どちらかで、元 Par の残余位置を保存できないことを証明する。
+両入力ですべての probe が成功するのに、最早停止の側が逆になるためである。
+`positive_clock` は、実 probe の有限結果の単調性から selector の全ての正 clock の結果が一致することを示す。
+`no_status_selector_any_clock` は、同じ反例入力で**全 clock** が元の正しい残余を返せないことを導く。
+`no_status_selector_observation` は、実 first-order Seq grammar と root の有限導出による
+残余観測そのものが存在しないことまで接続する。評価 clock を増やす回避には依存していない。
+
+これは、固定 projection 一つの不適切さから、成功判定を組み合わせる有限制御全体へ広げた
+**特定の翻訳方法の限界**である。任意の Seq grammar を排除する定理ではなく、
+元文字列言語クラスの分離でもない。入力内容に依存する新しい検査、停止残余を比較する構成、
+別の捕捉表現、追加の再帰規則を使う翻訳は排除していない。
+一般の最大残余を選ぶ Seq 文法と、Par/Seq のクラス一致・分離は引き続き未解決である。
+
+## 末尾確認なしの反復：停止位置の一般式と残る文法操作
+
+`SynchronizedStarFrontier.star_maximum` は、同期する有限個の検査の conjunction と、
+それぞれを独立に反復したときの停止位置の関係を示す。
+各検査は有限に成功または失敗し、成功すれば厳密に入力を消費する。
+同時検査は、すべての検査が同じ終点で成功したとき、その終点で成功し、
+一つでも失敗すれば失敗する。この一周の条件だけから、非有界の実 `evStar` について
+
+```
+evStar simultaneous p = maximum (component evaluators' evStar results at p)
+```
+
+を導く。位置は残り文字数なので、`maximum` は**最も早く止まった位置**に対応する。
+反復回数、残余文字列の内容、停止する component は固定しない。
+`maximum` は実評価結果を受け取る Lean の計算であり、PEG の新しい primitive でも、
+Seq 文法の閉包性として仮定した操作でもない。
+
+`RepeatedWordFrontier.source_failure_iff/step_success/step_failure` は、
+元の全捕捉語と各 unary view の一周の実結果を対応させる。
+区切り自由性と delimiter 境界の一意性から条件を証明するため、上の同期条件を
+別名の仮定として残していない。`physical` は任意の非空 parameter pattern・正の引数個数・
+区切り自由な実保持語・任意の元入力と開始位置に対して、実 bare `star` の返り値を計算する。
+元側と view 側の grammar・strategy・有限評価表は別々でもよい。
+`followed_by` は任意の後続を元の保持環境のまま、その停止位置で実行する評価式を示す。
+EOF、末尾 marker、有限 suffix 辞書、反復の展開上限は要求しない。
+
+`RepeatedFrontierTransfer.positive_iterations` は、元の引数が実際にすべて成功し、
+一周目も成功する場合に、**実 Par 規則呼出し**の残余位置が、各 actual を
+自分の終点から実行した **実 unary Seq 呼出し**の返す残余位置の最大値になることを証明する。
+caller の親環境を保ち、元 actual と変換後 actual の局所対応と捕捉の区切り自由性を明示する。
+Seq 呼出しの本体は、初回の `afterParts` に続いて通常の view 周期を bare `star` で反復する。
+`zero_iterations` は一周目の失敗時に元位置を返す別の場合を導く。
+初回の調整自体が失敗する view があるため、この零周の場合を成功時の最大値計算へ混ぜられない。
+
+実例は保持語 `a` と `ab`、周期 `[1,0]` である。
+`ab#a#ab#b#` では元の反復は残余5文字で止まり、短語の実 Seq 呼出しも5文字、長語の呼出しは0文字を返す。
+`ab#a#x#a#` では元は残余4文字、短語の呼出しは0文字、長語の呼出しは4文字を返す。
+`no_fixed_projection` は固定したどちらか一方を全入力で使う方法を否定する。
+両例の実捕捉値、正しい残余で成功する元の後続、誤った投影で消失する後続、
+零周の場合、先行 actual 失敗、clock 0 未定義を kernel で確認した。
+
+**この投影選択法では、停止位置を返す Seq 文法は構成できていない。** 固定周期では、上記の一周分再捕捉がこの不足を解消した。
+この投影法を完成するには、各呼出しの残余位置を実際の入力上で比較・選択する手段が必要である。
+今回の `maximum` を文法操作として使う翻訳は提示していない。
+以下の完成済み文法翻訳は引き続き EOF 付きの範囲であり、一般 Par/Seq の一致・分離も未解決である。
+
+## 入力末尾までの消費反復を、固定個数の unary 検査へ
+
+`RepeatedWordPattern` と `DelimitedRepeatEvaluation/RepeatedWordEvaluation/RepeatedWordTransfer` は、
+非空の有限 index 列 `js` を用いたコピー規則の本体
+
+```
+((param_js[0];d); ...; (param_js[last];d))*; !any
+```
+
+を、固定個数の unary Seq 検査へ翻訳する。引数個数、出現順、重複、捕捉語の長さ、
+反復回数はいずれも一般である。捕捉語は区切り `d` を含まず、空語でもよい。
+従来の `ControlledCopy` の構文上零幅の反復とは異なり、ここでは各周回が区切りを含む実入力を消費する。
+反復回数を展開した文法や捕捉語の有限辞書は生成しない。
+
+検査 `i` は実際に捕捉した一語 `w_i` を保持し、`js` の各位置で、index が `i` なら
+`w_i;d`、それ以外なら「区切りまでの任意語;d」を読む。この有限の周期をそのまま反復する。
+Seq 引数が既に消費した先頭部分は初回だけ `afterParts` で調整し、二周目以後は周期全体を検査する。
+各検査が入力末尾で成功すれば、実入力の区切り数は必ず `反復回数 * js.length` になる。
+`iteration_unique` が、別々に計算された検査の周回数の一致を導き、`source_iff_after` が
+元の全保持語 tuple による全体照合へ戻す。`js` の非空性はこの同期と各周回の厳密な消費に必要である。
+
+`DelimitedRepeatEvaluation.physical` は任意の進行する template の実 `evStar` を有限周回の照合へ接続する。
+これは反復回数の oracle を仮定する定理ではなく、実際の評価の trace と停止条件を使う証明である。
+`RepeatedWordTransfer.physical` は、実際の元引数と変換後引数を同じ caller 環境・同じ clock で評価し、
+新しく捕捉した実文字列と各 Seq 引数の異なる終点から、コピー呼出し全体の実評価一致を導く。
+元順の preflight の後に nullary 初期化 gate を呼び、空入力も clock 0 の未定義を保存する。
+空入力の分岐は元位置で判断し、引数を評価した後の位置が空であるだけでは成功させない。
+
+`RepeatedCopySyntax/Correspondence/Compiler` は、この本体を既存の parent/client の制御構文へ統合する。
+helper は独立 nullary prefix、client は親語を先頭で再照合する unary source 規則であり、
+コピー actual は親を正に消費し、parameterized recursive producer を呼べる。
+client ごとの親 alphabet 条件・戻り値効果の再帰閉包・全 actual の捕捉効果、全 raw 宣言と root、
+非空 pattern と全 index の範囲を有限検査する。
+client 実表の同時帰納で、任意の root 文脈・実再帰・actual 内の変換も同じ physical clock に接続し、
+元文字列言語・残余・有限失敗・定義性・全 clock 未定義性を保存する。
+
+例は source 5 規則 `[0,0,1,1,4]` から、Seq 9 規則 `[0,0,1,1,0,1,1,1,1]` への固定翻訳である。
+実捕捉は `[a^(2n)b c^(2n), a^n, a^(2n), a^(2n)b]`、周期は `[0,2,1,0,3,2,1]`。
+`source_and_target_all_repetitions` は任意の `n` と任意の正の周回数で両文法の受理を証明する。
+さらに空の親を持つ producer が実際に再帰して `aaaa` を捕捉し、三周消費する両文法の kernel 実行を確認した。
+全 actual が空でも `#` を 0/7/21 個消費できる。後続余剰文字、範囲外 index、空 pattern は拒否される。
+真の actual/client cycle は全入力・全 clock で未定義となり、preflight を除くと空入力で誤成功する。
+初期化省略の clock 0 誤成功と、初期化より先の actual 失敗も確認した。
+
+**この独立投影法では末尾確認が必要である。** 上記の再捕捉法はこの制限を外す。 `js=[1,0]`、保持語 `a` と `ab`、
+実入力 `ab#a#ab#b#` では、末尾確認を外した二つの unary loop はそれぞれ一周・二周で止まり、
+残余が 5 文字と 0 文字になる。この kernel 反例は、停止位置を任意の後続へ返す翻訳には別の同期が
+必要なことを示す。これは特定の投影法の制限であり、言語クラス分離ではない。
+一般の消費反復と後続・任意の本体・複数親・先頭再照合なしの client・無制限の Par/Seq 一致または分離は未解決。
+
 ## 保持語を読み進めた後の選択・否定を含むコピー本体
 
 `CopyBodyControl/Evaluation/Projections/Emission` と
@@ -11485,3 +12076,51 @@ CopyBodyControl/Evaluation/Projections/Emission and ControlledCopySyntax/Corresp
 ControlledCaptureEffects connects the actual grammar's recursive return-effect certificates, positive parent consumption, parameterized recursive producers and parent restoration to the same-physical-clock proof. Complete source/root and finite scope/effect checks yield original-string language and residual preservation, finite failure/definedness and all-clock undefinedness. The five-rule example generates 97 fixed Seq rules. Symbolic proofs cover every parent length and recursion depth with actual unbounded captures and child doubling. Kernel cases cover alternative post-consumption choice paths, incorrect continuation distribution, missing initialization/preflight, early argument failure, value-dependent nullable repetition and malformed scope/body rejection.
 
 Validation: full lake build including Audit passes (1,310 jobs). All 3,075 related public dependency reports use only standard axioms (3,014) or no axioms (61); the 97 new reports are guarded in Audit. The PR has 1,443 new guarded dependency checks across 134 new Lean modules. Consuming body repetition, general header recursion, arbitrary body atoms, multiple-parent clients and the unrestricted Par/Seq class comparison remain unresolved.
+
+## Consuming delimited repetition through EOF (latest extension)
+
+RepeatedWordPattern synchronizes arbitrarily many repetitions of any fixed nonempty parameter-index pattern, with arbitrary positive arity, occurrence order and repetition, and unbounded delimiter-free retained words (including empty words). Each unary pass checks its own retained word and skips other segments. Successful full-input passes have the same delimiter count, hence the same unbounded iteration count. The first pass starts after its actual Seq argument endpoint; later iterations use the whole fixed pattern. DelimitedRepeatEvaluation derives the real greedy evStar semantics from strict progress and finite traces, with no iteration bound or language oracle.
+
+RepeatedWordTransfer preserves actual Par/Seq calls at every physical clock in arbitrary caller environments, conditional on local actual correspondence and checked capture freedom. RepeatedCopySyntax/Correspondence/Compiler discharge those premises using complete raw-source/root checks, parent requirements, return effects and simultaneous client-table induction, including positive parent consumption and parameterized producer calls inside actuals. Original-string languages, residuals, finite failure/definedness and all-clock undefinedness are preserved.
+
+The five-rule source generates nine fixed Seq rules. Symbolic proofs cover every parent length and every positive consuming repetition count with real captures. Kernel checks include recursive positive producers, 0/7/21 separator inputs with empty actuals, excess input, invalid scope/patterns, initialization/preflight omissions, early argument failure and true cycles undefined on every input and clock. Without EOF the two real unary passes on ab#a#ab#b# stop after different iteration counts; this is a limitation of the proposed transformation, not a class separator. General stopping frontiers, arbitrary bodies and unrestricted Par/Seq class equality/separation remain unresolved.
+
+Validation: full lake build including Audit passes (1,319 jobs). All 3,167 related public theorem dependency reports use standard Lean axioms (3,100) or none (67); the 92 new reports have matching Audit guards. This extension adds nine Lean modules.
+
+## Exact general stopping frontiers (evaluator theorem, not a new grammar compiler)
+
+SynchronizedStarFrontier proves that greedy iteration of a synchronized conjunction stops at the maximum remaining-input position among the independently iterated component evaluators. The premises concern one actual finite consuming step, not iteration bounds or a termination oracle. RepeatedWordFrontier discharges them for arbitrary nonempty delimited parameter patterns and delimiter-free retained tuples, with arbitrary input, residual and valid source/view tables. An arbitrary continuation runs at that calculated frontier in the original environment. No EOF or finite suffix guard is used.
+
+RepeatedFrontierTransfer connects this formula to actual Par calls and actual unary Seq calls at their differing argument endpoints, in an arbitrary caller environment, when actuals and the first complete iteration succeed. Zero iterations are handled separately. The two real examples with a/ab captures show that either component can stop first; neither fixed consuming component is correct on all inputs, and using the other frontier loses the original continuation.
+
+The maximum operation is an explicit Lean calculation on evaluator results, not an MExp, a grammar closure assumption or a general Par-to-Seq construction. Selecting that frontier in a Seq grammar remains unresolved, as do unrestricted class equality/separation. The established EOF compiler retains its stated scope.
+
+Validation after this addition: full lake build including Audit passes (1,323 jobs). All 3,193 related public dependencies are standard (3,125) or axiom-free (68). This addition has 26 public theorem guards in four new modules; PR69 totals 118 new guards across 13 new Lean modules.
+
+## Finite status-only selection cannot repair the frontier (restricted compiler obstruction)
+
+FrontierStatusSelector compiles arbitrary finite branching selectors into actual first-order expressions. Guards may combine whole-projection lookahead with sequence, ordered choice, negation and zero-width repetition, including undefined nullable loops. Leaves select one of the two original consuming projections, fail or diverge. When both probes succeed, the selected leaf is independent of their returned endpoints.
+
+FrontierSelectorObstruction proves that every such selector fails to preserve the original residual on one of the two fixed a/ab examples. All positive evaluation clocks give the same output; no clock and no alternative finite derivation recovers the correct residual observation. The fixed projection grammar and all generated roots are first-order. This excludes this status-only selector compiler, not arbitrary Seq grammars or language-preserving translations. Input-sensitive guards, additional recursive selector rules and different retained-word representations are outside the theorem.
+
+Validation: full lake build including Audit passes (1,325 jobs); all 3,210 related public dependency reports are standard (3,140) or axiom-free (70). This addition has 17 guarded public theorems in two modules; PR69 totals 135 new guards across 15 new Lean modules. General frontier selection and unrestricted class equality/separation remain unresolved.
+
+## Whole-block recapture removes the EOF restriction for fixed copy periods
+
+RecapturedCopyBlock/Transfer and RecapturedCopySyntax/Correspondence/Compiler translate a bare greedy star of any fixed nonempty delimited parameter pattern. After original-order actual preflight, finite origin projections test the first complete block. Failure gives zero-iteration success at the original position. On success, a fixed delimiter skeleton captures the entire real first block B and calls one new unary Seq row whose body is param_0*. The Seq argument has consumed the first block, so the body consumes only subsequent copies. Source pattern evaluation equals literal B; the scanner's actual captured span is proved to equal B. No comparison of individual projection endpoints, EOF guard, synthetic input or endpoint oracle is used.
+
+The local theorem preserves all physical clocks, arbitrary caller environments and transformed actuals. Full raw grammar/root, scope, original capture effects, parent requirements and recursive return-effect closure are checked. Simultaneous client-row induction preserves original-string languages, residuals, finite failure/definedness and all-clock undefinedness in arbitrary checked control contexts. The older status-only selector obstruction remains valid: this construction captures a different composite word and uses a new consuming row.
+
+The former a/ab frontier counterexamples now return the correct five/four-character residuals and admit their original continuations. Actual Seq capture is ab#a#. The five-rule recursive source generates nine fixed unary/helper Seq rules. Symbolic proofs cover every parent length, every positive block repetition count and every recursion depth with child doubling and parent restoration. Kernel runs also cover zero iterations, failed preflight, removed first-block verification, empty original captures consuming delimiters with a partial-block remainder, recursive consuming producers and true cycles.
+
+Validation: full lake build including Audit passes (1,332 jobs). All 3,274 related public dependencies use standard Lean axioms (3,204) or none (70). This extension adds 64 guarded public theorems in seven modules; PR69 totals 199 new guards across 22 new Lean modules. The period remains a fixed delimited parameter list. General PEG iteration with varying per-iteration consumption, arbitrary bodies, multiple-parent clients and unrestricted Par/Seq equality/separation remain unresolved.
+
+## Input-dependent iteration control after a recaptured anchor
+
+CopyPeriodControl and ControlledPeriodTransfer/Syntax/Correspondence/Compiler translate `(P(W); T[P(W)])*` where P is a fixed nonempty delimited parameter pattern and T is arbitrary finite PEG control over a complete-block atom, terminals and independent nullary recursive helpers. T includes sequence, committed choice, negation and consuming/nullable stars, so different iterations may consume different words and arbitrarily different amounts of input.
+
+After checked actual preflight and a first-anchor test, a unary probe captures the real anchor block B and evaluates T[B]. Failure rolls the whole first iteration back to zero consumption; undefinedness propagates. On success another unary call captures B and executes T[B];(param_0;T[B])*. Source and target use the same physical helper-row clock. Helper prefix scope/closure and all source/root/capture/parent/return-effect checks are finite. The source tuple is related to the real singleton B environment throughout control and helper returns; whole-source language, residual, finite failure/definedness and all-clock undefinedness are preserved.
+
+The five-rule source generates ten fixed Seq rules. Symbolic proofs cover every parent length, every nonempty Boolean branch sequence and every recursive nesting depth, with child doubling and parent restoration. Kernel executions cover consuming inner repetition, negative retained-block tests, rollback after committed-choice failure, omitted-probe errors, recursive balanced helpers followed by retained-block replay, exact helper clocks and value-independent nullable divergence at every clock.
+
+Validation: full lake build including Audit passes (1,339 jobs). All 3,335 related public dependency reports are standard (3,262) or axiom-free (73). This addition has 61 guarded public theorems in seven modules; PR69 totals 260 new guards across 29 new Lean modules. General body control that uses tuple components separately, parameterized calls inside the iteration tail, anchor-free iteration and unrestricted Par/Seq equality/separation remain unresolved.
