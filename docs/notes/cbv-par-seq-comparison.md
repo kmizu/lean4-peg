@@ -16,6 +16,65 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 消費した分岐の後続を、束縛済みの保持環境へ融合する
+
+`RetainedContinuationSyntax/Algebra/Compiler` は、`(P.exp leaves); C`という元headerを
+扱う。Pは選択・否定・先読みguardの有限treeであり、Cは任意の一階式である。
+Cは実際に消費し、古いparameterを読み、parameterized callや反復も含められる。
+最終Seq化には、生成後の型・effect検査の通過が必要である。
+元の全call宣言とrootを有限検査し、生成した葉群を`FieldPlanCompiler`へ接続する。
+
+消費後の位置で元actualを取り直さず、Pの正の実行経路の葉にCを融合する。
+元葉が`anchor; B`なら生成コピーは`anchor; (B; C)`で、捕捉値は同じentry環境に残る。
+再捕捉patternはBだけでなくCが読むslotもcoverする必要があり、生成後の型・effect・
+参照検査で確認する。query専用経路にはC付きコピーを作らない。否定が成功して原点を
+保持する経路には空patternのC葉を作るため、そこでlive値の束縛が必要なら検査で拒否する。
+
+選択の単純分配`(a/b); C → (a; C)/(b; C)`は正しくない。
+`committed_suffix`は、代わりに`(&a; a; C) / (&!a; b; C)`が全ての部分結果を保つことを
+任意grammar/table/strategyで証明する。aが成功してCが失敗しても、bへ戻らない。
+未定義のa/Cも有限失敗やfallback成功へ変えない。guardを含む残りのcontrolは原点を保つ
+条件だけを使って構成し、コピーのlookupと元の選択判定を有限な生成データから導く。
+
+`related`は元bodyと生成bodyの任意tableでの局所一致を証明し、既存
+`SemanticBodyRewrite.physical`で元header群の再帰を閉じる。
+`RetainedContinuationCompiler.physical/observations_iff/language_translation/undefined_iff`
+は、この正規化・原点dispatch・型つきPar→Seqを合成し、全元入力・全physical clock・
+全有限観測・元文字列言語・全clock未定義を保存する。呼出し回数の意味を変える外部状態は
+モデルに含めず、同じtable/位置での純粋な再評価だけを使う。入力の符号化やpaddingはない。
+
+実例の元規則をεを省いて書くと、次のようになる。
+
+```
+F(w) = (w '#' ('!' / '(' F(ww) ')') / w '@' '?'); ';' H(w) w
+H(w) = w '?'
+G(v) = v '$' v
+start = G(F('a'*)) EOF
+```
+
+Fは分岐が消費した後に`;`を読み、同じ古い値をHのactualとして渡し、戻ってその値を
+再利用する。実際にその後続位置で元actual`a*`を再評価すると空語が捕捉され、
+保持していた`a`で成功する同じ後続が失敗することもkernel検証した。
+正しい生成先は後続へ値を保持し、子の倍長値で親を置き換えない。
+否定とguardの別headerも合わせ、元はarity1の5規則、生成Seqは固定20規則である。
+
+`RetainedContinuationProofs`は、`end(n)=; a^n ? a^n`、
+`t(n,0)=a^n @ ? end(n)`、`t(n,d+1)=a^n # ( t(2n,d) ) end(n)`について、
+全n/depth/余分clock/元位置/後続文字列の実source行を証明する。
+後続のH呼出しと親の再利用、外側の実捕捉`t(n,d)`、固定生成Seqでの
+`t(n,d) $ t(n,d)`のclock `d+3`受理まで接続した。空捕捉と捕捉長非有界を含む。
+単純分配だけが誤受理する入力、後続が必要とする未保持slotの拒否、独立prefixだけでは
+live bindingを供給できない例、nullable suffixの全入力非受理と成功prefix後の全clockNoneも
+検証している。
+
+**先行する選択枝が、後続で必要な値も既に束縛できる場合の正規化**である。
+独立prefixだけが消費してから初めて任意のlive値を読む一般の場合や、任意Parをこの形へ
+分解する証明は残る。Par/Seq全言語クラスの一致・分離は未解決のままである。
+
+今回 5 新 modules・46 新 guard。全 1,406 jobs/Audit と関連 3,910 公開依存
+（標準 Lean 公理 3,826、無公理 84）を検証。PR70は新 Lean 18 modules・193 guard。
+新しい sorry/axiom/native_decide はない。
+
 ## 共通の先頭再照合を持たない本体を、枝別の型つきheaderへ分配する
 
 `FieldPlanSyntax/Normalization/Compiler` は、元headerの本体全体を一つの再照合patternで

@@ -1,3 +1,8 @@
+import MacroPeg.CBV.RetainedContinuationSyntax
+import MacroPeg.CBV.RetainedContinuationAlgebra
+import MacroPeg.CBV.RetainedContinuationCompiler
+import MacroPeg.CBV.RetainedContinuationExamples
+import MacroPeg.CBV.RetainedContinuationProofs
 import MacroPeg.CBV.FieldPlanSyntax
 import MacroPeg.CBV.FieldPlanNormalization
 import MacroPeg.CBV.FieldPlanCompiler
@@ -38970,3 +38975,216 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.FieldPlanProofs.outer_capture_length_unbounded' depends on axioms: [propext] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.FieldPlanProofs.outer_capture_length_unbounded
+
+-- Retained continuations after consuming branch control.
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationSyntax.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationSyntax.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationSyntax.selected_global' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationSyntax.selected_global
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationSyntax.original_part' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationSyntax.original_part
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationSyntax.added_part' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationSyntax.added_part
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationSyntax.raw_spec' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationSyntax.raw_spec
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationSyntax.normalized_spec' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationSyntax.normalized_spec
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationSyntax.source_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationSyntax.source_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationSyntax.normalized_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationSyntax.normalized_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationSyntax.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationSyntax.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationAlgebra.seq_assoc' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationAlgebra.seq_assoc
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationAlgebra.guard_congr' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationAlgebra.guard_congr
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationAlgebra.committed_suffix' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationAlgebra.committed_suffix
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationAlgebra.negative_guard' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationAlgebra.negative_guard
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationAlgebra.base_exp' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationAlgebra.base_exp
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationAlgebra.fusion' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationAlgebra.fusion
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationAlgebra.related' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationAlgebra.related
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationAlgebra.physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationAlgebra.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationCompiler.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationCompiler.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationCompiler.firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationCompiler.firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationCompiler.physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationCompiler.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationCompiler.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationCompiler.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationCompiler.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationCompiler.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationCompiler.undefined_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationCompiler.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationCompiler.rule_count' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationCompiler.rule_count
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationExamples.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationExamples.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationExamples.generated_layout' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationExamples.generated_layout
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationExamples.every_input_every_clock' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationExamples.every_input_every_clock
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationExamples.original_string_language' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationExamples.original_string_language
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationExamples.direct_consuming_continuation_runs' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationExamples.direct_consuming_continuation_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationExamples.suffix_does_not_replace_the_parent_with_the_child' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationExamples.suffix_does_not_replace_the_parent_with_the_child
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationExamples.rerunning_the_actual_at_the_continuation_loses_the_value' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationExamples.rerunning_the_actual_at_the_continuation_loses_the_value
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationExamples.predicate_continuations' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationExamples.predicate_continuations
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationExamples.simple_distribution_is_wrong' depends on axioms: [propext,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationExamples.simple_distribution_is_wrong
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationExamples.future_live_fields_must_be_retained' depends on axioms: [propext,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationExamples.future_live_fields_must_be_retained
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationExamples.independent_prefix_does_not_supply_a_live_binding' depends on axioms: [propext,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationExamples.independent_prefix_does_not_supply_a_live_binding
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationExamples.undefined_suffix_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationExamples.undefined_suffix_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationExamples.nullable_suffix_never_becomes_a_fallback_success' depends on axioms: [propext,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationExamples.nullable_suffix_never_becomes_a_fallback_success
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationExamples.nullable_suffix_after_a_successful_prefix' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationExamples.nullable_suffix_after_a_successful_prefix
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationProofs.helper_call' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationProofs.helper_call
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationProofs.continuation_at' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationProofs.continuation_at
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationProofs.fresh_doubled_capture' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationProofs.fresh_doubled_capture
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationProofs.producer_rows' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationProofs.producer_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationProofs.producer_result' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationProofs.producer_result
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationProofs.outer_capture' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationProofs.outer_capture
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationProofs.source_and_generated_all_trees' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationProofs.source_and_generated_all_trees
+
+/-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationProofs.outer_capture_length_unbounded' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RetainedContinuationProofs.outer_capture_length_unbounded
