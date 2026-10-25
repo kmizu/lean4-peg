@@ -1,3 +1,7 @@
+import MacroPeg.CBV.CapturedOriginQuery
+import MacroPeg.CBV.CapturedOriginNormalization
+import MacroPeg.CBV.CapturedOriginCompiler
+import MacroPeg.CBV.CapturedOriginExamples
 import MacroPeg.CBV.GuardedPairSyntax
 import MacroPeg.CBV.GuardedPairSimulation
 import MacroPeg.CBV.GuardedPairCorrespondence

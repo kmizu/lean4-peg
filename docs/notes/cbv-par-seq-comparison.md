@@ -16,6 +16,31 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 保持値を再照合した先の検査を入口へ
+
+`CapturedOriginQuery`は、元位置から`&(param0;C)`または`&(param1;C)`を実行する検査を扱う。
+Cの両render先がclosedであることを有限検査し、実scanner引数から得た保持値なら、
+その再照合と元scannerが同じ終端に達することを証明する。
+検査をseq/alt/not/starで組み合わせても各部品は元位置へ戻るため、
+この対応を全ての部分結果に持ち上げられる。starの空成功による未定義も保存する。
+これは任意の位置でparamをscannerへ置き換える法則ではない。
+
+`CapturedOriginNormalization`は、保持値依存の元queryをclosedな入口queryへ直す。
+実capture tupleに限った行対応を再帰表で同clockに閉じ、全root観測を保存する。
+`CapturedOriginCompiler`は独立実引数の元順序preflight、query書換え、Seq入口を接続し、
+元clock k→Seq2k／Seqk→元kと全入力の元文字列言語・失敗・全clock未定義を証明する。
+生成先は固定した12規則である。
+
+実例は`&(param0;'c') / &(param1;'b')`で、保持値を入れ替えると同じ入力上で検査結果が変わる。
+旧closed検査は元queryを拒否するが、新検査を通した生成queryはclosedである。
+両停止順序n=1,2,4、親子順序反転と親二値復元、再照合後の実再帰helperもkernel実行した。
+実捕捉済みqueryのnullable starはcanonical scanner引数を渡す元文法とSeqで全入力全clock未定義。
+独立実引数が未定義ならquery以前のpreflightを保ち、これを省くと誤受理する反例も検証した。
+
+後続Cが親保持値を再び読む場合は拒否する。最大scanner frontier・指定消費headと、
+元位置から一つの保持値を再照合してclosed後続を読む検査形はまだ必要である。
+一般の捕捉依存query／独立引数差分／Par/Seq言語クラスの一致・分離は未解決。
+
 ## 捕捉前の実再帰検査を零引数の入口で保つ
 
 `GuardedPairSyntax/Simulation/Correspondence`は、元の二捕捉bodyを
@@ -10450,3 +10475,65 @@ consuming prefix, an arbitrary capture endpoint or a query depending on the
 parent's captured environment. Maximal scanner-frontier successes and the
 specified maxScanner continuation entry remain required. General Par/Seq
 class equality or genuine language separation remains unresolved.
+
+
+## Retained-value origin queries with checked closed continuations
+
+CapturedOriginQuery adds a checked plan language for origin tests. A leaf
+is a closed test or &(param_k;C), with k selecting one of the two actual
+captures and C checked closed under both renderings. The original query may
+therefore depend directly on its retained values. Plans compose using seq,
+ordered choice, negation and star. Every successful component returns to
+its original input position; nullable success under star remains undefined.
+
+Actual scanner argument evaluation derives the two stored words, and sound
+source tables derive their successful prefix alignments. Replaying the
+selected parameter at the common origin reaches the same endpoint as its
+scanner. After that point, C's checked closedness removes dependence on the
+parent environment. Structural plan induction proves equality with a closed
+canonical test using the corresponding scanner instead of the parameter,
+including failure and undefinedness. The proof deliberately does not assert
+scanner/parameter equivalence at arbitrary later positions.
+
+CapturedOriginNormalization constructs raw and canonical query lists in the
+same mixed source grammar. Its table relation is restricted to the actual
+capture tuple at the actual source position. Helper and pair rows close
+simultaneously at the same physical clock, invoking the structural expression
+simulation on the canonical query and continuation. Actual source-table
+soundness and finite plan checks discharge the alignment conditions; no
+row semantics or successful-capture premise is accepted as compiler input.
+The result is exact same-clock expression translation for rendered roots,
+not equality of arbitrary artificially supplied capture environments.
+
+CapturedOriginCompiler composes ordered original-argument preflight,
+this query normalization, and the existing guarded Seq header backend by
+finite whole-grammar/root checks. Source clock k refines target clock 2k;
+target clock k refines source clock k, starting with the original grammar.
+All residual observations, failure, unchanged-string language and all-clock
+undefinedness follow. The target grammar and root are fixed before input.
+
+CapturedOriginExamples uses &(param0;'c') / &(param1;'b') so the short
+capture is observed at its following character in either runtime order.
+On the same ab input prefix, swapping retained ab/a to a/ab changes the
+query from success to failure. The earlier closed-query checker rejects
+this original query; the new canonical header query passes. Direct original
+and twelve-rule Seq runs cover n=1,2,4 in both orders, parent/child order
+reversal and parent value restoration. Another checked leaf calls the real
+recursive a-star helper after replay and a literal. A continuation that
+reads another parent parameter is rejected.
+
+For a star of a successful retained replay test, actual canonical scanner
+arguments always produce a nullable success. The raw parameter-query source
+and Seq target are proved undefined for every input and clock. Separately,
+an undefined original first argument remains undefined before the dependent
+query in both original and generated grammars; bypassing that preflight
+incorrectly accepts a concrete payload. The all-input original-language
+correspondence is instantiated for the independently specified argument
+frontend, beyond these finite direct runs.
+
+This extends the earlier closed-origin-query restriction to the checked
+retained-replay test plans. It does not support an arbitrary parent-dependent
+continuation after replay, arbitrary capture endpoints or arbitrary consuming
+body prefixes. Maximal scanner-frontier arguments and the designated actual
+maximum-scanner head remain required; the full language-class comparison
+is still unresolved.
