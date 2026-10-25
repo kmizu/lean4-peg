@@ -1,3 +1,10 @@
+import MacroPeg.CBV.RecapturedCopyBlock
+import MacroPeg.CBV.RecapturedCopyTransfer
+import MacroPeg.CBV.RecapturedCopySyntax
+import MacroPeg.CBV.RecapturedCopyCorrespondence
+import MacroPeg.CBV.RecapturedCopyCompiler
+import MacroPeg.CBV.RecapturedCopyExamples
+import MacroPeg.CBV.RecapturedCopyProofs
 import MacroPeg.CBV.FrontierStatusSelector
 import MacroPeg.CBV.FrontierSelectorObstruction
 import MacroPeg.CBV.SynchronizedStarFrontier

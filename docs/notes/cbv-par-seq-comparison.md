@@ -16,6 +16,56 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 一周分の実入力を再捕捉し、消費反復の任意の停止位置を保存する
+
+`RecapturedCopyBlock/Transfer` と `RecapturedCopySyntax/Correspondence/Compiler` は、
+非空の固定 parameter index 列 `js` の消費反復
+
+```
+H(w_0,...,w_(n-1)) <- ((param_js[0];d); ...; (param_js[last];d))*
+```
+
+を EOF なしで固定 Seq 文法へ翻訳する。各元保持語は区切り `d` を含まず、空語でもよい。
+引数個数・出現順・重複、実捕捉語の長さ、反復回数、停止後の入力と後続は一般である。
+一周の消費語は実 tuple が決まれば `B=encode d W js` という一つの語に固定される。
+
+まず元順の全 actual preflight を行い、元位置から従来の有限 pattern projections で最初の一周を照合する。
+一周目が失敗すれば、元の `star` と同じく元位置で空成功する。一周目が成功すれば、
+区切りだけを読む固定 skeleton scanner でその**一周分の実入力区間を丸ごと新しい一語として捕捉**し、
+新しい unary Seq 規則 `Loop(B) <- (param_0)*` を呼ぶ。
+Seq 引数が一周目を既に消費しているため、本体では残りの周回だけ照合する。
+`B` は区切りを含み、元の個々の捕捉値より大きくてもよい。値を連結して作った架空の入力ではなく、
+`evSeqArgs` が元文字列上で実際に捕捉した値である。
+
+`source_run/star_literal` は元の一周とその反復が `B` の literal 照合と等しいことを証明し、
+`skeleton_run` は元保持語の区切り自由性から scanner の実終点が同じ一周末尾になることを証明する。
+`recapture_call` が scanner から得られる実 capture を `pre_eq` で `B` に同定し、
+新しい Seq 呼出しと元反復の**任意の停止残余**を対応させる。非空 pattern は `B≠[]` を保証する。
+独立した各投影の停止位置を比較する演算も、最大値を返す PEG primitive も必要ない。
+
+`RecapturedCopyTransfer.physical` は元 actual と変換後 actual を任意 caller 環境で評価し、
+全 clock の実呼出し一致を示す。先頭 pattern query が clock 0 で未定義なので、空入力や零周の場合も
+元の user-call 境界を保ち、この backend に別の nullary 初期化 gate は不要である。
+outer preflight が、actual 自体の失敗を零周成功と混同することを防ぐ。
+全 raw 宣言/root、scope、元捕捉の alphabet 条件、親条件と実再帰の戻り値効果を有限検査し、
+既存の client 実表対応と同時帰納して、任意の seq/choice/not/star 文脈と recursive actual を翻訳する。
+元文字列言語、残余、有限失敗、定義性と全 clock 未定義性を保存する。
+
+以前の停止位置反例 `ab#a#ab#b#` と `ab#a#x#a#` は、新しい実 Seq 文法で残余5文字・4文字を正しく返し、
+それぞれの後続を消費して成功する。Seq が実捕捉する語は `ab#a#` である。
+零周入力 `ab#b#` でも元位置を返す。先頭照合を省くと全消費へ誤り、outer preflight を省くと
+actual 失敗を空成功へ誤る実反例を検証した。
+
+親を持つ例は source 5 規則 `[0,0,1,1,4]` から Seq 9 規則 `[0,0,1,1,1,1,1,1,1]` となる。
+`source_and_target_all_trees n count depth` は任意の親語長、任意の正の一階層ごとの反復回数、
+任意の再帰深さを扱い、子語の倍化捕捉と帰還後の親語の復帰を証明する。
+空親を持つ producer の実再帰、空 actual での区切り消費と途中停止、真の cycle の全入力・全 clock 未定義も確認した。
+
+**一周ごとに消費語が変わる任意の PEG 反復は、まだ対象外である。**
+この backend は固定された `param_i;d` の有限列を一周とする。独立 nullary helper、
+親を先頭で再照合する unary client と共通 arity/pattern/d、元保持語の区切り自由性は残る。
+任意の本体・消費 prefix・複数親・先頭再照合なし、および一般 Par/Seq 言語クラスの一致・分離は未解決である。
+
 ## 反復全体の成功判定だけでは停止位置を選べない
 
 `FrontierStatusSelector` は、二つの実 unary projection を probe とする有限 selector を定義し、
@@ -85,7 +135,7 @@ Seq 呼出しの本体は、初回の `afterParts` に続いて通常の view �
 両例の実捕捉値、正しい残余で成功する元の後続、誤った投影で消失する後続、
 零周の場合、先行 actual 失敗、clock 0 未定義を kernel で確認した。
 
-**一般の停止位置を返す Seq 文法は、まだ構成できていない。**
+**この投影選択法では、停止位置を返す Seq 文法は構成できていない。** 固定周期では、上記の一周分再捕捉がこの不足を解消した。
 この投影法を完成するには、各呼出しの残余位置を実際の入力上で比較・選択する手段が必要である。
 今回の `maximum` を文法操作として使う翻訳は提示していない。
 以下の完成済み文法翻訳は引き続き EOF 付きの範囲であり、一般 Par/Seq の一致・分離も未解決である。
@@ -134,7 +184,7 @@ client 実表の同時帰納で、任意の root 文脈・実再帰・actual 内
 真の actual/client cycle は全入力・全 clock で未定義となり、preflight を除くと空入力で誤成功する。
 初期化省略の clock 0 誤成功と、初期化より先の actual 失敗も確認した。
 
-**末尾確認は現時点で必須である。** `js=[1,0]`、保持語 `a` と `ab`、
+**この独立投影法では末尾確認が必要である。** 上記の再捕捉法はこの制限を外す。 `js=[1,0]`、保持語 `a` と `ab`、
 実入力 `ab#a#ab#b#` では、末尾確認を外した二つの unary loop はそれぞれ一周・二周で止まり、
 残余が 5 文字と 0 文字になる。この kernel 反例は、停止位置を任意の後続へ返す翻訳には別の同期が
 必要なことを示す。これは特定の投影法の制限であり、言語クラス分離ではない。
@@ -11637,3 +11687,13 @@ FrontierStatusSelector compiles arbitrary finite branching selectors into actual
 FrontierSelectorObstruction proves that every such selector fails to preserve the original residual on one of the two fixed a/ab examples. All positive evaluation clocks give the same output; no clock and no alternative finite derivation recovers the correct residual observation. The fixed projection grammar and all generated roots are first-order. This excludes this status-only selector compiler, not arbitrary Seq grammars or language-preserving translations. Input-sensitive guards, additional recursive selector rules and different retained-word representations are outside the theorem.
 
 Validation: full lake build including Audit passes (1,325 jobs); all 3,210 related public dependency reports are standard (3,140) or axiom-free (70). This addition has 17 guarded public theorems in two modules; PR69 totals 135 new guards across 15 new Lean modules. General frontier selection and unrestricted class equality/separation remain unresolved.
+
+## Whole-block recapture removes the EOF restriction for fixed copy periods
+
+RecapturedCopyBlock/Transfer and RecapturedCopySyntax/Correspondence/Compiler translate a bare greedy star of any fixed nonempty delimited parameter pattern. After original-order actual preflight, finite origin projections test the first complete block. Failure gives zero-iteration success at the original position. On success, a fixed delimiter skeleton captures the entire real first block B and calls one new unary Seq row whose body is param_0*. The Seq argument has consumed the first block, so the body consumes only subsequent copies. Source pattern evaluation equals literal B; the scanner's actual captured span is proved to equal B. No comparison of individual projection endpoints, EOF guard, synthetic input or endpoint oracle is used.
+
+The local theorem preserves all physical clocks, arbitrary caller environments and transformed actuals. Full raw grammar/root, scope, original capture effects, parent requirements and recursive return-effect closure are checked. Simultaneous client-row induction preserves original-string languages, residuals, finite failure/definedness and all-clock undefinedness in arbitrary checked control contexts. The older status-only selector obstruction remains valid: this construction captures a different composite word and uses a new consuming row.
+
+The former a/ab frontier counterexamples now return the correct five/four-character residuals and admit their original continuations. Actual Seq capture is ab#a#. The five-rule recursive source generates nine fixed unary/helper Seq rules. Symbolic proofs cover every parent length, every positive block repetition count and every recursion depth with child doubling and parent restoration. Kernel runs also cover zero iterations, failed preflight, removed first-block verification, empty original captures consuming delimiters with a partial-block remainder, recursive consuming producers and true cycles.
+
+Validation: full lake build including Audit passes (1,332 jobs). All 3,274 related public dependencies use standard Lean axioms (3,204) or none (70). This extension adds 64 guarded public theorems in seven modules; PR69 totals 199 new guards across 22 new Lean modules. The period remains a fixed delimited parameter list. General PEG iteration with varying per-iteration consumption, arbitrary bodies, multiple-parent clients and unrestricted Par/Seq equality/separation remain unresolved.
