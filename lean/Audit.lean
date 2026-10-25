@@ -1,3 +1,11 @@
+import MacroPeg.CBV.DelimitedCopyCompiler
+import MacroPeg.CBV.DelimitedCopyEvaluation
+import MacroPeg.CBV.DelimitedCopyExamples
+import MacroPeg.CBV.DelimitedCopyProjection
+import MacroPeg.CBV.DelimitedCopySyntax
+import MacroPeg.CBV.DelimitedCopyTemplates
+import MacroPeg.CBV.DelimiterTemplate
+import MacroPeg.CBV.CaptureDelimiterSafety
 import MacroPeg.CBV.RetainedViewFusionAtoms
 import MacroPeg.CBV.RetainedViewFusionCompiler
 import MacroPeg.CBV.RetainedViewFusionCorrespondence
@@ -33386,3 +33394,367 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SubstringCaptureView.advance_observe' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SubstringCaptureView.advance_observe
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyCompiler.render_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyCompiler.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyCompiler.expression_physical' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyCompiler.expression_physical
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyCompiler.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyCompiler.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyCompiler.physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyCompiler.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyCompiler.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyCompiler.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyCompiler.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyCompiler.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyCompiler.defined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyCompiler.defined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyCompiler.undefined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyCompiler.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyEvaluation.source_row' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyEvaluation.source_row
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyEvaluation.short_row' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyEvaluation.short_row
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyEvaluation.long_row' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyEvaluation.long_row
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyEvaluation.short_call' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyEvaluation.short_call
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyEvaluation.long_call' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyEvaluation.long_call
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyEvaluation.physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyEvaluation.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.grammar_layout' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.grammar_layout
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.actual_parallel_captures' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.actual_parallel_captures
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.source_runs' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.source_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.generated_runs' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.generated_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.unchanged_source_seq_fails' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.unchanged_source_seq_fails
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.rejected_copies_and_balance' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.rejected_copies_and_balance
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.actual_residual_preserved' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.actual_residual_preserved
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.different_blocks_in_star' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.different_blocks_in_star
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.contextual_continuation' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.contextual_continuation
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.same_clock' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.same_clock
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.original_language' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.original_language
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.unsafe_capture_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.unsafe_capture_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.omitting_delimiter_condition_is_wrong' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.omitting_delimiter_condition_is_wrong
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.cycle_rows' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.cycle_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.cycle_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.cycle_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.divergent_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.divergent_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.ordered_divergence_source' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.ordered_divergence_source
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.ordered_divergence_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.ordered_divergence_target
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.skipping_preflight_changes_undefinedness' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.skipping_preflight_changes_undefinedness
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.failure_before_divergence' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.failure_before_divergence
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.shorter_capture_not_at_scanner_frontier' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.shorter_capture_not_at_scanner_frontier
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.balanced_capture' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.balanced_capture
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.short_capture' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.short_capture
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.both_unbounded_actuals' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.both_unbounded_actuals
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.copy_block_all_lengths' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.copy_block_all_lengths
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.source_and_target_accept_all_lengths' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.source_and_target_accept_all_lengths
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.unbounded_both_values' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.unbounded_both_values
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.physical_clock_zero_and_one' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.physical_clock_zero_and_one
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyExamples.wrong_actual_body_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyExamples.wrong_actual_body_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyProjection.split_unique' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyProjection.split_unique
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyProjection.prefix_before' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyProjection.prefix_before
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyProjection.projections_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyProjection.projections_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyProjection.block_projections_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyProjection.block_projections_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopySyntax.lexical_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopySyntax.lexical_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopySyntax.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopySyntax.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopySyntax.installed_append' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopySyntax.installed_append
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopySyntax.source_installed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopySyntax.source_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopySyntax.target_installed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopySyntax.target_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopySyntax.source_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopySyntax.source_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopySyntax.short_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopySyntax.short_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopySyntax.long_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopySyntax.long_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopySyntax.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopySyntax.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopySyntax.target_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopySyntax.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopySyntax.queries_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopySyntax.queries_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopySyntax.root_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopySyntax.root_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopySyntax.targetRoot_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopySyntax.targetRoot_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyTemplates.take_free' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyTemplates.take_free
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyTemplates.drop_free' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyTemplates.drop_free
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyTemplates.drop_nil_iff' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyTemplates.drop_nil_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyTemplates.run_lit_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyTemplates.run_lit_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyTemplates.run_gap_sep_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyTemplates.run_gap_sep_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyTemplates.run_eof_iff' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyTemplates.run_eof_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyTemplates.run_gap_eof_iff' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyTemplates.run_gap_eof_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyTemplates.source_accept' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyTemplates.source_accept
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyTemplates.short_accept' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyTemplates.short_accept
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyTemplates.long_accept' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyTemplates.long_accept
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyTemplates.accepts_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyTemplates.accepts_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyTemplates.run_nil_iff' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyTemplates.run_nil_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyTemplates.source_block' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyTemplates.source_block
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyTemplates.short_block' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyTemplates.short_block
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyTemplates.long_block' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyTemplates.long_block
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyTemplates.block_run_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyTemplates.block_run_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimiterTemplate.exp_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimiterTemplate.exp_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimiterTemplate.compile_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimiterTemplate.compile_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimiterTemplate.gap_step' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimiterTemplate.gap_step
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimiterTemplate.gap_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimiterTemplate.gap_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimiterTemplate.action_suffix' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimiterTemplate.action_suffix
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimiterTemplate.action_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimiterTemplate.action_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimiterTemplate.compile_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimiterTemplate.compile_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimiterTemplate.run_full_results' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimiterTemplate.run_full_results
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimiterTemplate.full_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimiterTemplate.full_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureDelimiterSafety.all_of_drop_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureDelimiterSafety.all_of_drop_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureDelimiterSafety.captured_free' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureDelimiterSafety.captured_free

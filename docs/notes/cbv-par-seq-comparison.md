@@ -16,6 +16,52 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 二つの無制限捕捉を原点からの独立検査へ分ける
+
+`DelimitedCopyProjection/DelimiterTemplate/DelimitedCopyTemplates/CaptureDelimiterSafety/DelimitedCopySyntax/Evaluation/Compiler`は、
+二つの元のPar実捕捉`u`/`v`を有限viewに縮めず、コピー検査を別々のSeq呼出しへ分ける。
+元の二引数規則の実本体は`param_1;d;param_0;d;param_1;d`という形、すなわち
+入力の`v d u d v d`部分を消費する。双方の参照は無guardで、捕捉長の上限や候補語辞書は使わない。
+二つのactualは独立したnullary再帰PEG libraryを呼ぶ任意のclosed式で、元の成功終端をscanner frontierへ
+合わせたり、長いactualを短いactualと差分parserへ構文分解したりする条件はない。
+
+Seq側は二つのunary規則を作る。第1の呼出しは実語`u`を捕捉し、残る最初の区間を区切りまで読み飛ばして
+`u`のコピーを検査し、その後の区間も区切りまで読む。第2の呼出しは元の入力位置から実語`v`を捕捉し、
+中間区間を読み飛ばして`v`のコピーを検査する。第1検査は先読みなので、両方とも元の入力位置でactualを評価する。
+実actualの左から右の先読みを先行させ、後のactualが未定義のときに第1コピー検査の有限失敗で短絡しない。
+各検査は一つの無制限実語だけを保持し、同時に二つの重なった語をSeqへ渡す差分parserは作らない。
+
+境界を一意にするため、**実捕捉語に区切り`d`を含めない**条件を有限検査する。
+`MaskedScannerAbsorption`の候補mask生成と閉包検査を再利用し、actualの消費経路が`d`を含まない有限alphabet内であることを確認する。
+これは最大run終端の条件ではない。負の先読み内部は消費経路へ含めず、未定義の再帰helperも停止仮定なしで扱う。
+libraryの全宣言はnullaryで参照範囲を有限検査し、コピー規則へcallbackしない。
+元の全宣言と開始式も有限AST一致で確認する。入力全体をそのalphabetへ制限したり、入力を符号化したりしない。
+
+`block_run_eq`は、両actualの物理的な共通原点とdelimiter freedomから、実際の後続suffix変換そのものの一致を証明する。
+第1・第2検査が異なるコピー境界を選ばないことも、区切りの一意性から導く。
+実Par/Seq表は同physical clockで対応し、clock0の未確定行も保存する。
+`DelimitedCopyCompiler.Term`はコピー区間・通常helper・文字・seq/alt/not/starの任意の組合せを許し、
+その全入力・全残余・有限失敗・有限実行存在・全clock未定義と、元文字列受理言語を保存する。
+語の意味、停止性、差分parserの存在をコンパイラへの仮定として渡さない。
+
+主例は`A=a* b`、`B ← a B c / b`の二つの独立parserで、元arity`[0,0,0,0,2]`から
+固定Seq `[0,0,0,0,1,1]`へ。実捕捉は`u=a^n b`と`v=a^n b c^n`で、
+任意n・任意後続suffixについてその`DerivesArgsPar`を証明した。
+任意の固定上限を両方の実捕捉長が超えることと、任意nの`v#u#v#`を元・生成双方が受理することも証明した。
+n=0/1/2/4の双方clock12直接実行、二種類のコピー違いと初回balance違いの拒否、
+残余`!X`の保存、異なる長さのblockをstarで反復する例、選択・否定・後続literalの文脈をkernel検証した。
+`A`の実終端はalphabet最大runの途中にあり、従来のfrontier条件を満たさない。
+後のactualの循環は全入力・全clock未定義、逆順の有限失敗も保存する。
+先読みpreflight省略で未定義が有限失敗になる反例、区切りを捕捉した場合の誤変換と検査拒否、
+不正な実本体の拒否、pure actualのclock0/1対応も検証した。
+
+`FiniteResidualControl.no_finite_summary`は、残り入力が`c^m`だけで、opaqueな`a^n b`と
+prefixだけから選んだ有限状態を渡すインターフェースの不可能性である。
+今回のコピー言語は後で元の語が再出現し、上記の検査は入力原点からparserを実行する。
+その不可能性定理を破ったとも、今回の言語がSeqを分離するとも主張しない。
+一般の独立actualの差分生成、任意の二保持値本体・parameter依存actual・libraryからのcallbackへの一般化と、
+Par/Seq言語クラス全体の一致・分離は引き続き未解決である。
+
 ## 一つの無制限保持語と他の有限viewを同時に運ぶ全体変換
 
 `SubstringCaptureView`と`RetainedViewFusionSyntax/Declarations/Atoms/Dispatch/Evaluation/Correspondence/Compiler`は、
@@ -11133,3 +11179,40 @@ composed a;payload filter succeeds with the correct substring view and fails wit
 The remaining restrictions are the leading first-word replay in positive-arity source rules and
 finite-suffix references to other captured words. Arbitrary replay of multiple independent
 unbounded retained words, and general original-string Par/Seq equality or separation, remain open.
+
+
+## Independent original-origin projections of two unbounded captures
+
+The DelimitedCopy modules translate a source two-argument rule with body
+param_1;d;param_0;d;param_1;d, consuming a v d u d v d block for real actual captures u/v.
+Neither value is replaced by finite metadata and neither replay has a finite suffix guard.
+Actuals may be arbitrary closed expressions over an independent nullary mutually recursive PEG
+library. Finite capture-mask and closure checks establish that consumed data uses an alphabet
+excluding the delimiter; they require no maximal scanner endpoint, parser factorization, capture
+length bound, finite word palette or termination assumption. The library cannot call the copy rule.
+
+Two unary Seq users retain u and v separately. The u pass starts after capturing u, skips the
+rest of the first word to d, checks u, and skips the third word to d. It runs in lookahead.
+The v pass starts from the original position, captures v, skips the middle word and checks v.
+Original left-to-right actual preflight runs before either projection. Unique delimiter splitting
+proves that both passes select the same boundaries and return the actual source suffix after the
+final d. Block suffix transformers, actual physical tables at every same clock, finite failure,
+finite-run existence and all-clock undefinedness agree. Raw declaration/root AST checks compose
+these blocks under ordinary helper, seq/choice/not/star and character control. The source input is
+unchanged, including all text after a block; there is no input encoding or full-input alphabet bound.
+
+The example has A=a* b and B←a B c / b. Source arities [0,0,0,0,2] become fixed target arities
+[0,0,0,0,1,1]. Actual DerivesArgsPar captures [a^n b,a^n b c^n] are proved for every n and arbitrary
+continuation, with both values exceeding every fixed length bound. Both grammars accept v#u#v#
+for every n. Direct kernel runs at clock12 cover n=0/1/2/4, copy/balance rejection, residual !X,
+star over blocks with different n, and choice/negation/literal continuation contexts. A's successful
+endpoint is strictly before the alphabet scanner frontier. Later-actual cycles stay undefined for
+all inputs/clocks; early failure still precedes them. Counterexamples establish why ordered preflight
+and delimiter safety are checked, and malformed actual declarations are rejected. Pure actuals
+retain the precise unresolved/resolved distinction at physical clocks0/1.
+
+The earlier no_finite_summary theorem concerns only the bare suffix c^m and prefix-selected finite
+control plus opaque a^n b. This construction instead reruns complete parsers from the original
+position and checks later copies; it is not a contradiction of that interface theorem or a language
+class separator. Arbitrary two-retained-value bodies, parent-dependent actuals and callbacks from
+the independent library are not covered here. The general original-string class question remains open.

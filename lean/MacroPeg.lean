@@ -875,3 +875,12 @@ import MacroPeg.CBV.RetainedViewFusionEvaluation
 import MacroPeg.CBV.RetainedViewFusionExamples
 import MacroPeg.CBV.RetainedViewFusionSyntax
 import MacroPeg.CBV.SubstringCaptureView
+
+import MacroPeg.CBV.DelimitedCopyCompiler
+import MacroPeg.CBV.DelimitedCopyEvaluation
+import MacroPeg.CBV.DelimitedCopyExamples
+import MacroPeg.CBV.DelimitedCopyProjection
+import MacroPeg.CBV.DelimitedCopySyntax
+import MacroPeg.CBV.DelimitedCopyTemplates
+import MacroPeg.CBV.DelimiterTemplate
+import MacroPeg.CBV.CaptureDelimiterSafety
