@@ -1,3 +1,9 @@
+import MacroPeg.CBV.DelimitedValueSafety
+import MacroPeg.CBV.RecursiveFieldSyntax
+import MacroPeg.CBV.RecursiveFieldCorrespondence
+import MacroPeg.CBV.RecursiveFieldCompiler
+import MacroPeg.CBV.RecursiveFieldExamples
+import MacroPeg.CBV.RecursiveFieldProofs
 import MacroPeg.CBV.CopyFieldCapture
 import MacroPeg.CBV.TupleFieldControl
 import MacroPeg.CBV.TupleFieldTransfer
@@ -36809,3 +36815,203 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.TupleFieldExamples.individual_words_in_star_and_negation
+
+/-! Fresh independent tuple values across recursive Par/Seq calls. -/
+/-- info: 'Shallot.MacroPeg.CBV.TupleFieldTransfer.physical_of_body' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TupleFieldTransfer.physical_of_body
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedValueSafety.checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedValueSafety.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedValueSafety.suffix_shape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedValueSafety.suffix_shape
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedValueSafety.captured_free' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedValueSafety.captured_free
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldSyntax.emitArgs_length' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldSyntax.emitArgs_length
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldSyntax.source_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldSyntax.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldSyntax.args_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldSyntax.args_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldSyntax.emit_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldSyntax.emit_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldSyntax.emitArgs_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldSyntax.emitArgs_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldSyntax.args_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldSyntax.args_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldSyntax.emitArgs_get' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldSyntax.emitArgs_get
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldSyntax.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldSyntax.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldCorrespondence.expression_of_body' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldCorrespondence.expression_of_body
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldCorrespondence.arguments_physical' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldCorrespondence.arguments_physical
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldCorrespondence.physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldCorrespondence.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldCompiler.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldCompiler.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldCompiler.firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldCompiler.firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldCompiler.physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldCompiler.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldCompiler.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldCompiler.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldCompiler.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldCompiler.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldCompiler.undefined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldCompiler.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldExamples.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldExamples.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldExamples.every_input_every_clock' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldExamples.every_input_every_clock
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldExamples.source_arities' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldExamples.source_arities
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldExamples.generated_arities' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldExamples.generated_arities
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldExamples.short_doubled' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldExamples.short_doubled
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldExamples.fresh_child_values' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldExamples.fresh_child_values
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldExamples.word_at' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldExamples.word_at
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldExamples.fresh_child_captures' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldExamples.fresh_child_captures
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldExamples.recursive_inputs' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldExamples.recursive_inputs
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldExamples.generated_recursive_inputs' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldExamples.generated_recursive_inputs
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldExamples.bad_parent_restoration_rejected' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldExamples.bad_parent_restoration_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldExamples.missing_component_rejected' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldExamples.missing_component_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldExamples.delimiter_in_actual_rejected' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldExamples.delimiter_in_actual_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldExamples.unchecked_positive_producer_rejected' depends on axioms: [propext,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldExamples.unchecked_positive_producer_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldExamples.actual_source_declaration_is_checked' depends on axioms: [propext,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldExamples.actual_source_declaration_is_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldExamples.recursive_query_in_actual_is_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldExamples.recursive_query_in_actual_is_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldExamples.partial_actual_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldExamples.partial_actual_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldExamples.partial_actual_both_undefined' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldExamples.partial_actual_both_undefined
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldExamples.value_dependent_nullable_body_checked' depends on axioms: [propext,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldExamples.value_dependent_nullable_body_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldExamples.empty_word_nullable_star_propagates' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldExamples.empty_word_nullable_star_propagates
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldProofs.row_all_trees' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldProofs.row_all_trees
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldProofs.initial_captures' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldProofs.initial_captures
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFieldProofs.source_and_target_all_trees' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFieldProofs.source_and_target_all_trees

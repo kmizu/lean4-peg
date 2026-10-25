@@ -53,19 +53,20 @@ theorem head_firstOrder (base arity : Nat) (d : Char) (js : List Nat) (args : Li
 /-- The original actuals may overlap or contain calls. Their local evaluation
 correspondence and delimiter freedom are the interface to the caller compiler.
 The body after the anchor can use the tuple components separately. -/
-theorem physical (bodies : List MExp) (g h : MGrammar) (base : Nat) (d : Char)
+theorem physical_of_body (g h : MGrammar) (base : Nat) (d : Char)
     (j : Nat) (js : List Nat) (e : MExp)
-    (hb : RecursiveParserStability.Valid bodies)
-    (hgs : RecursiveParserStability.Installed bodies g)
-    (hhs : RecursiveParserStability.Installed bodies h)
+    (emittedBody : MExp) (hem : emittedBody.FirstOrder)
     (args emitted : List MExp) (hlen : emitted.length=args.length) (hn : 0<args.length)
-    (hc : TupleFieldControl.check bodies.length args.length e=true)
     (hscope : ∀ i∈j::js, i<args.length)
     (cover : ∀ i, i<args.length → i∈j::js)
     (hsource : ruleAtM g.rules base=some ⟨args.length,sourceBody d (j::js) e⟩)
-    (hi : Installed h base args.length d (j::js) e)
+    (hi : Installed h base args.length d (j::js) emittedBody)
     (hg : g.FirstOrder) (hfo : MExp.FirstOrderArgs args)
     (x : List Char) (E : List (List Char)) (k p : Nat) (hp : p≤x.length)
+    (hbody : ∀ m, m<k → ∀ W : List (List Char), W.length=args.length →
+      (∀ i, (hii : i<W.length) → Free d W[i]) → ∀ q, q≤x.length →
+      evV g x .callByValuePar (tblV g x .callByValuePar m) W e q=
+        evV h x .callByValueSeq (tblV h x .callByValueSeq m) W emittedBody q)
     (he : ∀ i, (hii : i<args.length) → evV g x .callByValuePar (tblV g x .callByValuePar k) E args[i] p=
       evV h x .callByValueSeq (tblV h x .callByValueSeq k) E (emitted[i]'(by omega)) p)
     (hfree : ∀ i, (hii : i<args.length) → ∀ q,
@@ -116,8 +117,39 @@ theorem physical (bodies : List MExp) (g h : MGrammar) (base : Nat) (d : Char)
             rw [CallLookahead.evV_peek,hquery]
             change CallLookahead.peek p (some ((run d W (sourceParts d (j::js)) (sfx x p)).map List.length))=_
             rw [hfirst]; rfl
-          rw [evV_seq_ok hguard,TupleFieldControl.entry bodies g h hb hgs hhs
-            (base+args.length) args.length d (j::js) e hc hi.entry x E W hwl cover hsc hwfree k p hp rest hfirst]
-          rw [sourceBody,evV_seq_ok (by rw [compile_eval g x .callByValuePar _ W d _ p hp,hfirst]; rfl)]
+          rw [evV_seq_ok hguard,CopyFieldCapture.entry h
+            (base+args.length) args.length d (j::js) emittedBody hem hi.entry x E W hwl cover hsc hwfree k p hp rest hfirst]
+          have hstep : evV g x .callByValuePar (tblV g x .callByValuePar k) W
+              (compile d (sourceParts d (j::js))) p=some (some rest.length) := by
+            rw [compile_eval g x .callByValuePar _ W d _ p hp,hfirst]; rfl
+          rw [sourceBody,evV_seq_ok hstep]
+          exact hbody k (by omega) W hwl hwfree rest.length
+            (evV_ok (tblV_ok _ _ _ k) _ p hp _ hstep)
+
+theorem physical (bodies : List MExp) (g h : MGrammar) (base : Nat) (d : Char)
+    (j : Nat) (js : List Nat) (e : MExp)
+    (hb : RecursiveParserStability.Valid bodies)
+    (hgs : RecursiveParserStability.Installed bodies g)
+    (hhs : RecursiveParserStability.Installed bodies h)
+    (args emitted : List MExp) (hlen : emitted.length=args.length) (hn : 0<args.length)
+    (hc : TupleFieldControl.check bodies.length args.length e=true)
+    (hscope : ∀ i∈j::js, i<args.length)
+    (cover : ∀ i, i<args.length → i∈j::js)
+    (hsource : ruleAtM g.rules base=some ⟨args.length,sourceBody d (j::js) e⟩)
+    (hi : Installed h base args.length d (j::js) e)
+    (hg : g.FirstOrder) (hfo : MExp.FirstOrderArgs args)
+    (x : List Char) (E : List (List Char)) (k p : Nat) (hp : p≤x.length)
+    (he : ∀ i, (hii : i<args.length) → evV g x .callByValuePar (tblV g x .callByValuePar k) E args[i] p=
+      evV h x .callByValueSeq (tblV h x .callByValueSeq k) E (emitted[i]'(by omega)) p)
+    (hfree : ∀ i, (hii : i<args.length) → ∀ q,
+      evV g x .callByValuePar (tblV g x .callByValuePar k) E args[i] p=some (some q) → Free d (pre x p q)) :
+    evV g x .callByValuePar (tblV g x .callByValuePar k) E (.call base args) p=
+      evV h x .callByValueSeq (tblV h x .callByValueSeq k) E (head base args.length d (j::js) emitted) p := by
+  apply physical_of_body g h base d j js e e (TupleFieldControl.firstOrder _ _ e hc)
+    args emitted hlen hn hscope cover hsource hi hg hfo x E k p hp
+  · intro m hm W hl hf q hq
+    exact TupleFieldControl.physical bodies g h hb hgs hhs x m W args.length e hc q hq
+  · exact he
+  · exact hfree
 
 end Shallot.MacroPeg.CBV.TupleFieldTransfer

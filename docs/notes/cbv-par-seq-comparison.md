@@ -16,6 +16,48 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 個別の保持値を渡す、多引数の自己再帰まで
+
+`RecursiveFieldSyntax/Correspondence/Compiler` は、個別 field 再捕捉を
+parameterized self call の本体まで接続する。元文法は独立 nullary helper prefix と、
+任意正 arity の一つの自己再帰 header `H(W) <- P(W); body(W)` を持つ。
+`body` は raw 一階 `MExp` の通常制御、各 parameter の個別使用、helper 呼出し、
+新 actual を持つ `H` 呼出しを組み合わせられる。開始式も一般の検査済み raw 式である。
+
+各呼出しは元順序の actual preflight と先頭 `P` の検証を行い、その呼出しで新しく
+得た各値を実 Seq 引数へ捕捉する。`TupleFieldTransfer.physical_of_body` は異なる
+元/変換後本体を許す局所 interface に一般化した。
+`RecursiveFieldCorrespondence.physical` はこれを実 physical clock の帰納法で
+閉じる。再帰先本体の同値や eventual table の一致を外部仮定として残さず、全ての
+新 tuple と入力位置で、同じ clock の元/変換後式の評価一致を証明する。
+
+`DelimitedValueSafety` は fresh actual が separator を含まないことを証明する。
+正に消費する actual は保持 parameter、separator-free literal、通常の選択/反復/
+連接を用いる。否定 query 内には任意の構文検査済み再帰 call を許し、その部分的
+計算を保持する。正に消費する actual 内の call はこの検査ではまだ拒否する。
+各 call の arity/scope、pattern の非空・全成分 coverage、helper 閉包、本体と開始式、
+実 source declaration/root 全体を有限検査し、元文字列言語・残余・失敗・全 clock
+未定義の保存へ接続した。
+
+`RecursiveFieldProofs.source_and_target_all_trees` は任意の n と再帰 depth で、
+元の二保持語 `aⁿ`, `aⁿb` から child の `a^(2n)`, `a^(2n)b` を実際に新捕捉し、child から
+戻ったら親の long/short を個別に再利用する入力族を認識する。`row_all_trees` は
+任意の外側入力・残余でも成立する。Seq 文法は常に arities `[1,1,6]` の三規則で、
+元の一規則 `[2]` と同じ `depth+1` clock で動く。静的な有限 word palette や
+子の値を親へ漏らす代入ではない。初期捕捉と fresh doubled capture も記号的に証明。
+
+kernel 実行では初期長 0/1/2 と depth 0/1/2/3、誤った親復帰の拒否、source declaration
+改変・coverage・actual separator・未検証の正の producer call の拒否を確認した。
+部分的な actual は全入力・全 clock で両戦略とも未定義になり、空の保持語が生む
+nullable star の未定義も伝播する。
+
+全体 `lake build`/Audit は 1,350 jobs を通過。関連 3,431 public 依存報告は標準公理
+3,355 または無公理 76。六新モジュールと局所 interface の追加で 44 guard、PR69
+全体は 40 新 Lean モジュール・356 guard。必須 covering anchor、separator-free
+actual、単一 parameterized self-recursive header という条件は残る。任意の複数
+parameterized callee 間の相互再帰、正の actual 内の一般 producer call、anchor-free
+文法の一般変換、Par/Seq 全言語クラスの一致・分離は未解決である。
+
 ## 検証した先頭ブロックから、元の各保持語を個別に捕捉し直す
 
 `CopyFieldCapture` と `TupleFieldControl/Transfer/Compiler` は、必須の先頭
