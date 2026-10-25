@@ -905,3 +905,10 @@ import MacroPeg.CBV.RecursivePatternCorrespondence
 import MacroPeg.CBV.RecursivePatternCompiler
 import MacroPeg.CBV.RecursivePatternExamples
 import MacroPeg.CBV.RecursivePatternStreamProofs
+
+import MacroPeg.CBV.ParentPatternTransfer
+import MacroPeg.CBV.RetainedPatternSyntax
+import MacroPeg.CBV.RetainedPatternCorrespondence
+import MacroPeg.CBV.RetainedPatternCompiler
+import MacroPeg.CBV.RetainedPatternExamples
+import MacroPeg.CBV.RetainedPatternProofs

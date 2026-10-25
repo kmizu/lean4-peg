@@ -16,6 +16,45 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 一つの実保持語に依存する実引数と、子の捕捉後の親復帰
+
+`ParentPatternTransfer` と `RetainedPatternSyntax/Correspondence/Compiler` は、一つの親保持語を
+**長さ無制限の実文字列のまま**持つ再帰 client と、任意 arity の区切り付きコピー規則を統合する。
+source client の実本体は `param_0;tail`、生成 unary Seq client の本体は変換した `tail`。
+client の呼出し引数では親の語を消費・連接・再捕捉でき、子から戻った継続では元の親の語を再照合できる。
+コピー actual は closed でなくてもよく、親の語や unary client 呼出しを先読みで調べ、実際に捕捉する語を選べる。
+
+`ParentPatternTransfer.captured_free` は任意の caller 保持環境で capture alphabet の有限検査を正当化し、
+`physical` は source/target で異なる actual 式列をその**同じ親環境**のまま評価する。
+生成 unary copy 規則の実環境は新しい捕捉語へ切り替わるが、actual 評価時の親環境と混同しない。
+`RetainedPatternCorrespondence.Rows` は、元の共通原点から親語を再照合した位置と Seq 引数終点を対応させる。
+実際の source/target 表を physical clock で一斉に帰納し、再帰 actual・子の新捕捉・親の継続を接続する。
+独立 nullary helpers の表対応も実際の両文法から導く。
+元の全宣言・開始式、helper/client 参照、親 parameter の scope、コピー arity/添字、capture alphabet を有限検査し、
+全元文字列の観測・受理言語・残余・有限失敗・有限実行存在・全 clock 未定義を同じ clock で保存する。
+
+`RetainedPatternExamples` の source arity `[0,0,1,1,4]` は固定 Seq `[0,0,1,1,1,1,1,1]` へ。
+実際の親が `a` か `aaa` かによって、同じ現在入力から第2 actual が `ab` か `abc` を捕捉する。
+この判定は actual 内で、親の語を引数にする実 unary client 呼出しを先読みする。
+親に `#` を含む語 `a#` を保持したままコピー規則を動かす例も双方で成功し、親の値を alphabet 内へ制限しない。
+copy の捕捉語にだけ、区切りを含まない条件を課す。
+
+主再帰例は親 `w=a^n` を保持して4つの新語 `[a^n b c^n,a^n b,a^n,ε]` をコピー照合し、
+子の実引数 `param_0;param_0` で `ww` を新しく捕捉する。帰還後は `":";param_0` で元の親 `w` を使う。
+`RetainedPatternProofs.actual_captures` は任意 n と任意後続について、親を実 literal として代入した実 actual の捕捉列を導出する。
+`source_and_target_all_trees` は任意 n・任意再帰深さについて元/生成双方の受理を証明する。
+実語が `w→ww→wwww` と伸びても、各継続では自分の親の値へ戻る。
+直接 kernel 実行では深さ0/1/2、長さ1/2、空親、短い子捕捉の拒否、子値が漏れた場合の余分な照合語の拒否を確認した。
+親依存コピー actual の真の循環と、空親を再照合する nullable star は全入力・全 clock で未定義である。
+親環境での preflight 省略の有限失敗反例、root の未束縛 parent・範囲外 user・不正元宣言の拒否も検証した。
+
+残る条件は、独立した nullary helper 群、先頭で自分の新捕捉を再照合する unary clients、
+一つの選択した arity/区切り/添字列を共有する param+d 列のコピー本体である。
+コピー actual の正の消費経路で親語や unary client を使うことは現在の capture effect 検査では許さず、
+先読み・その結果による producer 選択を扱う。client の通常の本体・呼出し引数では親語を直接消費できる。
+複数の親保持語を任意本体へ同時に渡す一般変換、先頭再照合なしの任意 client、任意の複数保持値本体と、
+Par/Seq 言語クラス全体の一致・分離は引き続き未解決である。
+
 ## 任意 arity のコピー本体と、実引数を通る相互再帰の統合
 
 `DelimitedPatternCallTransfer` と `RecursivePatternSyntax/Correspondence/Compiler` は、任意 arity の
@@ -50,7 +89,7 @@ seq/優先選択/not/star の任意文脈、全元入力・全残余の成功、
 残る構文条件は nullary clients、closed actuals、一つの選択した arity/区切り/添字列を共有するコピー規則、
 区切りを含まない実捕捉、parameter と区切りを並べたコピー本体である。
 同じ区切りを消費する内側コピーの正の出力を外側 actual として捕捉することはこの検査では許さず、
-先読み内部のコピー照合を扱う。親の保持 parameter に依存する actual、任意の複数保持値本体と、
+先読み内部のコピー照合を扱う。親依存 actual は上記 RetainedPattern が一つの実保持語について扱う。任意の複数保持値本体と、
 Par/Seq 言語クラス全体の一致・分離は引き続き未解決である。
 
 ## 任意個の保持語を任意順・任意回数で使う区切り付き本体
@@ -11336,3 +11375,14 @@ DelimitedPatternCallTransfer relates calls whose source and target actual-expres
 The eight-rule source compiles to eleven fixed Seq rules. Each of its four actuals queries the following block before returning the real tuple [a^n b c^n, a^n b, a^n, empty]. Symbolic derivations cover every n and every following block-length list; both grammars accept arbitrary finite streams of these blocks. Direct kernel runs check different block lengths, actual tuples, residuals, invalid later blocks, direct nested copy queries, transformed client syntax and rejection by the older independence check. Genuine same-position copy/actual cycles stay undefined on every input and clock; omitting preflight exposes finite failure before a divergent later actual. Invalid arities, references, delimiter captures and raw source declarations are rejected.
 
 Clients remain nullary, actuals closed and captured outputs delimiter-free. Copy occurrences share one chosen arity, separator and finite parameter-occurrence list; the body consists of retained-word segments followed by separators. Positive inner-copy outputs containing that separator cannot themselves be captured by an outer copy; nested lookahead is supported. General parameter-dependent actuals, arbitrary multi-value callee bodies and the unrestricted language-class equality/separation remain unresolved.
+
+
+### Parent-dependent actuals with a real retained payload
+
+ParentPatternTransfer generalizes capture safety and arbitrary-arity copy-call transfer to an arbitrary caller environment. RetainedPattern combines that transfer with unary leading-replay clients: the source rule is param_0;tail and the Seq rule contains the transformed tail. Parent-dependent actual queries may call unary clients with the parent's real word and choose different consumed producer results. Client bodies and unary actuals can consume the retained word directly, capture a new concatenated word for a recursive child, and use the original parent after return. Actual evaluation retains the caller environment; each generated copy pass receives its own fresh captured word. Simultaneous actual-table clock induction relates the source replay origin to the Seq argument endpoint without abstracting the retained parent into a finite view.
+
+The full raw-grammar/root checker validates the independent nullary helper prefix, client and parent scope, copy arity/occurrence indices and capture effects. Observations, original-string language, all residuals, finite failure/definedness and all-clock undefinedness correspond at the same physical clock. Five source rules with arities [0,0,1,1,4] become eight fixed Seq rules. On the same current input, actual capture tuples differ under parents a and aaa. A parent containing the separator a# is allowed; only fresh copy-captured outputs exclude the separator. Direct runs cover real recursive child doubling, parent restoration, empty parents, child-prefix failure and leaked-child-value rejection.
+
+Symbolic source derivations establish the actual tuple [a^n b c^n,a^n b,a^n,empty] after substituting the retained parent a^n for every n and every following suffix. Both grammars accept every initial parent length and every recursive nesting depth, with children capturing ww from the actual argument w;w and parent continuations replaying their own original w. True parent/copy-actual cycles and nullable retained-parent stars stay undefined on every input and clock; preflight omission gives finite failure before a divergent actual. Invalid root parent scope, client addresses and source declarations are rejected.
+
+Unary clients still require leading replay. The copy header still has one selected separator and parameter-occurrence list; positive fresh-capture paths must be checked delimiter-free. Parent replay or unary clients inside such positive paths are currently rejected, while zero-width queries and query-driven producer choices are supported. Independent nullary helpers remain available for consuming producers. Arbitrary multi-parent clients, arbitrary multi-value callee bodies and the full language-class equality/separation question remain unresolved.
