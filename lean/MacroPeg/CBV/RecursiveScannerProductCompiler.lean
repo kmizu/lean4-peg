@@ -1,3 +1,4 @@
+import MacroPeg.CBV.GuardedScannerIteration
 import MacroPeg.CBV.GuardedReplayControl
 import MacroPeg.CBV.GuardedReplayRotation
 import MacroPeg.CBV.ScannerReplayResidual
@@ -22,6 +23,7 @@ inductive Entry (n : Nat) where
   | safeReplay
   | scan (q : Fin n)
   | shift (q : Fin n) (residuals : ScannerReplayResidual.Labels n)
+  | scannerIterate (q : Fin n)
   | iterate (q : Fin n) (residuals : ScannerReplayResidual.Labels n)
   | aligned (control : GuardedReplayControl.Expr n)
   | alt (left right : Entry n)
@@ -32,12 +34,13 @@ abbrev Entries (n : Nat) := Nat → Entry n
 def Entry.inputSafe {n : Nat} : Entry n → Bool
   | .replay | .iterate _ _ => false
   | .aligned c => GuardedReplayControl.inputSafe c
-  | .safeReplay | .scan _ | .shift _ _ => true
+  | .safeReplay | .scan _ | .scannerIterate _ | .shift _ _ => true
   | .alt a b | .guard _ a b => a.inputSafe || b.inputSafe
 
 def sourceHeader {n : Nat} : Entry n → MExp
   | .replay | .safeReplay => .param 0
   | .scan q => .call q.val []
+  | .scannerIterate q => GuardedScannerIteration.header q
   | .shift q R => .seq (.lit ((R q).getD [])) (.param 0)
   | .iterate q R => GuardedReplayIteration.header ((R q).getD [])
   | .aligned c => GuardedReplayControl.header c
@@ -227,6 +230,18 @@ theorem controlArg_filter {n : Nat} (M : Machine n) (bodies : List Arg) (P : Lis
     simp only [controlArg,filter,GuardedReplayControl.residual,DependentCaptureFilter.filter,
       controlArg_plain M bodies P a,controlArg_filter M bodies P a]
 
+/-- An unbounded scanner prefix is resumed after the actual capture;
+its guarded query becomes an actual replay before the next iteration. -/
+def scannerIteratedBody {n : Nat} (M : Machine n) (q : Fin n) (bodies : List Arg)
+    (P : List Nat) (mode : Mode) (b : Arg) : MExp :=
+  match mode with
+  | none => .seq (GuardedScannerIteration.residual P q) (plain M bodies [P] b)
+  | some (a,z) => if ha : a<(observer M).width then
+      RegularCaptureProduct.choice ((List.range (observer M).width).map (fun u =>
+        .seq (GuardedScannerIteration.residualFilter M P q (state M P ⟨a,ha⟩).val u)
+          (filter M bodies [P] b u z)))
+    else MExp.failAlways
+
 /-- Plain residual header, used to preserve the original choice before
 running a continuation that may fail or remain undefined. -/
 def targetHeader {n : Nat} (M : Machine n) (P : List Nat) : Entry n → MExp
@@ -235,6 +250,7 @@ def targetHeader {n : Nat} (M : Machine n) (P : List Nat) : Entry n → MExp
     | none => MExp.failAlways | some r => .call r.val []
   | .shift q R => match DynamicScannerBinding.resume P q with
     | none => MExp.failAlways | some r => .lit ((R r).getD [])
+  | .scannerIterate q => GuardedScannerIteration.residual P q
   | .iterate q R => sourceExpr M (iterationArg P q R)
   | .aligned c => sourceExpr M (controlArg P c)
   | .alt a b => .alt (targetHeader M P a) (targetHeader M P b)
@@ -248,6 +264,7 @@ def targetBody {n : Nat} (M : Machine n) (entry : Entry n) (bodies : List Arg)
   match entry with
   | .scan q => scannerBody M q bodies P mode b
   | .shift q R => shiftedBody M q R bodies P mode b
+  | .scannerIterate q => scannerIteratedBody M q bodies P mode b
   | .iterate q R => iteratedBody M q R bodies P mode b
   | .aligned c => controlledBody M c bodies P mode b
   | .alt a c => RootObservation.branch (.andP (targetHeader M P a))
@@ -391,7 +408,7 @@ theorem sourceHeader_firstOrder {n : Nat} (entry : Entry n) :
     (sourceHeader entry).FirstOrder := by
   induction entry with
   | replay | safeReplay | scan _ | shift _ _ => trivial
-  | iterate q R => exact ⟨⟨True.intro,True.intro⟩,True.intro⟩
+  | iterate q R | scannerIterate q => exact ⟨⟨True.intro,True.intro⟩,True.intro⟩
   | aligned c => exact ⟨GuardedReplayControl.render_firstOrder c,True.intro⟩
   | alt a b ha hb => exact ⟨ha,hb⟩
   | guard positive a b ha hb => cases positive <;> exact ⟨ha,hb⟩
@@ -402,6 +419,7 @@ theorem targetHeader_firstOrder {n : Nat} (M : Machine n) (P : List Nat) (entry 
   | replay | safeReplay => trivial
   | scan q => simp only [targetHeader]; split <;> trivial
   | shift q R => simp only [targetHeader]; split <;> trivial
+  | scannerIterate q => exact GuardedScannerIteration.residual_firstOrder P q
   | iterate q R | aligned _ => exact sourceExpr_firstOrder M _
   | alt a b ha hb => exact ⟨ha,hb⟩
   | guard positive a b ha hb => cases positive <;> exact ⟨ha,hb⟩
@@ -424,6 +442,18 @@ theorem targetBody_firstOrder {n : Nat} (M : Machine n) (entry : Entry n) (bodie
         split
         · exact ⟨True.intro,filter_firstOrder M bodies [P] b _ _⟩
         · trivial
+  | scannerIterate q =>
+    cases mode with
+    | none => exact ⟨GuardedScannerIteration.residual_firstOrder P q,plain_firstOrder M bodies [P] b⟩
+    | some pair =>
+      obtain ⟨a,z⟩ := pair
+      simp only [targetBody,scannerIteratedBody]
+      split
+      · apply RegularCaptureProduct.choice_firstOrder
+        intro e he
+        obtain ⟨u,_,rfl⟩ := List.mem_map.mp he
+        exact ⟨GuardedScannerIteration.residualFilter_firstOrder M P q _ u,filter_firstOrder M bodies [P] b u z⟩
+      · trivial
   | iterate q R =>
     cases mode with
     | none => exact plain_firstOrder M bodies [P] _

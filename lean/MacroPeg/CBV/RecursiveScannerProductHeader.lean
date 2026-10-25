@@ -1,3 +1,4 @@
+import MacroPeg.CBV.GuardedScannerFilter
 import MacroPeg.CBV.IndependentCaptureControl
 import MacroPeg.CBV.ControlFilter
 import MacroPeg.CBV.ScannerFrontierCertificate
@@ -13,7 +14,7 @@ open CaptureTransitionProfile (profile)
 whole-capture profile. Replay entries impose no scanner frontier. -/
 def entryCheck {n : Nat} (M : Machine n) (entry : Entry n) (P : List Nat) : Bool :=
   match entry with
-  | .scan q => ScannerFrontierCertificate.check P q
+  | .scan q | .scannerIterate q => ScannerFrontierCertificate.check P q
   | .shift q R => ScannerReplayResidual.completeCheck M R || ScannerFrontierCertificate.check P q
   | .replay | .safeReplay | .iterate _ _ => true
   | .aligned c => GuardedReplayControl.captureCheck P c
@@ -23,7 +24,7 @@ theorem entryCheck_of_safe {n : Nat} (M : Machine n) (entry : Entry n) (w : List
     (h : entry.inputSafe=true → TotalCaptureSafety.Total M w) :
     entryCheck M entry (profile (observer M) w)=true := by
   induction entry with
-  | scan q => exact (ScannerFrontierCertificate.check_actual M w q).mpr (h rfl q)
+  | scan q | scannerIterate q => exact (ScannerFrontierCertificate.check_actual M w q).mpr (h rfl q)
   | shift q R => exact Bool.or_eq_true_iff.mpr (Or.inr ((ScannerFrontierCertificate.check_actual M w q).mpr (h rfl q)))
   | replay | safeReplay | iterate _ _ => rfl
   | aligned c => exact GuardedReplayControl.capture_safe M w c h
@@ -75,6 +76,54 @@ theorem source_scan_prefix {n : Nat} (M : Machine n) (entries : Entries n) (bodi
   DependentCaptureFilter.success_prefix (by decide)
     (ClockFreezing.frozen_sound (source_firstOrder M entries bodies) x .callByValuePar (by decide) _ _ k)
     E (.call q.val []) True.intro p _ hp (source_scan M entries bodies q x k p E hp)
+
+
+theorem scanner_iteration_residual {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
+    (q : Fin n) (w x : List Char) (k l p : Nat) (hp : p≤x.length) :
+    evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [w]
+      (GuardedScannerIteration.residual (profile (observer M) w) q) p=
+    evV (target M entries bodies) x .callByValueSeq (targetTable M entries bodies x l) [w]
+      (GuardedScannerIteration.residual (profile (observer M) w) q) p := by
+  cases hs : StatefulScanner.advance M q w with
+  | none => simp [GuardedScannerIteration.residual,DynamicScannerBinding.resume_actual,hs,MExp.failAlways,evV]
+  | some r =>
+    simp only [GuardedScannerIteration.residual,DynamicScannerBinding.resume_actual,hs]
+    exact GuardedScannerIteration.residual_transfer M r w _ _ x .callByValuePar .callByValueSeq _ _
+      (fun r p hp => source_scan M entries bodies r x k p [w] hp)
+      (fun r p hp => target_scan M entries bodies r x l p [w] hp) p hp
+
+theorem scanner_iteration_source {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
+    (q : Fin n) (w x : List Char) (k p j : Nat) (hp : p≤x.length) (hj : j≤x.length)
+    (hcap : sfx x p=w++sfx x j) (hw : StatefulScanner.advance M q w≠none) :
+    evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [w]
+      (sourceHeader (.scannerIterate q)) p=
+    evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [w]
+      (GuardedScannerIteration.residual (profile (observer M) w) q) j := by
+  cases hs : StatefulScanner.advance M q w with
+  | none => exact False.elim (hw hs)
+  | some r =>
+    simp only [sourceHeader,GuardedScannerIteration.residual,DynamicScannerBinding.resume_actual,hs]
+    exact GuardedScannerIteration.header_eq M q r w hs _ _ x .callByValuePar .callByValuePar _ _
+      (fun r p hp => source_scan M entries bodies r x k p [w] hp)
+      (fun r p hp => source_scan M entries bodies r x k p [w] hp) p j ⟨hp,hj,hcap⟩
+
+theorem scanner_iteration_filter {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
+    (q : Fin n) (w x : List Char) (k l p : Nat) (hp : p≤x.length)
+    (hw : StatefulScanner.advance M q w≠none) (a z : Nat) (ha : a<(observer M).width) :
+    evV (target M entries bodies) x .callByValueSeq (targetTable M entries bodies x l) [w]
+      (GuardedScannerIteration.residualFilter M (profile (observer M) w) q a z) p=
+    RegularCaptureProduct.filtered (observer M) x a z p
+      (evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [w]
+        (GuardedScannerIteration.residual (profile (observer M) w) q) p) := by
+  have ht := scanner_iteration_residual M entries bodies q w x k l p hp
+  cases hs : StatefulScanner.advance M q w with
+  | none => exact False.elim (hw hs)
+  | some r =>
+    simp only [GuardedScannerIteration.residualFilter,GuardedScannerIteration.residual,
+      DynamicScannerBinding.resume_actual,hs] at ht ⊢
+    exact (GuardedScannerFilter.star_correct M (targetRules M entries bodies)
+      (target_firstOrder M entries bodies) r x w l p hp a z ha).trans
+      (congrArg (RegularCaptureProduct.filtered (observer M) x a z p) ht.symm)
 
 /-- For an actual source argument, the selected finite profile certifies
 exactly that the original scanner reaches the capture endpoint. This lemma
@@ -269,6 +318,10 @@ theorem target_header {n : Nat} (M : Machine n) (entries : Entries n) (bodies : 
       simp only [targetHeader,DynamicScannerBinding.resume_actual,hs,sourceHeader]
       rw [target_scan M entries bodies r x l j [w] hj,source_scan M entries bodies q x k p [w] hp,
         hcap,StatefulScanner.run_after_prefix M w (sfx x j) q r hs]
+  | scannerIterate q =>
+    have hr := (ScannerFrontierCertificate.check_actual M w q).mp hw
+    exact ((scanner_iteration_source M entries bodies q w x k p j hp hj hcap hr).trans
+      (scanner_iteration_residual M entries bodies q w x k l j hj)).symm
   | aligned c =>
     exact (aligned_header M _ c hEntry w rfl hw _ _ x _ _ _ _ p j hp hj hcap).symm
   | iterate q R =>
@@ -310,6 +363,21 @@ theorem entry_plain_body {n : Nat} (M : Machine n) (entries : Entries n) (bodies
     evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [w]
       (.seq (sourceHeader entry) (sourceExpr M b)) p := by
   induction entry with
+  | scannerIterate q =>
+    have hr := (ScannerFrontierCertificate.check_actual M w q).mp hw
+    have he := (scanner_iteration_source M entries bodies q w x k p j hp hj hcap hr).trans
+      (scanner_iteration_residual M entries bodies q w x k l j hj)
+    simp only [targetBody,scannerIteratedBody]
+    cases hv : evV (target M entries bodies) x .callByValueSeq (targetTable M entries bodies x l) [w]
+        (GuardedScannerIteration.residual (profile (observer M) w) q) j with
+    | none => rw [evV_seq_none hv,evV_seq_none (he.trans hv)]
+    | some v => cases v with
+      | none => rw [evV_seq_fail hv,evV_seq_fail (he.trans hv)]
+      | some z =>
+        rw [evV_seq_ok hv,evV_seq_ok (he.trans hv)]
+        exact hBody z (DependentCaptureFilter.success_prefix (by decide)
+          (ClockFreezing.frozen_sound (target_firstOrder M entries bodies) x .callByValueSeq (by decide) _ _ l)
+          [w] _ (GuardedScannerIteration.residual_firstOrder _ q) j z hj hv).1
   | scan q => exact plain_body M entries bodies q b w x p j k l hp hj hcap ((ScannerFrontierCertificate.check_actual M w q).mp hw) hBody
   | iterate q R =>
     have he := iteration_header M _ q R hEntry w rfl
@@ -411,6 +479,38 @@ theorem entry_product_body {n : Nat} (M : Machine n) (entries : Entries n) (bodi
       (evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [w]
         (.seq (sourceHeader entry) (sourceExpr M b)) p) := by
   induction entry with
+  | scannerIterate q =>
+    have hr := (ScannerFrontierCertificate.check_actual M w q).mp hw
+    let e := GuardedScannerIteration.residual (profile (observer M) w) q
+    let g := source M entries bodies
+    let h := target M entries bodies
+    let T := sourceTable M entries bodies x k
+    let U := targetTable M entries bodies x l
+    have hT : SoundTV g x .callByValuePar T :=
+      ClockFreezing.frozen_sound (source_firstOrder M entries bodies) x .callByValuePar (by decide) _ _ k
+    have he := scanner_iteration_source M entries bodies q w x k p j hp hj hcap hr
+    have hseq : evV g x .callByValuePar T [w] (.seq (sourceHeader (.scannerIterate q)) (sourceExpr M b)) p=
+        evV g x .callByValuePar T [w] (.seq e (sourceExpr M b)) j := by
+      change (match evV g x .callByValuePar T [w] (sourceHeader (.scannerIterate q)) p with
+        | some (some z) => evV g x .callByValuePar T [w] (sourceExpr M b) z | other => other)=_
+      rw [he]
+      rfl
+    rw [hseq]
+    rw [CapturePrefixRows.filter_prefix (observer M) x w p j a.val t hp hj hcap _
+      (fun z hz => DependentCaptureFilter.success_prefix (by decide) hT [w]
+        (.seq e (sourceExpr M b)) ⟨GuardedScannerIteration.residual_firstOrder _ q,sourceExpr_firstOrder M b⟩ j z hj hz)]
+    simp only [targetBody,scannerIteratedBody,dif_pos a.isLt,SequentialRecursiveScanner.state_actual]
+    apply ControlFilter.seq_transfer (observer M) (valid M) g h x .callByValuePar .callByValueSeq
+      (by decide) T U hT [w] e (sourceExpr M b) (GuardedScannerIteration.residual_firstOrder _ q)
+      (sourceExpr_firstOrder M b)
+      (GuardedScannerIteration.residualFilter M (profile (observer M) w) q)
+      (fun a z => filter M bodies [profile (observer M) w] b a z) j hj
+      (RegularCaptureProduct.run (observer M) a.val w) t
+      (RegularCaptureProduct.run_bound (valid M) _ a.isLt w) ht
+    · intro a z ha hz
+      exact scanner_iteration_filter M entries bodies q w x k l j hj hr a z ha
+    · intro z hz a ha
+      exact hBody z hz a ha
   | scan q => exact product_body M entries bodies q b w x p j k l hp hj hcap ((ScannerFrontierCertificate.check_actual M w q).mp hw) a t ht hBody
   | iterate q R =>
     let e := iterationArg (profile (observer M) w) q R

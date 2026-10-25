@@ -195,6 +195,32 @@ theorem header_extension {n : Nat} (M : Machine n) (left right : List MRule)
       (RecursiveScannerProductHelpers.lexical M) (RecursiveScannerProductHelpers.installed M left)
       (RecursiveScannerProductHelpers.installed M right) x .callByValuePar .callByValuePar k q.val
       (by rw [RecursiveScannerProductHelpers.helperBodies_length]; have := q.isLt; omega) [] [])
+  | scannerIterate q =>
+    have hs (z : Nat) :
+        evV (RecursiveScannerProductHelpers.grammar M left) x .callByValuePar
+          (tblV (RecursiveScannerProductHelpers.grammar M left) x .callByValuePar k) E (.call q.val []) z=
+        evV (RecursiveScannerProductHelpers.grammar M right) x .callByValuePar
+          (tblV (RecursiveScannerProductHelpers.grammar M right) x .callByValuePar k) E (.call q.val []) z := by
+      rw [evV_call_par (RecursiveScannerProductHelpers.scanner_rule M left q) rfl (by decide),
+        evV_call_par (RecursiveScannerProductHelpers.scanner_rule M right q) rfl (by decide)]
+      simp only [evParArgs]
+      exact congrArg (fun row => valAt row z) (RecursiveParserStability.helper_rows_eq
+        (RecursiveScannerProductHelpers.lexical M) (RecursiveScannerProductHelpers.installed M left)
+        (RecursiveScannerProductHelpers.installed M right) x .callByValuePar .callByValuePar k q.val
+        (by rw [RecursiveScannerProductHelpers.helperBodies_length]; have := q.isLt; omega) [] [])
+    have hb (z : Nat) :
+        evV (RecursiveScannerProductHelpers.grammar M left) x .callByValuePar
+          (tblV (RecursiveScannerProductHelpers.grammar M left) x .callByValuePar k) E (GuardedScannerIteration.step q) z=
+        evV (RecursiveScannerProductHelpers.grammar M right) x .callByValuePar
+          (tblV (RecursiveScannerProductHelpers.grammar M right) x .callByValuePar k) E (GuardedScannerIteration.step q) z :=
+      congrArg (fun result => match result with
+        | some (some j) => evV (RecursiveScannerProductHelpers.grammar M left) x .callByValuePar
+            (tblV (RecursiveScannerProductHelpers.grammar M left) x .callByValuePar k) E (.andP (.param 0)) j
+        | other => other) (hs z)
+    exact congrArg (fun result => match result with
+      | some (some j) => evV (RecursiveScannerProductHelpers.grammar M left) x .callByValuePar
+          (tblV (RecursiveScannerProductHelpers.grammar M left) x .callByValuePar k) E (.param 0) j
+      | other => other) (evStar_congr p (fun z _ => hb z))
   | alt a b ha hb => simp only [sourceHeader,evV,ha,hb]
   | guard positive a b ha hb =>
     cases positive <;> cases hv : evV (RecursiveScannerProductHelpers.grammar M left) x .callByValuePar

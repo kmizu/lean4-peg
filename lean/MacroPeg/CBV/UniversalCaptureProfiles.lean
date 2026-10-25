@@ -95,7 +95,7 @@ def entryCheck {n : Nat} (M : Machine n) : Entry n → Bool
   | .shift q R | .iterate q R => ScannerReplayResidual.entryCheck M R q && ScannerReplayResidual.completeCheck M R
   | .alt a b | .guard _ a b => entryCheck M a && entryCheck M b
   | .aligned c => GuardedReplayControl.check M c && GuardedReplayControl.universalCheck c
-  | .scan _ => false
+  | .scan _ | .scannerIterate _ => false
 
 theorem entry_sound {n : Nat} (M : Machine n) : ∀ e, entryCheck M e=true →
     headerCheck M e=true ∧ ∀ P, RecursiveScannerProductHeader.entryCheck M e P=true
@@ -112,7 +112,7 @@ theorem entry_sound {n : Nat} (M : Machine n) : ∀ e, entryCheck M e=true →
     obtain ⟨ha,ha'⟩ := entry_sound M a ha
     obtain ⟨hb,hb'⟩ := entry_sound M b hb
     exact ⟨Bool.and_eq_true_iff.mpr ⟨ha,hb⟩,fun P => Bool.and_eq_true_iff.mpr ⟨ha' P,hb' P⟩⟩
-  | .scan _,h => by cases h
+  | .scan _,h | .scannerIterate _,h => by cases h
 
 /-- The only remaining checks inspect actual source rule syntax and entry
 machines. Arbitrary argument seq/alt/star/notP and user recursion are allowed. -/
@@ -137,6 +137,8 @@ theorem header_all {n : Nat} (M : Machine n) (P : List Nat) (hP : P∈profiles (
     subst Q
     exact hP
   | .scan _ => fun _ h => h
+  | .scannerIterate q => product_all _ _ _
+      (closure_all _ (valid M) _ (fun _ h => h)) (by simpa [AllIn] using hP)
   | .iterate q R => by
     apply product_all
     · rw [effects_noUser M (fun _ _ => []) (summary M) [P] _ (rawControlArg_scoped _)]

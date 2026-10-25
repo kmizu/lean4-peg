@@ -1,3 +1,10 @@
+import MacroPeg.CBV.ScannerLoopCaptureExamples
+import MacroPeg.CBV.ScannerLoopUndefined
+import MacroPeg.CBV.ScannerLoopExamples
+import MacroPeg.CBV.ScannerLoopCompiler
+import MacroPeg.CBV.ReadableScannerProfiles
+import MacroPeg.CBV.GuardedScannerFilter
+import MacroPeg.CBV.GuardedScannerIteration
 import MacroPeg.CBV.AutomaticFiniteOriginExamples
 import MacroPeg.CBV.AutomaticFiniteOrigin
 import MacroPeg.CBV.AlphabetOriginControl

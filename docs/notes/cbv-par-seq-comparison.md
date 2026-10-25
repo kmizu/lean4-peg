@@ -16,6 +16,49 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 長さ可変 scanner を保持値の照合付きで反復する入口
+
+`Entry.scannerIterate q` は、実補助 scanner を呼ぶ生の入口
+`(scan(q); &param0)*; param0` を扱う。固定 literal prefix の列挙ではなく、
+各反復が scanner の読める長さ全体を消費する。捕捉値 `w` を q から読んで
+実際に到達する状態を r とすると、捕捉終点での Seq 入口は
+`(scan(r); param0)*` になる。scanner が終わる絶対位置は元・先で同じであり、
+元の零幅 query と先の全保持値消費が位置対応を次の反復へ保つ。
+空捕捉と零消費 step も含む partial-result 対応から、nullable 未定義を保存する。
+
+`GuardedScannerIteration` の位置対応を、実コンパイル済み補助規則に対する
+`GuardedScannerFilter`、再帰 plain/product 行の同時帰納、元 header の出力 profile
+検査へ接続した。元の反復の消費 profile は H(q) の有限閉包と最終全保持値との積で
+覆う。最終的な定理に補助行や再帰行の意味論的 oracle はない。
+
+`ReadableScannerProfiles` は scanner の遷移文字から alphabet を集め、その生成
+profile domain を q からの正確な可読性で絞り、H(q) を作る。元の優先遷移で
+各 listed arc が実際に有効であることを有限検査し、scanner の再帰出力検査を証明する。
+異なる到達先を持つ同文字重複 arc はこの frontend では拒否する。
+`ScannerLoopCompiler` は反復する user と、新しい scanner 捕捉を返す getter user
+からなる元テンプレートの H/C/A を構成する。入力は実機械・開始状態・tail 構文だけで、
+捕捉語の palette や手書き出力集合を渡さない。tail の有限参照／profile 検査から、
+全入力の固定一階 Seq 元文字列言語、通常 physical 定義／全 clock 未定義が得られる。
+alphabet は scanner の文字だけでよく、tail の文字や入力全体の所属は要求しない。
+
+`ScannerLoopExamples` は q0 が a、q1 が b を読む部分機械を使う。全 k の `a b^k`
+が可読であり、親 ab・長さ可変の中間 abbb・子 a・親 ab の復帰を実行する。
+単純な反復と親子再帰の生成 Seq 文法を通常 clock12 で直接 kernel 検証する。
+捕捉後の tail 失敗を保持し、非可読 capture、不正参照、無効な優先 arc を拒否する。
+`ScannerLoopCaptureExamples` は全 k の `a b^k` を実元 user が通常 physical clock で
+捕捉することと、捕捉長が非有界なことを証明する。`ScannerLoopUndefined` は alphabet
+外の X 上で空捕捉となる実 root が、元・先とも全通常 clock で未定義と証明する。
+
+この入口は無界長の独立 scanner prefix を反復へ追加するものである。
+一般の消費する parameterized user prefix、全再照合を伴わない任意依存継続、
+独立複数捕捉、および一般 Par/Seq 一致／分離は未解決である。
+
+検証: 全 `lake build` 1088 jobs（Auditを含む）成功。関連905定理の依存公理は
+標準Lean公理または公理なしで、新規55定理には `#guard_msgs` による依存検査を追加した。
+非可読 capture の検査を外すと、実元のnullable未定義が実先の有限失敗へ変わる反例も検証した。
+
+## 既存の有限prefixと呼出し元制御
+
 固定文字列を消費してから保持値を再照合する入口も、走査・直接再照合と
 同じ `RecursiveScannerProductCompiler` へ統合した。`Entry.shift q R` の元入口は
 `lit (R q); param0` で、生成先は実捕捉の終点から `lit (R r)` を消費する。
