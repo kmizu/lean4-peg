@@ -1,3 +1,6 @@
+import MacroPeg.CBV.EmptyResultExamples
+import MacroPeg.CBV.EmptyCaptureDecision
+import MacroPeg.CBV.EmptyResultObservation
 import MacroPeg.CBV.ScannerFrontierValues
 import MacroPeg.CBV.NestedCapturedOriginExamples
 import MacroPeg.CBV.CapturedOriginQuery

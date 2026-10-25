@@ -16,6 +16,34 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## scannerによらない実捕捉の空／非空判定
+
+`EmptyResultObservation`は、任意のnullary再帰PEG（引数なしの規則だけからなる文法）を、
+元結果を保存する規則と空成功だけを残す規則の二系統へ変換する。規則数は元の2倍。
+実Par表と実Seq表の同clockの関係を証明し、全入力・全有効位置・全clockで、
+空成功をそのまま保存し、消費成功だけを有限失敗へ写し、元の有限失敗と未定義を保存する。
+左右再帰・相互再帰・優先選択・否定・nullableなstarも構文として制限しない。
+外部の停止判定やnullable判定は使わない。
+
+seq/alt/starの空成功候補には、元の処理全体の先読みgateを置く。
+空にならない前半を早く失敗させると後半の未定義が消えるため、このgateが必要になる。
+優先選択では、先行枝が非空成功したときに後続の空成功へ落ちないよう元の先行枝の否定も保つ。
+starは元の全反復を先読みしてから最初の本体の失敗を検査し、nullableな本体を有限失敗に変えない。
+
+`EmptyCaptureDecision`はこの判定器を任意個の独立したnullary PEG引数へ接続する。
+元Par引数を左から右へ全て先読みした後、実際の捕捉文字列列の`List.isEmpty`に従って
+固定のSeq式が継続を選ぶ。捕捉長・捕捉数・停止終端のscanner条件は要求しない。
+選ばれた継続は入力を消費してよく、first-order性も保存する。
+ただし公開定理は、元の実`evParArgs`の結果と生成式の同clockの対応であり、
+捕捉内容全体の復元や、任意のparameterized callee本体の文法変換までは証明していない。
+前節までの`CapturedOriginCompiler`の適用条件をこの部品だけで取り除いたとは主張しない。
+
+例では再帰する`a^n b^n`、`a*`、空式から得る互いに異なる三捕捉と消費する継続、
+全て空の捕捉、失敗→無限再帰／無限再帰→失敗、未完成clockから有限結果への遷移を検証した。
+前半消費後の無限再帰とnullable-starは全clock（後者は全入力）で未定義のまま。
+seq/starのgate、選択の優先条件、引数preflightを省くと結果が変わる実反例もkernel検証した。
+クラス全体の一致・分離は引き続き未解決である。
+
 ## 再照合後に別の保持値も読む入れ子検査
 
 `CapturedOriginQuery.Plan.follow`は`&(param_k;plan)`を追加し、再照合後のplanでも
@@ -10619,3 +10647,42 @@ specialization to general stateful scanner frontiers. It also does not claim
 that nonempty values remain dead at all later input positions. Arbitrary
 consuming dependent continuations, arbitrary capture endpoints and the full
 Par/Seq language-class equality or separation remain unresolved.
+
+
+## Exact empty-result observations for independent recursive arguments
+
+EmptyResultObservation compiles an arbitrary nullary recursive PEG into two
+nullary rule channels per original rule. At every actual physical clock,
+the normal Seq channel agrees with the original Par result; the empty
+channel keeps empty success, finite failure and undefinedness, and maps
+only consuming success to finite failure. Source recursive structure may
+include left/mutual recursion, priority, negation and nullable repetition.
+No termination or semantic nullability oracle is required.
+
+A full original-expression lookahead gate precedes the zero-only candidate
+for sequence, choice and repetition. Without it, discarding a consuming
+prefix could skip a divergent continuation and incorrectly yield finite
+failure. Choice also retains the original earlier-branch failure condition,
+so a consuming success never falls through to a nullable alternative.
+Star tests first-body failure only after its complete original evaluation;
+nullable repetitions therefore remain undefined.
+
+EmptyCaptureDecision applies these observers to arbitrarily many independent
+nullary recursive argument expressions. Ordered preflight preserves actual
+Par failure/undefinedness order before a finite decision tree selects a leaf
+from the exact isEmpty view of the real captured-word tuple. The chosen leaf
+may consume input, and the emitted expression is first order when its leaves
+are. The physical theorem relates that actual Seq expression to evParArgs
+at the same original position and clock. It does not reconstruct captured
+contents or yet compile an arbitrary parameterized callee body. In particular,
+it does not by itself remove the scanner-frontier conditions of the earlier
+whole-grammar compiler. General language-class equality/separation remains open.
+
+Kernel examples cover independent balanced a/b and a-star producers plus an
+empty argument, distinct nonempty captures, a consuming selected leaf, all
+empty captures, failure before divergence and divergence before failure,
+out-of-range calls, and incomplete versus completed recursive clocks.
+All-clock proofs retain divergence after a consumed prefix and preserve
+nullable-star undefinedness on every input. Concrete omissions of sequence/
+star gates, choice priority and original argument preflight give different
+results and are explicitly rejected as alternative constructions.
