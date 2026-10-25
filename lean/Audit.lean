@@ -1,3 +1,10 @@
+import MacroPeg.CBV.RepeatedWordArguments
+import MacroPeg.CBV.MultiplyingPrefixCompiler
+import MacroPeg.CBV.MultiplyingPrefixEvaluation
+import MacroPeg.CBV.MultiplyingPrefixCalls
+import MacroPeg.CBV.MultiplyingPrefixCorrespondence
+import MacroPeg.CBV.MultiplyingPrefixExamples
+import MacroPeg.CBV.MultiplyingPrefixUndefined
 import MacroPeg.CBV.WordViewSubstitution
 import MacroPeg.CBV.DoublingPrefixCompiler
 import MacroPeg.CBV.DoublingPrefixEvaluation
@@ -25881,3 +25888,243 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.DoublingPrefixExamples.empty_target' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.DoublingPrefixExamples.empty_target
+
+-- Mixed multiplication factors and separate equal captures.
+
+/-- info: 'Shallot.MacroPeg.CBV.RepeatedWordArguments.copies_nil' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RepeatedWordArguments.copies_nil
+
+/-- info: 'Shallot.MacroPeg.CBV.RepeatedWordArguments.expression_word' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RepeatedWordArguments.expression_word
+
+/-- info: 'Shallot.MacroPeg.CBV.RepeatedWordArguments.expression_value' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RepeatedWordArguments.expression_value
+
+/-- info: 'Shallot.MacroPeg.CBV.RepeatedWordArguments.strip_concat' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RepeatedWordArguments.strip_concat
+
+/-- info: 'Shallot.MacroPeg.CBV.RepeatedWordArguments.sequential' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RepeatedWordArguments.sequential
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.arity_positive' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.arity_positive
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.mode_positive' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.mode_positive
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.view_word' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.view_word
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.view_value' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.view_value
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.firstOrder_replicate' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.firstOrder_replicate
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.target_firstOrder' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.block_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.block_length
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.blocks_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.blocks_length
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.rule_count' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.rule_count
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.blocks_rule' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.blocks_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.source_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.source_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.target_rule' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.target_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.origin_mode' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixCompiler.origin_mode
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixEvaluation.evaluator' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixEvaluation.evaluator
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixEvaluation.view_evaluator' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixEvaluation.view_evaluator
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixCalls.prefix_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixCalls.prefix_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixCorrespondence.tables_rows' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixCorrespondence.tables_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixCorrespondence.evaluator_eq' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixCorrespondence.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixCorrespondence.undefined_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixCorrespondence.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixCorrespondence.decide_eq' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixCorrespondence.decide_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixCorrespondence.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixCorrespondence.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixCorrespondence.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixCorrespondence.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.triple_valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.triple_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.triple_source' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.triple_source
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.triple_target' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.triple_target
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.triple_nonpowers' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.triple_nonpowers
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.mixed_valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.mixed_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.mixed_source' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.mixed_source
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.mixed_target' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.mixed_target
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.mixed_language' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.mixed_language
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.mixed_layout' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.mixed_layout
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.restoring_valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.restoring_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.restoring_source' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.restoring_source
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.restoring_target' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.restoring_target
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.fresh_valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.fresh_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.fresh_source' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.fresh_source
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.fresh_target' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.fresh_target
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.fresh_empty' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.fresh_empty
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.parent_mismatch' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.parent_mismatch
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.distinct_captures' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.distinct_captures
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.private_helper' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.private_helper
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.missing_prefix' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.missing_prefix
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.nullable_valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.nullable_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.unit_factor_rejected' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.unit_factor_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.unit_factor_counterexample' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.unit_factor_counterexample
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.empty_row' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.empty_row
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.empty_source' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.empty_source
+
+/-- info: 'Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.empty_target' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MultiplyingPrefixExamples.empty_target

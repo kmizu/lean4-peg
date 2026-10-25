@@ -1,3 +1,10 @@
+import MacroPeg.CBV.RepeatedWordArguments
+import MacroPeg.CBV.MultiplyingPrefixCompiler
+import MacroPeg.CBV.MultiplyingPrefixEvaluation
+import MacroPeg.CBV.MultiplyingPrefixCalls
+import MacroPeg.CBV.MultiplyingPrefixCorrespondence
+import MacroPeg.CBV.MultiplyingPrefixExamples
+import MacroPeg.CBV.MultiplyingPrefixUndefined
 import MacroPeg.CBV.WordViewSubstitution
 import MacroPeg.CBV.DoublingPrefixCompiler
 import MacroPeg.CBV.DoublingPrefixEvaluation
