@@ -1,3 +1,9 @@
+import MacroPeg.CBV.FiniteSuffixExamples
+import MacroPeg.CBV.FiniteSuffixCallCompiler
+import MacroPeg.CBV.FiniteSuffixBody
+import MacroPeg.CBV.FiniteWordCaptureSelection
+import MacroPeg.CBV.FiniteSuffixReplay
+import MacroPeg.CBV.ExactWordCaptureMachine
 import MacroPeg.CBV.EmptyObservedExamples
 import MacroPeg.CBV.EmptyObservedCompiler
 import MacroPeg.CBV.EmptyObservedCorrespondence

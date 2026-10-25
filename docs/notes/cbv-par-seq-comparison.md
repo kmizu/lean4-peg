@@ -16,6 +16,48 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 有限suffix領域で実内容を保つ捕捉再照合
+
+`FiniteSuffixCallCompiler`は、EOFだけでなく、残り入力が指定した有限集合`R`に入る位置で
+保持値を再照合する文法をSeqへ変換する。元の直接参照は`guard(R);param_k`という形で、
+`guard`は現在のsuffixが`R`の一語と**完全一致**する零幅検査である。
+`suffixes alphabet bound`を使えば、残り長さの上限と有限アルファベットによる領域にもできる。
+入力全体や、元の実捕捉値の長さを制限する条件ではない。
+
+観測する候補は`R`の全prefixから自動生成する。保持値が候補語ならその語自体を、
+それ以外なら`none`（その他）を保持する有限viewへ写す。
+元の捕捉語が候補外でも入力から捨てたりcallを拒否したりしない。
+`R`に入るsuffixへ一致する語は必ずそのprefixなので、その他の語はその位置で一致しない。
+この性質により、選択・否定・star、任意の消費prefixと独立helper呼出しを含む本体で、
+実値を候補リテラルまたは失敗へ置き換えられる。候補外の長い値を否定で検査して成功する動作も保存する。
+
+`ExactWordCaptureMachine`は、候補語を読み終えた後の一文字をsinkへ送る有限機械を作る。
+空語を含む全語について、受理終状態へ着くことと実捕捉語の完全一致を証明した。
+機械の有限和と既存`RegularCaptureProduct`の実再帰parser出力フィルタを再利用し、
+候補ごとの等値queryからviewを生成する。全遷移profileの巨大な列挙は不要。
+元parserの先読みが失敗・未定義の順序を保存し、継続失敗によって別の捕捉候補へ落ちない。
+
+元文法は、独立したnullary再帰helper群と一つの任意arity calleeからなる。
+実引数はhelper呼出し列、本体の呼出しも独立helperに限る。このbackendではuser本体の相互再帰や
+親依存actualは扱っていない。前節までのEOF backendを全面的に置き換えるものではない。
+元のhelper宣言を変更せず、固定Seq側だけに出力フィルタ規則を生成する。
+全宣言・開始式・helperの参照範囲を有限に検査し、実安定表の対応から
+全入力・全残余・有限失敗・有限実行の存在・全clock未定義と元文字列受理言語を保存する。
+新backendについて同clockや一定clock倍率は主張しない。
+
+主例は元9規則から固定656規則・全nullaryのSeqへ。
+`a`/`b`の内容による受理・拒否、同原点の二捕捉`a`/`ab`、候補外の長い保持値を拒否せず使う本体を検証した。
+別のsuffix領域`{ab}`では`a`/`ab`を異なる非空語として保持し、再照合で`a`だけを消費して
+非空の残余`b`を後続が読む元・Seq双方の直接実行を検証した。
+balanced a/b再帰helperによる実捕捉もn=1,2,4で確認し、n=2の元・Seq双方を直接実行した。
+nullableな実捕捉値の反復は空でない残り入力上でも全clock未定義を保存する。
+未定義helperが先行する引数列は全入力・全clock未定義、逆順の有限失敗も保存する。
+空dictionary、アルファベット外文字、guard省略の誤った一般化とその有限検査での拒否も検証した。
+
+条件は引き続き**再照合する現在位置の有限suffix領域**である。
+このguardなしでは、候補外の長い保持値が普通に一致する実反例がある。
+任意の位置での無制限な再照合、任意user本体、および一般のPar/Seq一致・分離は未解決である。
+
 ## EOFで保持値を再照合する相互再帰文法の全体変換
 
 `EmptyObservedSyntax`から`EmptyObservedCompiler`は、保持値の直接の再照合が
@@ -10770,3 +10812,60 @@ ab from the same ab!a input are both nonempty, yet after consuming ab! only
 a replays successfully. The checker rejects an unguarded parameter rule.
 The unrestricted content-dependent replay problem and the full Par/Seq
 language-class equality or genuine separation remain unresolved.
+
+
+## Exact finite-content replay beyond EOF
+
+FiniteSuffixReplay/Body/CallCompiler supports actual consuming retained-word
+replay when the current remaining input belongs to a fixed finite dictionary
+R. The original source guard tests exact suffix membership and preserves the
+current position. The suffixes(alphabet,bound) constructor covers every word
+within a finite alphabet and length bound. Neither total original input
+length nor captured-word length is bounded by the compiler.
+
+The observation dictionary is generated from all prefixes of R. Captures in
+that dictionary retain their exact literal contents; every other actual
+capture receives an overflow/other view. An other capture is not rejected at
+call entry: it is known to fail only behind the original suffix guard.
+Negation, choice, partial star, arbitrary consuming body prefixes and
+independent recursive helper calls preserve that distinction. Specialization
+can therefore retain distinct nonempty a/ab values and consume only a from
+a later ab suffix, leaving b to a continuation.
+
+ExactWordCaptureMachine generates strict finite-word output automata,
+including the empty word. Reading one extra character after the candidate
+reaches a dead state, unlike periodic summaries. The existing machine-family
+sum and RegularCaptureProduct backend supply real independent recursive
+parser output tests. FiniteWordCaptureSelection probes equality with each
+candidate rather than enumerating every transition profile. Preflight retains
+actual argument failure and undefinedness, and guarded branch commitment
+prevents a failing continuation from retrying a different capture class.
+
+The whole-program frontend has independent nullary recursive helper nodes,
+one arbitrary-arity source callee, helper-call actuals and helper-only body
+calls. This is a complementary backend: it does not yet cover the mutually
+recursive parameterized users or parent-dependent actuals of the separate
+EOF-observed frontend. Source helpers stay as declared, while only the Seq
+target receives output-product rows. Finite declaration/root/range checks
+connect actual source syntax to stable physical table equality. All original
+string observations, residuals, finite failure, finite-run existence and
+all-clock undefinedness are preserved. No same-clock or constant clock-ratio
+claim is made for this backend.
+
+The primary nine-rule source yields a fixed 656-rule nullary Seq grammar.
+Direct source/Seq kernel executions distinguish a/b contents, preserve actual
+common-origin a/ab captures, and preserve failures on wrong copies. A separate
+ab-suffix instance directly verifies partial replay leaving a nonempty b
+remainder and consuming it afterward. Balanced recursive a/b arguments have
+actual captures checked at n=1,2,4 and a direct generated Seq run at n=2.
+A longer captured value remains usable through negative replay tests; its
+actual target finite run is obtained by the definedness correspondence.
+Nullable retained replay on nonempty remaining input is undefined at every
+clock. An undefined leading argument is undefined for every original input
+and clock, while reversing it with a failing argument fails finitely.
+Empty dictionaries, alphabet boundaries and omission of the source replay
+guard are checked, with unguarded raw source rules rejected by the frontend.
+
+Arbitrary unguarded replay can match an overflow word and cannot be replaced
+by this finite view. General replay locations, arbitrary parameterized user
+control and the unrestricted Par/Seq equality or separation remain open.
