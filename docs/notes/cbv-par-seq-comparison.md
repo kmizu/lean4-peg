@@ -16,6 +16,50 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 検証した先頭ブロックから、元の各保持語を個別に捕捉し直す
+
+`CopyFieldCapture` と `TupleFieldControl/Transfer/Compiler` は、必須の先頭
+`P(W) = W[j₀];d;W[j₁];d;…` が全成分を含む場合、その実入力上の各語と
+区切り文字を別々の Seq 引数へ捕捉する。生成する引数は各出現につき
+`[gap(d), chr(d)]` の二つで、実捕捉値は `[W[j₀], [d], W[j₁], [d], …]`。
+元の Par 引数の捕捉範囲が重なっていても、先頭ブロック中のコピーを実際に
+消費して取り直す。語の値を生成構文へ埋め込まず、仮想入力も使わない。
+
+`CopyFieldCapture.expression_view` は、元の各 parameter を対応する偶数位置へ
+代入すると、任意の一階式・任意の戦略/再帰表・任意の後続位置で評価が一致すると
+証明する。この値の表現定理は引数つき呼出しも含む。範囲外の元 parameter は
+失敗のままで、追加の区切り文字用/重複用引数が漏れ出さない。
+`scan_encoded` と `entry` が、この環境を実 Seq 引数評価で生成して実規則へ
+入ることを証明する。
+
+戦略間の変換は別に検証する。`TupleFieldControl` の本体は各成分を個別に使う
+raw `MExp` で、任意の通常の選択・否定・反復を許す。内部の呼出しは独立した
+nullary 再帰 helper に限る。`TupleFieldTransfer.physical` は任意の caller 環境と
+元/変換後 actual の局所対応を仮定し、元 actual の preflight、先頭一致確認、
+各語の再捕捉、本体評価を同じ physical clock で接続する。先頭が不一致のときは
+有限失敗し、actual や本体の未定義も保存する。
+
+`TupleFieldCompiler.check` は helper 閉包、原 actual の通常構文とアルファベット
+効果、区切り文字不在、先頭 pattern の scope/全成分 coverage、本体 scope を
+有限検査する。helper prefix と一つの parameterized header からなる実文法を
+生成し、閉じた actual を持つ開始呼出しについて、全入力の残余・失敗・元文字列
+言語・全 clock 未定義の保存を証明した。以前の parameterized recursive client
+frontend への接続は、この追加ではまだ行っていない。
+
+`TupleFieldExamples` は任意の n で、同じ位置から重ねて捕捉した `aⁿ` と `aⁿb`
+を `[1,0,1]` の先頭ブロックから六つの実引数へ取り直し、後続の `aⁿ!aⁿb` を
+個別再照合で受理することを証明する。後続は常に先頭ブロック全体より短く、
+その位置で opaque なブロック全体の再照合は失敗する。元一規則 `[2]` から
+固定三規則 `[1,1,6]` を生成する。先頭一致確認の省略による実誤受理、coverage/
+区切り文字/parameter scope 検査、個別語の反復と否定、再帰 helper の正確な
+clock、nullable star の全 clock 未定義も kernel 検証した。
+
+全体 `lake build` と Audit は 1,344 jobs を通過。関連 3,387 public 依存報告は
+標準公理 3,312 または無公理 75。この追加は五モジュール・52 guard、PR69 全体は
+34 新 Lean モジュール・312 guard。必須で全成分を含む先頭ブロックなしの変換、
+本体内の任意の parameterized call、既存再帰 client との接続、一般 Par/Seq
+一致または分離は未解決。一般の値表現定理と、この制限つき戦略変換を区別する。
+
 ## 固定ブロック後の一般制御で、一周ごとに消費語が変わる反復へ
 
 `CopyPeriodControl` と `ControlledPeriodTransfer/Syntax/Correspondence/Compiler` は、

@@ -1,3 +1,8 @@
+import MacroPeg.CBV.CopyFieldCapture
+import MacroPeg.CBV.TupleFieldControl
+import MacroPeg.CBV.TupleFieldTransfer
+import MacroPeg.CBV.TupleFieldCompiler
+import MacroPeg.CBV.TupleFieldExamples
 import MacroPeg.CBV.CopyPeriodControl
 import MacroPeg.CBV.ControlledPeriodTransfer
 import MacroPeg.CBV.ControlledPeriodSyntax
