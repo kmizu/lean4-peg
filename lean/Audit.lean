@@ -1,3 +1,5 @@
+import MacroPeg.CBV.RenamedCopyFIFO
+import Shallot.Peg.Separation.CBVPlainEmbedding
 import MacroPeg.CBV.RenamedCopy
 import Shallot.Peg.Separation.CBVRenamedCopy
 import MacroPeg.CBV.FiniteCaptureInterface
@@ -39289,3 +39291,27 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.PegSeparation.renamed_copy_isPar' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.PegSeparation.renamed_copy_isPar
+
+/-- info: 'Shallot.MacroPeg.CBV.RenamedCopyFIFO.accepts_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RenamedCopyFIFO.accepts_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.RenamedCopyFIFO.reversal_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RenamedCopyFIFO.reversal_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.RenamedCopyFIFO.acceptsReverse_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RenamedCopyFIFO.acceptsReverse_iff
+
+/-- info: 'Shallot.PegSeparation.embedExp_epsArgs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.embedExp_epsArgs
+
+/-- info: 'Shallot.PegSeparation.peg_cbv_accepts' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.peg_cbv_accepts
+
+/-- info: 'Shallot.PegSeparation.pel_subset_firstOrder_cbv' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.pel_subset_firstOrder_cbv

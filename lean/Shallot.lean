@@ -97,3 +97,4 @@ import Shallot.Peg.Separation.CBVSeqSpace
 import Shallot.Peg.Separation.CBVForwardBoolean
 import Shallot.Peg.Separation.CBVSeqLinearSpace
 import Shallot.Peg.Separation.CBVRenamedCopy
+import Shallot.Peg.Separation.CBVPlainEmbedding

@@ -51,11 +51,11 @@ main entryの負の結論にはKo下界の追加公理が含まれる一方、op
 単に多項式時間で認識できるという上界では足りない。
 この予算を満たすSeqシミュレーションはまだ構成していない。
 
-新たなSeq非所属定理、候補`w#uppercase(w)`のSeq所属・非所属、一般Par/Seqの一致・分離は
-いずれも今回の調査からは主張しない。次の非所属経路の課題を、捕捉環境を含む
-量的なシミュレーションへ具体化した調査結果である。
+このcell-probe調査自体から、新たなSeq非所属定理や一般Par/Seqの一致・分離は
+主張しない。次の非所属経路の課題を、捕捉環境を含む量的なシミュレーションへ
+具体化した調査結果である。コピー言語についての正の経路は次節で扱う。
 
-## 別アルファベットへのコピーを、具体的な分離候補として固定する
+## 別アルファベットコピーの認識と、分離候補としての再評価
 
 `RenamedCopy.Language`は、元の5文字a,b,A,B,#上の
 `{ w # uppercase(w) | w in {a,b}* }`である。例えば`ab#AB`を受理し、
@@ -81,17 +81,39 @@ uの直後が#、かつvが入力末尾まで達したときだけ比較を完�
 残り入力のA/Bはa/b/#と別なので非空の旧値が再照合不能になる。
 任意の再帰的なtarget文法と、target内部での新しい捕捉も許す。
 ただし入口に残る無制限のcaller stackは含まない。従ってこれは引継ぎ方式の障害であり、
-Seq非所属の証明ではない。任意Seq文法のstack・先読み・新捕捉を含む構成又は下界が残る。
+Seq非所属の証明ではない。以下のFIFOによる経路は、まさに有限tupleへ平坦化しない
+構成を調べる必要があることを示す。
+
+`RenamedCopyFIFO.accepts_iff`は、左のbitをFIFOへenqueueし、右の文字を大文字の
+対応表と比較しながらdequeueするモデルの全入力での正確な認識を証明する。
+`acceptsReverse_iff`は、有限な文字判定だけを取り替えて反転言語も認識する。
+このコードのListはqueue内容の仕様であり、List.appendの定数時間性は主張しない。
+
+[Leong–Seiferas（JACM 1981）, Theorem 4.1 / Corollary 4.2](https://www.cs.bu.edu/faculty/gacs/courses/cs535/papers/heads_vs_tapes_ub.pdf)
+は、dequeやmultihead tape unitを、入力commandを追加せず実時間でsingle-head tape群へ
+模倣する。FIFO認識をこの既知のsimulationへ入れ、反転言語の実時間TMを得てから、
+監査した実時間TM→SCA→通常PEGの経路へ入れる正の方法がある。
+上の外部audit driverの`realTimeReverseToPEG`は、その後半の一般変換を証明し、
+標準3公理のみで検証した。`Shallot.PegSeparation.pel_subset_firstOrder_cbv`は、
+このrepoの任意の通常PEGを、同じ元の文字列言語を持つ一階Seq（及び他の戦略）へ移す。
+
+したがって、この単純コピー言語は非所属の本命として追わない。
+これは文献上の構成を組み合わせる判断であり、このrepoに`renamed_copy_isSeq`という
+kernel定理を追加したという意味ではない。FIFOから具体的なmultitape TMへの実装と、
+外部PEGモデルからこのrepoのPEGモデルへの意味対応はまだLeanで接続していない。
+FIFO・各一般compiler・通常PEGからSeqへの埋込みの検証範囲を区別する。
 
 計算量による別経路との関係も確認した。既存の
 `original_reverse_requires_P_linear_space`から、一般一致はPの線形空間包含を含意する。
 [MITの講義資料（2008年、Lecture 12）](https://ocw.mit.edu/courses/6-080-great-ideas-in-theoretical-computer-science-spring-2008/6a28fe89bb2e34cc97abe80af66155f6_lec12.pdf)
 もPとLINSPACEの包含方向を未解決として説明している。
-今回の候補では、単純な左右の文字比較に対する文法の表現力を直接調べる。
-一般一致・分離も、この候補のSeq所属・非所属も未解決で、新規性の確定は主張しない。
+この例では、単純な左右の文字比較に対する文法の表現力を直接調べた。
+一般Par/Seqの一致・分離は未解決で、この言語の形式的Seq所属への接続も未完了である。
+新規性の確定は主張しない。
 
-検証: `lake build`（Audit込み）1,409 jobs成功。今回追加17定理の依存は標準Lean公理
-又は無公理で、すべてguard付き。PR71全体では3新規Lean module・23新規guard。
+検証: `lake build`（Audit込み）1,411 jobs成功。今回追加6定理の依存はpropext/Quot.soundのみで、
+すべてAudit guard付き。PR71全体は5新規Lean library module・29新規guard。
+別環境の正のcompilerは8,579 jobs成功し、外部audit driverにも標準公理依存のguardを追加した。
 
 ## 消費前の情報を有限個の捕捉へ平坦化する方式の限界
 

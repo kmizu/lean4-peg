@@ -1,3 +1,4 @@
+import MacroPeg.CBV.RenamedCopyFIFO
 import MacroPeg.CBV.RenamedCopy
 import MacroPeg.CBV.FiniteCaptureInterface
 import MacroPeg.CBV.RetainedContinuationSyntax
