@@ -1,3 +1,10 @@
+import MacroPeg.CBV.CopyPeriodControl
+import MacroPeg.CBV.ControlledPeriodTransfer
+import MacroPeg.CBV.ControlledPeriodSyntax
+import MacroPeg.CBV.ControlledPeriodCorrespondence
+import MacroPeg.CBV.ControlledPeriodCompiler
+import MacroPeg.CBV.ControlledPeriodExamples
+import MacroPeg.CBV.ControlledPeriodProofs
 import MacroPeg.CBV.RecapturedCopyBlock
 import MacroPeg.CBV.RecapturedCopyTransfer
 import MacroPeg.CBV.RecapturedCopySyntax

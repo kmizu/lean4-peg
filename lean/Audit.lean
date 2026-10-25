@@ -1,3 +1,10 @@
+import MacroPeg.CBV.CopyPeriodControl
+import MacroPeg.CBV.ControlledPeriodTransfer
+import MacroPeg.CBV.ControlledPeriodSyntax
+import MacroPeg.CBV.ControlledPeriodCorrespondence
+import MacroPeg.CBV.ControlledPeriodCompiler
+import MacroPeg.CBV.ControlledPeriodExamples
+import MacroPeg.CBV.ControlledPeriodProofs
 import MacroPeg.CBV.RecapturedCopyBlock
 import MacroPeg.CBV.RecapturedCopyTransfer
 import MacroPeg.CBV.RecapturedCopySyntax
@@ -36306,3 +36313,267 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.RecapturedCopyProofs.cycle_target' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.RecapturedCopyProofs.cycle_target
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyPeriodControl.firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyPeriodControl.firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyPeriodControl.physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyPeriodControl.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyPeriodControl.iteration' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyPeriodControl.iteration
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyPeriodControl.skeleton_env' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyPeriodControl.skeleton_env
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyPeriodControl.entry' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyPeriodControl.entry
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodTransfer.rules_projection' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodTransfer.rules_projection
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodTransfer.rules_probe' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodTransfer.rules_probe
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodTransfer.rules_run' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodTransfer.rules_run
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodTransfer.source_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodTransfer.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodTransfer.rules_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodTransfer.rules_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodTransfer.head_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodTransfer.head_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodTransfer.physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodTransfer.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodSyntax.emitArgs_eq_map' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodSyntax.emitArgs_eq_map
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodSyntax.emitArgs_length' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodSyntax.emitArgs_length
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodSyntax.pattern_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodSyntax.pattern_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodSyntax.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodSyntax.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodSyntax.emit_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodSyntax.emit_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodSyntax.emitArgs_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodSyntax.emitArgs_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodSyntax.source_installed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodSyntax.source_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodSyntax.target_installed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodSyntax.target_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodSyntax.source_user' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodSyntax.source_user
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodSyntax.target_user' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodSyntax.target_user
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodSyntax.source_copy' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodSyntax.source_copy
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodSyntax.target_extra' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodSyntax.target_extra
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodSyntax.target_copy' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodSyntax.target_copy
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodSyntax.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodSyntax.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodSyntax.target_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodSyntax.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodCorrespondence.expression_physical' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodCorrespondence.expression_physical
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodCorrespondence.arguments_physical' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodCorrespondence.arguments_physical
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodCorrespondence.tables_related' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodCorrespondence.tables_related
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodCorrespondence.physical' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodCorrespondence.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodCorrespondence.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodCorrespondence.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodCompiler.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodCompiler.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodCompiler.firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodCompiler.firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodCompiler.physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodCompiler.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodCompiler.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodCompiler.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodCompiler.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodCompiler.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodCompiler.defined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodCompiler.defined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodCompiler.undefined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodCompiler.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodExamples.checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodExamples.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodExamples.source_arities' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodExamples.source_arities
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodExamples.target_arities' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodExamples.target_arities
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodExamples.source_trees' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodExamples.source_trees
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodExamples.target_trees' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodExamples.target_trees
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodExamples.mixed_iterations_leave_suffix' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodExamples.mixed_iterations_leave_suffix
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodExamples.failed_suffix_rolls_back_whole_iteration' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodExamples.failed_suffix_rolls_back_whole_iteration
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodExamples.suffix_probe_is_required' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodExamples.suffix_probe_is_required
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodExamples.retained_negative_test_controls_whole_iteration' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodExamples.retained_negative_test_controls_whole_iteration
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodExamples.nested_consuming_star' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodExamples.nested_consuming_star
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodExamples.helper_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodExamples.helper_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodExamples.physical_helper_clock_is_preserved' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodExamples.physical_helper_clock_is_preserved
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodExamples.bad_helper_scope_rejected' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodExamples.bad_helper_scope_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodExamples.divergent_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodExamples.divergent_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodExamples.failed_anchor_skips_divergent_tail' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodExamples.failed_anchor_skips_divergent_tail
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodExamples.recursive_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodExamples.recursive_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodExamples.recursive_helper_in_variable_iterations' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodExamples.recursive_helper_in_variable_iterations
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodExamples.all_physical_clocks' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodExamples.all_physical_clocks
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodProofs.actual_captures' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodProofs.actual_captures
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodProofs.source_and_target_all_trees' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodProofs.source_and_target_all_trees
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodProofs.divergent_source_undefined' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodProofs.divergent_source_undefined
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledPeriodProofs.divergent_target_undefined' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledPeriodProofs.divergent_target_undefined

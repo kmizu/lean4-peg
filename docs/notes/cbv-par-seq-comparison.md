@@ -16,6 +16,60 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 固定ブロック後の一般制御で、一周ごとに消費語が変わる反復へ
+
+`CopyPeriodControl` と `ControlledPeriodTransfer/Syntax/Correspondence/Compiler` は、
+固定の非空 delimited parameter 列 `P(W)` の後に制御 `T` を持つ本体
+
+```
+H(W) <- (P(W); T[P(W)])*
+```
+
+を元文字列上の Seq へ翻訳する。`T` は block atom、空成功、any/chr/range/literal、
+独立 nullary helper 呼出し、連接、優先選択、否定、反復からなる有限構文である。
+block atom は常に元の `P(W)` 全体を再照合する。helper は prefix 内で再帰してよく、
+一周の後半が消費する文字数・語・選択経路は入力に応じて変わる。
+後半には消費する `star` も許し、有限個の反復回数や出力語を列挙しない。
+元捕捉の区切り自由性は捕捉値に対する条件であり、入力全体の文字集合は制限しない。
+
+元順の actual preflight と初回の `P(W)` 検査の後、最初の固定ブロックを実入力から `B` として捕捉する。
+別の unary probe 規則がその捕捉値で `T[B]` を評価する。
+後半が失敗すれば、既に照合した最初のブロックも含めて一周全体を取り消し、元位置で零周成功する。
+後半が未定義なら未定義のまま伝播する。成功時は実行用 unary 規則
+
+```
+Run(B) <- T[B]; (param_0; T[B])*
+```
+
+へ同じブロックを捕捉し直して入る。Seq actual が先頭 `P(W)` を消費済みなので、
+この本体はその後半と後続の各周を正しい位置から実行する。
+初回ブロックが失敗した場合には後半を評価しない。
+probe と実行規則は同じ physical clock の sibling call であり、後半の helper 行は
+元の source 本体と同じ一段前の実表を使う。停止性の oracle や追加 clock の余裕を仮定しない。
+
+`CopyPeriodControl.physical/iteration` は元 tuple での `T[P(W)]` と新しい単語環境 `[B]` での `T[B]` を対応させる。
+helper prefix の閉じた有限構文検査から実 recursive row の一致を導き、各制御文脈へ持ち上げる。
+先頭ブロックが非空で、後半の実成功は suffix を返すことから、外側反復の成功は常に厳密に消費する。
+nullable な内側反復の未定義を拒否・空成功へ置き換えない。
+`ControlledPeriodTransfer.physical` は任意の caller 環境・元/変換後 actual・全 clock の実呼出し一致を示す。
+raw 宣言/root、period scope、後半の helper scope、元 actual の捕捉効果、親条件と戻り値効果閉包を有限検査し、
+client 実表の同時帰納へ接続する。元文字列言語、残余、有限失敗、定義性、全 clock 未定義性を保存する。
+
+例の後半は `(+;block) / ~`。各周は `B+B` または `B~` を入力で選ぶ。
+`source_and_target_all_trees n flags depth` は任意の親語長、任意の非空 Bool 選択列、任意の再帰深さでの
+source/target 受理を証明する。子語を倍化して捕捉し、帰還後の親語を復帰させる。
+source 5 規則 `[0,0,1,1,4]` は固定 Seq 10 規則 `[0,0,1,1,1,1,1,1,1,1]` となる。
+消費する内側反復 `( +;block )*;~`、保持値の否定による周全体の rollback、
+committed choice 後半の失敗、probe を省いた誤失敗も kernel で確認した。
+独立 helper の実再帰が異なる長さの balanced word を消費した後にも元ブロックを再照合できる。
+helper の clock 1 未定義/clock 2 成功と、後半 `eps*` の全 clock 未定義を保存する。
+
+残る制約は、各周が同じ固定ブロックで始まること、後半の保持値利用がそのブロック全体であること、
+後半の呼出しが独立 nullary helper であること。後半からの parameterized client 呼出しや
+元 tuple の各成分の独立利用、先頭 anchor のない任意の反復はまだ扱えていない。
+既存の unary client の先頭再照合・共通 arity/pattern/後半・元捕捉の区切り自由性も残る。
+一般 Par/Seq 言語クラスの一致・分離は引き続き未解決である。
+
 ## 一周分の実入力を再捕捉し、消費反復の任意の停止位置を保存する
 
 `RecapturedCopyBlock/Transfer` と `RecapturedCopySyntax/Correspondence/Compiler` は、
@@ -11697,3 +11751,13 @@ The local theorem preserves all physical clocks, arbitrary caller environments a
 The former a/ab frontier counterexamples now return the correct five/four-character residuals and admit their original continuations. Actual Seq capture is ab#a#. The five-rule recursive source generates nine fixed unary/helper Seq rules. Symbolic proofs cover every parent length, every positive block repetition count and every recursion depth with child doubling and parent restoration. Kernel runs also cover zero iterations, failed preflight, removed first-block verification, empty original captures consuming delimiters with a partial-block remainder, recursive consuming producers and true cycles.
 
 Validation: full lake build including Audit passes (1,332 jobs). All 3,274 related public dependencies use standard Lean axioms (3,204) or none (70). This extension adds 64 guarded public theorems in seven modules; PR69 totals 199 new guards across 22 new Lean modules. The period remains a fixed delimited parameter list. General PEG iteration with varying per-iteration consumption, arbitrary bodies, multiple-parent clients and unrestricted Par/Seq equality/separation remain unresolved.
+
+## Input-dependent iteration control after a recaptured anchor
+
+CopyPeriodControl and ControlledPeriodTransfer/Syntax/Correspondence/Compiler translate `(P(W); T[P(W)])*` where P is a fixed nonempty delimited parameter pattern and T is arbitrary finite PEG control over a complete-block atom, terminals and independent nullary recursive helpers. T includes sequence, committed choice, negation and consuming/nullable stars, so different iterations may consume different words and arbitrarily different amounts of input.
+
+After checked actual preflight and a first-anchor test, a unary probe captures the real anchor block B and evaluates T[B]. Failure rolls the whole first iteration back to zero consumption; undefinedness propagates. On success another unary call captures B and executes T[B];(param_0;T[B])*. Source and target use the same physical helper-row clock. Helper prefix scope/closure and all source/root/capture/parent/return-effect checks are finite. The source tuple is related to the real singleton B environment throughout control and helper returns; whole-source language, residual, finite failure/definedness and all-clock undefinedness are preserved.
+
+The five-rule source generates ten fixed Seq rules. Symbolic proofs cover every parent length, every nonempty Boolean branch sequence and every recursive nesting depth, with child doubling and parent restoration. Kernel executions cover consuming inner repetition, negative retained-block tests, rollback after committed-choice failure, omitted-probe errors, recursive balanced helpers followed by retained-block replay, exact helper clocks and value-independent nullable divergence at every clock.
+
+Validation: full lake build including Audit passes (1,339 jobs). All 3,335 related public dependency reports are standard (3,262) or axiom-free (73). This addition has 61 guarded public theorems in seven modules; PR69 totals 260 new guards across 29 new Lean modules. General body control that uses tuple components separately, parameterized calls inside the iteration tail, anchor-free iteration and unrestricted Par/Seq equality/separation remain unresolved.
