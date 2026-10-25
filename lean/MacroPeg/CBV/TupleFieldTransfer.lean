@@ -52,14 +52,15 @@ theorem head_firstOrder (base arity : Nat) (d : Char) (js : List Nat) (args : Li
 
 /-- The original actuals may overlap or contain calls. Their local evaluation
 correspondence and delimiter freedom are the interface to the caller compiler.
-The body after the anchor can use the tuple components separately. -/
-theorem physical_of_body (g h : MGrammar) (base : Nat) (d : Char)
+The body after the anchor can use the tuple components separately. The source
+rule and the generated projection block may have different addresses. -/
+theorem physical_at (g h : MGrammar) (sourceIndex base : Nat) (d : Char)
     (j : Nat) (js : List Nat) (e : MExp)
     (emittedBody : MExp) (hem : emittedBody.FirstOrder)
     (args emitted : List MExp) (hlen : emitted.length=args.length) (hn : 0<args.length)
     (hscope : ∀ i∈j::js, i<args.length)
     (cover : ∀ i, i<args.length → i∈j::js)
-    (hsource : ruleAtM g.rules base=some ⟨args.length,sourceBody d (j::js) e⟩)
+    (hsource : ruleAtM g.rules sourceIndex=some ⟨args.length,sourceBody d (j::js) e⟩)
     (hi : Installed h base args.length d (j::js) emittedBody)
     (hg : g.FirstOrder) (hfo : MExp.FirstOrderArgs args)
     (x : List Char) (E : List (List Char)) (k p : Nat) (hp : p≤x.length)
@@ -71,7 +72,7 @@ theorem physical_of_body (g h : MGrammar) (base : Nat) (d : Char)
       evV h x .callByValueSeq (tblV h x .callByValueSeq k) E (emitted[i]'(by omega)) p)
     (hfree : ∀ i, (hii : i<args.length) → ∀ q,
       evV g x .callByValuePar (tblV g x .callByValuePar k) E args[i] p=some (some q) → Free d (pre x p q)) :
-    evV g x .callByValuePar (tblV g x .callByValuePar k) E (.call base args) p=
+    evV g x .callByValuePar (tblV g x .callByValuePar k) E (.call sourceIndex args) p=
       evV h x .callByValueSeq (tblV h x .callByValueSeq k) E (head base args.length d (j::js) emitted) p := by
   rw [evV_call_par hsource rfl (by decide)]
   have heargs := ParentPatternTransfer.arguments_congr g h x (tblV g x .callByValuePar k) (tblV h x .callByValueSeq k) E p args emitted hlen he
@@ -88,7 +89,7 @@ theorem physical_of_body (g h : MGrammar) (base : Nat) (d : Char)
     | some W =>
       have hquery := CopyBodyProjections.query_physical g h base d j js args emitted hlen hn hscope hi.projections
         hg hfo x E k p hp he hfree W hs
-      change valAt (tblV g x .callByValuePar k base W) p=
+      change valAt (tblV g x .callByValuePar k sourceIndex W) p=
         evV h x .callByValueSeq (tblV h x .callByValueSeq k) E
           (.seq (.andP (targetHead base emitted)) (.call (base+args.length) (CopyFieldCapture.scanArgs d (j::js)))) p
       cases k with
@@ -125,6 +126,29 @@ theorem physical_of_body (g h : MGrammar) (base : Nat) (d : Char)
           rw [sourceBody,evV_seq_ok hstep]
           exact hbody k (by omega) W hwl hwfree rest.length
             (evV_ok (tblV_ok _ _ _ k) _ p hp _ hstep)
+
+theorem physical_of_body (g h : MGrammar) (base : Nat) (d : Char)
+    (j : Nat) (js : List Nat) (e : MExp)
+    (emittedBody : MExp) (hem : emittedBody.FirstOrder)
+    (args emitted : List MExp) (hlen : emitted.length=args.length) (hn : 0<args.length)
+    (hscope : ∀ i∈j::js, i<args.length)
+    (cover : ∀ i, i<args.length → i∈j::js)
+    (hsource : ruleAtM g.rules base=some ⟨args.length,sourceBody d (j::js) e⟩)
+    (hi : Installed h base args.length d (j::js) emittedBody)
+    (hg : g.FirstOrder) (hfo : MExp.FirstOrderArgs args)
+    (x : List Char) (E : List (List Char)) (k p : Nat) (hp : p≤x.length)
+    (hbody : ∀ m, m<k → ∀ W : List (List Char), W.length=args.length →
+      (∀ i, (hii : i<W.length) → Free d W[i]) → ∀ q, q≤x.length →
+      evV g x .callByValuePar (tblV g x .callByValuePar m) W e q=
+        evV h x .callByValueSeq (tblV h x .callByValueSeq m) W emittedBody q)
+    (he : ∀ i, (hii : i<args.length) → evV g x .callByValuePar (tblV g x .callByValuePar k) E args[i] p=
+      evV h x .callByValueSeq (tblV h x .callByValueSeq k) E (emitted[i]'(by omega)) p)
+    (hfree : ∀ i, (hii : i<args.length) → ∀ q,
+      evV g x .callByValuePar (tblV g x .callByValuePar k) E args[i] p=some (some q) → Free d (pre x p q)) :
+    evV g x .callByValuePar (tblV g x .callByValuePar k) E (.call base args) p=
+      evV h x .callByValueSeq (tblV h x .callByValueSeq k) E (head base args.length d (j::js) emitted) p := by
+  exact physical_at g h base base d j js e emittedBody hem args emitted hlen hn hscope cover
+    hsource hi hg hfo x E k p hp hbody he hfree
 
 theorem physical (bodies : List MExp) (g h : MGrammar) (base : Nat) (d : Char)
     (j : Nat) (js : List Nat) (e : MExp)

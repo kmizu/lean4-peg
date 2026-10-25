@@ -16,6 +16,54 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 異なる捕捉タプルを渡す、複数headerの相互再帰をParからSeqへ
+
+`MutualFieldSyntax/Layout/Correspondence/Compiler` は、従来の一つの自己再帰 header
+という制約を外し、**任意個の正 arity の parameterized header と任意の相互呼出し**を
+一つの固定 Seq 文法へ変換する。各 header の arity と再照合 field の順序・重複は
+別々に指定できる。raw 本体・root の seq/alt/not/star、各 parameter の独立利用、
+新 actual を持つ自己/相互呼出しを有限検査し、元の全宣言と root 自体との一致も検査する。
+実行時の語や入力長を compiler へ渡さず、保持語の有限 palette は置かない。
+
+元の規則番号 `helpers+i` と、生成先の projection block の先頭
+`helpers+Σ(j<i)(arity_j+1)` を分離した。`TupleFieldTransfer.physical_at` は
+この異なる二つの配置で実評価を対応させる。既存の `physical_of_body` API は同じ
+番号を渡す特殊化として維持した。各 target block は元 arity 個の unary projection
+と、一つの実 field 捕捉 entry からなる。entry は field ごとの word/separator を
+別々に受け取り、元の各 parameter の view を復元する。
+規則数は `helpers+Σ(arity_i+1)` で、arity の異なる callee も正しく配置される。
+
+`MutualFieldCorrespondence.physical` は、全 header の全ての新しい保持環境について
+実 physical table の clock に強帰納する。call の source/target actual 評価、区切り
+自由性、本体の一致を接続し、recursive-body の仮定を全て外す。
+`MutualFieldCompiler.physical/observations_iff/language_translation/undefined_iff`
+は、有限な宣言検査だけから、**全元入力・全 physical clock の一致、全有限観測、
+同じ元文字列言語、全 clock 未定義**を保存する。
+独立 nullary helper の再帰・未定義も、元と同じ実 helper 行で扱う。
+
+例は source arity `[2,1]` から target arity `[1,1,6,1,2]` へ変換する。
+二引数側の実捕捉 `[a^n,a^n b]` から、一引数側へ新しく `a^(2n)` を捕捉し、
+さらに二引数側へ `[a^(2n),a^(2n)b]` を捕捉する。子から戻った後は、一引数側が
+自分の `a^(2n)` を使い、二引数側は元の `a^n b` と `a^n` を独立に再利用する。
+`MutualFieldProofs.f_rows_all_depths/g_rows_all_depths/source_and_target_all_trees`
+は、**任意初期長 n（空捕捉を含む）・任意再帰 depth・任意の後続文字列**について
+この実評価を記号的に証明する。固定 scanner root と固定 target の全入力受理は
+clock `2*depth+1` で成立する。有限 kernel 例に加えて、子の値で親を置き換えた
+入力の拒否、不完全な cover・不正 scope/arity・異なる元宣言の拒否、nullable body の
+全 clock 未定義を source/target 両方で証明した。
+
+**条件は、各 header が先頭で全 tuple を覆う区切りつき anchor を再照合することと、
+actual の実捕捉が区切りを含まないこと。** actual の消費部分は literal/parameter と
+通常制御の検査対象で、正に消費する一般 user call は未対応。零幅 query 内には
+検査済みの相互 call も置ける。任意の Par 文法がこの形へ正規化できるとは主張せず、
+anchor のない一般 live capture と、Par/Seq 全言語クラスの一致・分離は未解決である。
+2019年の[原記事](https://kmizu.hatenablog.com/entry/2019/10/24/145039)も両方式の
+タグ照合を示しているが、個別の書き換えとクラス全体の変換を区別する。
+
+検証は全 1,384 jobs/Audit、関連公開依存 3,680 件（標準 Lean 公理 3,599、
+無公理 81）。今回 6 新 modules・46 新 guard、PR69 全体は 74 新 Lean modules・
+605 guard。新しい sorry/axiom/native_decide は置いていない。
+
 ## 任意の一階Seq文法の全域化と、元文字列上の補集合閉包
 
 `SequentialTotalSyntax/FirstOrder/Arguments/Routes/Calls/Layout/Atoms/Expression/Stages/
