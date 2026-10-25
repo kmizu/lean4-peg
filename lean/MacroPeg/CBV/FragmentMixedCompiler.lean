@@ -66,7 +66,8 @@ theorem emit_bounded (total offset : Nat) (users : List Body) (h : offset+(tails
     · exact ih (offset+(normalize u).leaves.length) (by omega) P hp
 
 theorem valid (users : List Body) : FragmentMixedRecursive.Valid (plans users) (tails users) :=
-  emit_bounded (tails users).length 0 users (by omega)
+  fun P hp => Plan.all_imp (fun _ hj => by omega) P
+    (emit_bounded (tails users).length 0 users (by omega) P hp)
 
 theorem placed_leaf (ps : List Plan) (ambient pre post : List Part) (group : List (Option Part))
     (ha : ambient=pre++group.map (fun b => b.getD (true,.eps))++post) (i : Nat) (hi : i<group.length) :
@@ -82,7 +83,10 @@ theorem placed_leaf (ps : List Plan) (ambient pre post : List Part) (group : Lis
       rw [ha,List.getElem?_append_left (by simp; omega : pre.length+i<(pre++group.map (fun b => b.getD (true,.eps))).length),
         List.getElem?_append_right (by omega)]
       simp only [Nat.add_sub_cancel_left,List.getElem?_map,hg,he,Option.map_some,Option.getD_some]
-    simp only [address,hg,he,lookup,FragmentMixedRecursive.leaf,hb]
+    have hn : pre.length+i≠ambient.length+1 := by
+      have hlt := (List.getElem?_eq_some_iff.mp hb).choose
+      omega
+    simp only [address,hg,he,lookup,FragmentMixedRecursive.leaf,hb,hn,ite_false]
     exact (FragmentMixedForm.render_raw (ambient.map Prod.fst) ambient.length ps true b).symm
 
 private theorem exp_congr (L R : Nat → MExp) : ∀ (P : Plan), P.All (fun i => L i=R i) → P.exp L=P.exp R

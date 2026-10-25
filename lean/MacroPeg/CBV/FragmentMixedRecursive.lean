@@ -18,7 +18,9 @@ def pair (split : Bool) (b : MExp) : List MRule := [⟨3,triple split b⟩,⟨1,
 
 def stuck : MExp := .star .eps
 def entry (kinds : List Bool) (n j : Nat) (G H : MExp) : MExp :=
-  if j=n then .seq (.andP (argument G H)) stuck else if kinds[j]?.getD true then FragmentConsumingEntry.entry (2*j+2) (2*j+3) G H
+  if j=n then .seq (.andP (argument G H)) stuck
+  else if j=n+1 then .seq (.andP (argument G H)) (.call (2*n+2) [.eps])
+  else if kinds[j]?.getD true then FragmentConsumingEntry.entry (2*j+2) (2*j+3) G H
   else .call (2*j+3) [argument G H]
 
 private theorem scanner_firstOrder : scanner.FirstOrder := by
@@ -29,8 +31,10 @@ theorem entry_firstOrder (kinds : List Bool) (n j : Nat) (G H : MExp) (hG : G.Fi
   unfold entry; split
   · exact ⟨⟨⟨scanner_firstOrder,scanner_firstOrder,hG⟩,hH⟩,True.intro⟩
   · split
-    · exact FragmentConsumingEntry.entry_firstOrder _ _ G H hG hH
-    · exact ⟨⟨⟨scanner_firstOrder,scanner_firstOrder,hG⟩,hH⟩,True.intro⟩
+    · exact ⟨⟨⟨scanner_firstOrder,scanner_firstOrder,hG⟩,hH⟩,⟨True.intro,True.intro⟩⟩
+    · split
+      · exact FragmentConsumingEntry.entry_firstOrder _ _ G H hG hH
+      · exact ⟨⟨⟨scanner_firstOrder,scanner_firstOrder,hG⟩,hH⟩,True.intro⟩
 
 open FragmentConsumingRecursive (aWord aWord_syntax)
 
@@ -221,25 +225,27 @@ theorem render_fragment_syntax (kinds : List Bool) (n : Nat) (plans : List Plan)
 /-- Logical users may branch, test, and guard at the caller origin.
 The appended leaf rows support the ordinary Par normalization proof. -/
 def leaf (plans : List Plan) (tails : List Part) (j : Nat) : MExp :=
-  match tails[j]? with
+  if j=tails.length+1 then scanner else match tails[j]? with
   | none => stuck
   | some b => .seq (head b.1) (.seq (.param 0) (render (tails.map Prod.fst) tails.length plans true false b.2))
 def source (plans : List Plan) (tails : List Part) : MGrammar :=
   ⟨plans.map (fun P => ⟨1,P.exp (leaf plans tails)⟩)++
-    (tails.map (fun b => ⟨1,.seq (head b.1) (.seq (.param 0) (render (tails.map Prod.fst) tails.length plans true false b.2))⟩)++[⟨1,stuck⟩])⟩
+    (tails.map (fun b => ⟨1,.seq (head b.1) (.seq (.param 0) (render (tails.map Prod.fst) tails.length plans true false b.2))⟩)++[⟨1,stuck⟩,⟨1,scanner⟩])⟩
 abbrev target (plans : List Plan) (tails : List Part) : MGrammar :=
   ⟨⟨1,.param 0⟩::⟨1,ControlledFragmentReplay.tailBody⟩::
-    tails.flatMap (fun b => pair b.1 (render (tails.map Prod.fst) tails.length plans false false b.2))⟩
+    (tails.flatMap (fun b => pair b.1 (render (tails.map Prod.fst) tails.length plans false false b.2))++[⟨1,scanner⟩])⟩
 /-- A finite syntax check on every logical user's leaf indices. -/
 def Valid (plans : List Plan) (tails : List Part) : Prop :=
-  ∀ P∈plans, P.All (fun j => j≤tails.length)
+  ∀ P∈plans, P.All (fun j => j≤tails.length+1)
 
 theorem leaf_firstOrder (plans : List Plan) (tails : List Part) (j : Nat) :
     (leaf plans tails j).FirstOrder := by
   unfold leaf
-  cases tails[j]? with
-  | none => trivial
-  | some b => exact ⟨by cases b.1 <;> trivial,True.intro,render_firstOrder (tails.map Prod.fst) tails.length plans true false b.2⟩
+  split
+  · exact scanner_firstOrder
+  · cases tails[j]? with
+    | none => trivial
+    | some b => exact ⟨by cases b.1 <;> trivial,True.intro,render_firstOrder (tails.map Prod.fst) tails.length plans true false b.2⟩
 theorem source_firstOrder (plans : List Plan) (tails : List Part) : (source plans tails).FirstOrder := by
   intro r hr
   rcases List.mem_append.mp hr with hr | hr
@@ -248,24 +254,31 @@ theorem source_firstOrder (plans : List Plan) (tails : List Part) : (source plan
   · rcases List.mem_append.mp hr with hr | hr
     · obtain ⟨b,_,rfl⟩ := List.mem_map.mp hr
       exact ⟨by cases b.1 <;> trivial,True.intro,render_firstOrder (tails.map Prod.fst) tails.length plans true false b.2⟩
-    · simp only [List.mem_singleton] at hr; subst r; trivial
+    · rcases List.mem_cons.mp hr with rfl | hr
+      · trivial
+      · have he : r=⟨1,scanner⟩ := by simpa using hr
+        subst r; exact scanner_firstOrder
 theorem target_firstOrder (plans : List Plan) (tails : List Part) : (target plans tails).FirstOrder := by
   intro r hr
   rcases List.mem_cons.mp hr with he | hr
   · subst r; trivial
   · rcases List.mem_cons.mp hr with he | hr
     · subst r; exact ⟨scanner_firstOrder,True.intro⟩
-    · obtain ⟨b,_,hr⟩ := List.mem_flatMap.mp hr
-      have hf := render_firstOrder (tails.map Prod.fst) tails.length plans false false b.2
-      simp only [pair,List.mem_cons,List.not_mem_nil,or_false] at hr
-      rcases hr with rfl | rfl
-      · cases he : b.1 <;> simp only [triple,Bool.false_eq_true,ite_false,ite_true]
-        · trivial
-        · exact ⟨scanner_firstOrder,True.intro,firstOrder_subst (args:=[CaptureViews.prefixExpr 3])
-            ⟨CaptureViews.prefixExpr_firstOrder 3,True.intro⟩ _ hf⟩
-      · cases he : b.1 <;> simp only [single,Bool.false_eq_true,ite_false,ite_true]
-        · exact hf
-        · exact ⟨scanner_firstOrder,True.intro,hf⟩
+    · rcases List.mem_append.mp hr with hr | hr
+      · obtain ⟨b,_,hr⟩ := List.mem_flatMap.mp hr
+        have hf := render_firstOrder (tails.map Prod.fst) tails.length plans false false b.2
+        simp only [pair,List.mem_cons,List.not_mem_nil,or_false] at hr
+        rcases hr with rfl | rfl
+        · cases he : b.1 <;> simp only [triple,Bool.false_eq_true,ite_false,ite_true]
+          · trivial
+          · exact ⟨scanner_firstOrder,True.intro,firstOrder_subst (args:=[CaptureViews.prefixExpr 3])
+              ⟨CaptureViews.prefixExpr_firstOrder 3,True.intro⟩ _ hf⟩
+        · cases he : b.1 <;> simp only [single,Bool.false_eq_true,ite_false,ite_true]
+          · exact hf
+          · exact ⟨scanner_firstOrder,True.intro,hf⟩
+      · have he : r=⟨1,scanner⟩ := by simpa using hr
+        subst r; exact scanner_firstOrder
+
 theorem source_rule (plans : List Plan) (tails : List Part) (i : Nat) (P : Plan) (hr : plans[i]?=some P) :
     ruleAtM (source plans tails).rules i=some ⟨1,P.exp (leaf plans tails)⟩ := by
   have hi : i<plans.length := (List.getElem?_eq_some_iff.mp hr).choose
@@ -285,6 +298,25 @@ theorem leaf_rule (plans : List Plan) (tails : List Part) (j : Nat) (b : Part) (
 theorem stuck_rule (plans : List Plan) (tails : List Part) :
     ruleAtM (source plans tails).rules (plans.length+tails.length)=some ⟨1,stuck⟩ := by
   simp [source,ruleAtM_eq_getElem?]
+
+theorem scanner_rule (plans : List Plan) (tails : List Part) :
+    ruleAtM (source plans tails).rules (plans.length+tails.length+1)=some ⟨1,scanner⟩ := by
+  simp only [source,ruleAtM_eq_getElem?]
+  rw [List.getElem?_append_right (by simp; omega)]
+  simp only [List.length_map]
+  rw [show plans.length+tails.length+1-plans.length=tails.length+1 from by omega]
+  rw [List.getElem?_append_right (by simp)]
+  simp
+
+theorem source_leaf_rule (plans : List Plan) (tails : List Part) (j : Nat) (hj : j≤tails.length+1) :
+    ruleAtM (source plans tails).rules (plans.length+j)=some ⟨1,leaf plans tails j⟩ := by
+  by_cases hs : j=tails.length+1
+  · subst j; simpa [leaf,Nat.add_assoc] using scanner_rule plans tails
+  by_cases he : j=tails.length
+  · subst j; simpa [leaf] using stuck_rule plans tails
+  have hj' : j<tails.length := by omega
+  simpa [leaf,hs,List.getElem?_eq_getElem hj'] using
+    leaf_rule plans tails j tails[j] (List.getElem?_eq_getElem hj')
 
 /-- The distinguished leaf ignores the captured value at every clock,
 including the initial empty table. Argument evaluation still comes first. -/
@@ -347,19 +379,39 @@ private theorem pair_odd (f : MExp → MExp) (tails : List Part) : ∀ i b, tail
       have hi := ih i b (by simpa using hr)
       simpa [pair,Nat.mul_add,Nat.add_assoc] using hi
 
+theorem pairs_length (f : MExp → MExp) (tails : List Part) :
+    (tails.flatMap (fun b => pair b.1 (f b.2))).length=2*tails.length := by
+  induction tails with
+  | nil => simp
+  | cons b tails ih =>
+    rw [List.flatMap_cons,List.length_append,ih]
+    change 2+2*tails.length=2*(tails.length+1)
+    omega
+
+theorem target_scanner_rule (plans : List Plan) (tails : List Part) :
+    ruleAtM (target plans tails).rules (2*tails.length+2)=some ⟨1,scanner⟩ := by
+  simp only [ruleAtM_eq_getElem?,List.getElem?_cons_succ]
+  rw [List.getElem?_append_right (by rw [pairs_length]; exact Nat.le_refl _)]
+  rw [pairs_length]
+  simp
+
 theorem compare_rule (plans : List Plan) (tails : List Part) : ruleAtM (target plans tails).rules 0=some ⟨1,.param 0⟩ := rfl
 theorem tail_compare_rule (plans : List Plan) (tails : List Part) :
     ruleAtM (target plans tails).rules 1=some ⟨1,ControlledFragmentReplay.tailBody⟩ := rfl
 
 theorem ternary_rule (plans : List Plan) (tails : List Part) (i : Nat) (b : Part) (hr : tails[i]?=some b) :
     ruleAtM (target plans tails).rules (2*i+2)=some ⟨3,triple b.1 (render (tails.map Prod.fst) tails.length plans false false b.2)⟩ := by
-  simpa only [target,ruleAtM_eq_getElem?,Nat.add_assoc,List.getElem?_cons_succ]
-    using pair_even (render (tails.map Prod.fst) tails.length plans false false) tails i b hr
+  have hi : i<tails.length := (List.getElem?_eq_some_iff.mp hr).choose
+  simp only [ruleAtM_eq_getElem?,List.getElem?_cons_succ]
+  rw [List.getElem?_append_left (by rw [pairs_length]; omega)]
+  exact pair_even (render (tails.map Prod.fst) tails.length plans false false) tails i b hr
 
 theorem unary_rule (plans : List Plan) (tails : List Part) (i : Nat) (b : Part) (hr : tails[i]?=some b) :
     ruleAtM (target plans tails).rules (2*i+3)=some ⟨1,single b.1 (render (tails.map Prod.fst) tails.length plans false false b.2)⟩ := by
-  simpa only [target,ruleAtM_eq_getElem?,Nat.add_assoc,List.getElem?_cons_succ]
-    using pair_odd (render (tails.map Prod.fst) tails.length plans false false) tails i b hr
+  have hi : i<tails.length := (List.getElem?_eq_some_iff.mp hr).choose
+  simp only [ruleAtM_eq_getElem?,List.getElem?_cons_succ]
+  rw [List.getElem?_append_left (by rw [pairs_length]; omega)]
+  exact pair_odd (render (tails.map Prod.fst) tails.length plans false false) tails i b hr
 
 /-- Expose the actual source body control at the caller origin. The
 argument preview runs before any negative leaf can turn failure into success. -/
@@ -388,32 +440,13 @@ theorem source_call (plans : List Plan) (tails : List Part) (hValid : Valid plan
       apply Plan.eval_congr
       apply Plan.all_imp (t:=P) _ hbounded
       intro j hj
-      by_cases he : j=tails.length
-      · subst j
-        rw [valAt_tblV_succ (stuck_rule plans tails) [w] hp]
-        simp [leaf]
-      have hj : j<tails.length := by omega
-      have hj' := List.getElem?_eq_getElem hj
-      rw [valAt_tblV_succ (leaf_rule plans tails j tails[j] hj') [w] hp]
-      simp only [leaf,hj']
+      rw [valAt_tblV_succ (source_leaf_rule plans tails j hj) [w] hp]
   · intro q ha
     apply Plan.all_imp (t:=P) _ hbounded
     intro j hj
-    by_cases he : j=tails.length
-    · subst j
-      rw [evV_call_par (stuck_rule plans tails) rfl (by decide)]
-      change (match (match evV g x .callByValuePar T E a p with
-        | some (some z) => some (some [pre x p z]) | some none => some none | none => none) with
-        | some (some W) => valAt (T (plans.length+tails.length) W) p
-        | some none => some none | none => none)=_
-      rw [ha]
-    have hj : j<tails.length := by omega
-    have hj' := List.getElem?_eq_getElem hj
-    rw [evV_call_par (leaf_rule plans tails j tails[j] hj') rfl (by decide)]
-    change (match (match evV g x .callByValuePar T E a p with
-      | some (some z) => some (some [pre x p z]) | some none => some none | none => none) with
-      | some (some W) => valAt (T (plans.length+j) W) p | some none => some none | none => none)=_
-    rw [ha]
+    rw [evV_call_par (source_leaf_rule plans tails j hj) rfl (by decide)]
+    change evV (source plans tails) x .callByValuePar T E a p=some (some q) at ha
+    simp only [evParArgs,ha]
 
 
 /-- Ordinary replay absorbs the argument endpoint into Seq evaluation while
@@ -493,10 +526,12 @@ theorem direct_call_eq (plans : List Plan) (tails : List Part) (hValid : Valid p
         simp only [directEntry,ite_true]
         exact ArgumentGuard.look_sequence_congr _ _ x .callByValuePar .callByValueSeq _ _ E E
           _ _ _ _ p harg ((stuck_eval _ _ _ _ _ _).trans (stuck_eval _ _ _ _ _ _).symm)
-      have hj : j<tails.length := by omega
+      have hk := hkind.resolve_left he
+      have hj : j<tails.length := by
+        have hb := (List.getElem?_eq_some_iff.mp hk).choose
+        simpa using hb
       have hj' := List.getElem?_eq_getElem hj
       have hsplit : tails[j].1=false := by
-        have hk := hkind.resolve_left he
         simpa only [List.getElem?_map,hj',Option.map_some,Option.some.injEq] using hk
       simp only [directEntry,he,ite_false]
       apply bare_transfer _ _ (source_firstOrder plans tails) x m (plans.length+j) (2*j+3) p E a a'
@@ -513,6 +548,47 @@ theorem direct_call_eq (plans : List Plan) (tails : List Part) (hValid : Valid p
       exact Plan.eval_congr P hleaves
     exact ArgumentGuard.look_sequence_congr _ _ x .callByValuePar .callByValueSeq _ _ E E
       _ _ _ _ p harg hplans
+
+/-- The source capture is evaluated before an independent scanner leaf.
+The target passes an empty value at the old origin, preserving clock zero. -/
+theorem scanner_transfer (g h : MGrammar) (x : List Char) (m i j p : Nat)
+    (E : List (List Char)) (a a' : MExp) (hp : p≤x.length)
+    (hr : ruleAtM g.rules i=some ⟨1,scanner⟩)
+    (ht : ruleAtM h.rules j=some ⟨1,scanner⟩)
+    (he : evV g x .callByValuePar (tblV g x .callByValuePar m) E a p=
+      evV h x .callByValueSeq (tblV h x .callByValueSeq m) E a' p) :
+    evV g x .callByValuePar (tblV g x .callByValuePar m) E (.call i [a]) p=
+      evV h x .callByValueSeq (tblV h x .callByValueSeq m) E
+        (.seq (.andP a') (.call j [.eps])) p := by
+  have hrow (w : List Char) :
+      valAt (tblV g x .callByValuePar m i [w]) p=
+      valAt (tblV h x .callByValueSeq m j [[]]) p := by
+    cases m with
+    | zero => rfl
+    | succ k =>
+      rw [valAt_tblV_succ hr [w] hp,valAt_tblV_succ ht [[]] hp]
+      exact ParserPrefixFusion.pure_eval g h x .callByValuePar .callByValueSeq _ _ [w] [[]] scanner
+        (by simp [scanner,NestedScannerArguments.scan,NestedScannerArguments.choice,MExp.failAlways,ParserPrefixFusion.Pure]) p
+  have hempty : evV h x .callByValueSeq (tblV h x .callByValueSeq m) E (.call j [.eps]) p=
+      valAt (tblV h x .callByValueSeq m j [[]]) p := by
+    rw [evV_call_seq ht rfl p]
+    simp [evSeqArgs,evV,pre]
+  have hlook : evV h x .callByValueSeq (tblV h x .callByValueSeq m) E (.andP a') p=
+      CallLookahead.peek p (evV g x .callByValuePar (tblV g x .callByValuePar m) E a p) := by
+    rw [CallLookahead.evV_peek,←he]
+  rw [evV_call_par hr rfl (by decide)]
+  change (match evParArgs g x .callByValuePar (tblV g x .callByValuePar m) E [a] p with
+    | some (some W) => valAt (tblV g x .callByValuePar m i W) p
+    | some none => some none | none => none)=
+    (match evV h x .callByValueSeq (tblV h x .callByValueSeq m) E (.andP a') p with
+    | some (some q) => evV h x .callByValueSeq (tblV h x .callByValueSeq m) E (.call j [.eps]) q
+    | other => other)
+  rw [hlook]
+  cases hv : evV g x .callByValuePar (tblV g x .callByValuePar m) E a p with
+  | none => simp [evParArgs,hv,CallLookahead.peek]
+  | some v => cases v with
+    | none => simp [evParArgs,hv,CallLookahead.peek]
+    | some q => simp only [evParArgs,hv,CallLookahead.peek]; exact (hrow _).trans hempty.symm
 
 private theorem call_eq (plans : List Plan) (tails : List Part) (hValid : Valid plans tails)
     (x : List Char) (m i p : Nat) (E : List (List Char))
@@ -549,8 +625,14 @@ private theorem call_eq (plans : List Plan) (tails : List Part) (hValid : Valid 
         simp only [entry,ite_true]
         exact ArgumentGuard.look_sequence_congr _ _ x .callByValuePar .callByValueSeq _ _ E E
           _ _ _ _ p harg ((stuck_eval _ _ _ _ _ _).trans (stuck_eval _ _ _ _ _ _).symm)
+      by_cases hs : j=tails.length+1
+      · subst j
+        simp only [entry,he,ite_false,ite_true]
+        exact scanner_transfer _ _ x m (plans.length+(tails.length+1)) (2*tails.length+2) p E
+          (argument G H) (argument G' H') hp
+          (by simpa [Nat.add_assoc] using scanner_rule plans tails) (target_scanner_rule plans tails) harg
       have hj : j<tails.length := by omega
-      simp only [entry,he,ite_false]
+      simp only [entry,he,hs,ite_false]
       have hj' := List.getElem?_eq_getElem hj
       have hkinds : (tails.map Prod.fst)[j]?=some tails[j].1 := by simp only [List.getElem?_map,hj',Option.map_some]
       simp only [hkinds,Option.getD_some]

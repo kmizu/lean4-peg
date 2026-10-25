@@ -9,21 +9,34 @@ open CaptureTransitionProfile (profile)
 
 /-- Entry resumption depends only on the configured scanner state and
 whole-capture profile. Replay entries impose no scanner frontier. -/
-def entryCheck {n : Nat} (entry : Entry n) (P : List Nat) : Bool :=
+def entryCheck {n : Nat} (M : Machine n) (entry : Entry n) (P : List Nat) : Bool :=
   match entry with
-  | .scan q | .shift q _ => ScannerFrontierCertificate.check P q
+  | .scan q => ScannerFrontierCertificate.check P q
+  | .shift q R => ScannerReplayResidual.completeCheck M R || ScannerFrontierCertificate.check P q
   | .replay | .safeReplay => true
-  | .alt a b | .guard _ a b => entryCheck a P && entryCheck b P
+  | .alt a b | .guard _ a b => entryCheck M a P && entryCheck M b P
 
 theorem entryCheck_of_safe {n : Nat} (M : Machine n) (entry : Entry n) (w : List Char)
     (h : entry.inputSafe=true → TotalCaptureSafety.Total M w) :
-    entryCheck entry (profile (observer M) w)=true := by
+    entryCheck M entry (profile (observer M) w)=true := by
   induction entry with
-  | scan q | shift q _ => exact (ScannerFrontierCertificate.check_actual M w q).mpr (h rfl q)
+  | scan q => exact (ScannerFrontierCertificate.check_actual M w q).mpr (h rfl q)
+  | shift q R => exact Bool.or_eq_true_iff.mpr (Or.inr ((ScannerFrontierCertificate.check_actual M w q).mpr (h rfl q)))
   | replay | safeReplay => rfl
   | alt a b ha hb | guard _ a b ha hb =>
     exact Bool.and_eq_true_iff.mpr ⟨ha (fun hx => h (Bool.or_eq_true_iff.mpr (Or.inl hx))),
       hb (fun hx => h (Bool.or_eq_true_iff.mpr (Or.inr hx)))⟩
+
+/-- The weaker shift certificate either reads this particular capture,
+or certifies that every unreadable capture makes the actual source fail. -/
+theorem shift_complete_of_unreadable {n : Nat} (M : Machine n)
+    (q : Fin n) (R : ScannerReplayResidual.Labels n) (w : List Char)
+    (hw : entryCheck M (.shift q R) (profile (observer M) w)=true)
+    (hs : StatefulScanner.advance M q w=none) :
+    ScannerReplayResidual.completeCheck M R=true := by
+  rcases Bool.or_eq_true_iff.mp hw with hc | hr
+  · exact hc
+  · exact False.elim ((ScannerFrontierCertificate.check_actual M w q).mp hr hs)
 
 /-- A positive parameterized call inside an actual source argument obtains
 its capture safety from the finite certified prefix, with arbitrary other
@@ -164,7 +177,7 @@ own origin and do not substitute a consumed endpoint for that origin. -/
 theorem target_header {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
     (entry : Entry n) (hEntry : headerCheck M entry=true) (w x : List Char) (p j k l : Nat)
     (hp : p≤x.length) (hj : j≤x.length) (hcap : sfx x p=w++sfx x j)
-    (hw : entryCheck entry (profile (observer M) w)=true) :
+    (hw : entryCheck M entry (profile (observer M) w)=true) :
     evV (target M entries bodies) x .callByValueSeq (targetTable M entries bodies x l) [w]
       (targetHeader M (profile (observer M) w) entry) j=
     evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [w]
@@ -180,9 +193,14 @@ theorem target_header {n : Nat} (M : Machine n) (entries : Entries n) (bodies : 
       rw [target_scan M entries bodies r x l j [w] hj,source_scan M entries bodies q x k p [w] hp,
         hcap,StatefulScanner.run_after_prefix M w (sfx x j) q r hs]
   | shift q R =>
-    have hr := (ScannerFrontierCertificate.check_actual M w q).mp hw
     cases hs : StatefulScanner.advance M q w with
-    | none => exact False.elim (hr hs)
+    | none =>
+      have he := ScannerReplayResidual.replay_unreadable M R q hEntry
+        (shift_complete_of_unreadable M q R w hw hs) w hs
+        (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) p j hcap
+      simp only [targetHeader,DynamicScannerBinding.resume_actual,hs]
+      change some none=_
+      exact he.symm
     | some r =>
       simp only [targetHeader,DynamicScannerBinding.resume_actual,hs]
       exact (ScannerReplayResidual.replay_eq M R q hEntry w r hs _ _ x _ _ p j hj hcap).symm
@@ -201,7 +219,7 @@ theorem target_header {n : Nat} (M : Machine n) (entries : Entries n) (bodies : 
 theorem entry_plain_body {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
     (entry : Entry n) (hEntry : headerCheck M entry=true) (b : Arg) (w x : List Char) (p j k l : Nat)
     (hp : p≤x.length) (hj : j≤x.length) (hcap : sfx x p=w++sfx x j)
-    (hw : entryCheck entry (profile (observer M) w)=true)
+    (hw : entryCheck M entry (profile (observer M) w)=true)
     (hBody : ∀ z, z≤x.length →
       evV (target M entries bodies) x .callByValueSeq (targetTable M entries bodies x l) [w]
         (plain M bodies [profile (observer M) w] b) z=
@@ -213,9 +231,14 @@ theorem entry_plain_body {n : Nat} (M : Machine n) (entries : Entries n) (bodies
   induction entry with
   | scan q => exact plain_body M entries bodies q b w x p j k l hp hj hcap ((ScannerFrontierCertificate.check_actual M w q).mp hw) hBody
   | shift q R =>
-    have hr := (ScannerFrontierCertificate.check_actual M w q).mp hw
     cases hs : StatefulScanner.advance M q w with
-    | none => exact False.elim (hr hs)
+    | none =>
+      have he := ScannerReplayResidual.replay_unreadable M R q hEntry
+        (shift_complete_of_unreadable M q R w hw hs) w hs
+        (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) p j hcap
+      simp only [sourceHeader]
+      rw [evV_seq_fail he]
+      simp [targetBody,shiftedBody,DynamicScannerBinding.resume_actual,hs,MExp.failAlways,evV]
     | some r =>
       have he := ScannerReplayResidual.replay_eq M R q hEntry w r hs
         (source M entries bodies) (target M entries bodies) x
@@ -259,7 +282,7 @@ theorem entry_plain_body {n : Nat} (M : Machine n) (entries : Entries n) (bodies
 theorem entry_product_body {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
     (entry : Entry n) (hEntry : headerCheck M entry=true) (b : Arg) (w x : List Char) (p j k l : Nat)
     (hp : p≤x.length) (hj : j≤x.length) (hcap : sfx x p=w++sfx x j)
-    (hw : entryCheck entry (profile (observer M) w)=true)
+    (hw : entryCheck M entry (profile (observer M) w)=true)
     (a : Fin (observer M).width) (t : Nat) (ht : t<(observer M).width)
     (hBody : ∀ z, z≤x.length → ∀ u, u<(observer M).width →
       evV (target M entries bodies) x .callByValueSeq (targetTable M entries bodies x l) [w]
@@ -274,9 +297,14 @@ theorem entry_product_body {n : Nat} (M : Machine n) (entries : Entries n) (bodi
   induction entry with
   | scan q => exact product_body M entries bodies q b w x p j k l hp hj hcap ((ScannerFrontierCertificate.check_actual M w q).mp hw) a t ht hBody
   | shift q R =>
-    have hr := (ScannerFrontierCertificate.check_actual M w q).mp hw
     cases hs : StatefulScanner.advance M q w with
-    | none => exact False.elim (hr hs)
+    | none =>
+      have he := ScannerReplayResidual.replay_unreadable M R q hEntry
+        (shift_complete_of_unreadable M q R w hw hs) w hs
+        (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) p j hcap
+      simp only [sourceHeader]
+      rw [evV_seq_fail he]
+      simp [targetBody,shiftedBody,DynamicScannerBinding.resume_actual,hs,MExp.failAlways,evV,RegularCaptureProduct.filtered]
     | some r =>
       let u := (R r).getD []
       let g := source M entries bodies

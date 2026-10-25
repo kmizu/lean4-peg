@@ -6,34 +6,74 @@ open RecursiveScannerProductCompiler (Arg Entry Entries helpers helperBodies off
 open ReplayControlFusion (Plan)
 open StatefulScanner (Machine)
 
+/-- Every occurrence of the caller's retained values is excluded, including
+lookahead tests and actual arguments. Called users may inspect their fresh captures. -/
+def independent : Arg → Bool
+  | .param _ => false
+  | .user _ a | .star a | .notP a => independent a
+  | .seq a b | .alt a b => independent a && independent b
+  | .lit _ => true
+
+/-- Capture independence is structural; no assumption about callee rows or
+successful evaluations is needed. -/
+theorem independent_environment {n : Nat} (M : Machine n) (g : MGrammar)
+    (x : List Char) (T : ClockFreezing.Table) (E F : List (List Char)) :
+    ∀ e, independent e=true → ∀ p,
+    evV g x .callByValuePar T E (sourceExpr M e) p=
+    evV g x .callByValuePar T F (sourceExpr M e) p
+  | .lit _,_,_ => rfl
+  | .param _,h,_ => by cases h
+  | .user i a,h,p => by
+    simp only [sourceExpr,evV,evParArgs,independent_environment M g x T E F a h]
+  | .seq a b,h,p | .alt a b,h,p => by
+    have ha := independent_environment M g x T E F a (Bool.and_eq_true_iff.mp h).1
+    have hb := independent_environment M g x T E F b (Bool.and_eq_true_iff.mp h).2
+    simp only [sourceExpr,evV,ha,hb]
+  | .notP a,h,p => by
+    simp only [sourceExpr,evV,independent_environment M g x T E F a h]
+  | .star a,h,p =>
+    evStar_congr p (fun q _ => independent_environment M g x T E F a h q)
+
 structure Part (n : Nat) where
   entry : Entry n
   body : Arg
+  /-- Omit the entry and erase the old capture, checked by `independent`. -/
+  closed : Bool := false
 
-def expand (a : Arg) : Plan → Arg
-  | .leaf j => .user j a
-  | .alt p q => .alt (expand a p) (expand a q)
-  | .notP p => .notP (expand a p)
-  | .guard p q => .seq (.notP (.notP (expand a p))) (expand a q)
+def callArg {n : Nat} (parts : List (Part n)) (j : Nat) (a : Arg) : Arg :=
+  match parts[j]? with
+  | some r => if r.closed then .lit [] else a
+  | none => a
 
-/-- Argument evaluation precedes every caller-side control tree. Its
-selected leaves recapture that same argument at the original position. -/
-def normalize (plans : List Plan) : Arg → Arg
+def captureValue {n : Nat} (parts : List (Part n)) (j : Nat) (w : List Char) : List Char :=
+  match parts[j]? with
+  | some r => if r.closed then [] else w
+  | none => w
+
+def expand {n : Nat} (parts : List (Part n)) (a : Arg) : Plan → Arg
+  | .leaf j => .user j (callArg parts j a)
+  | .alt p q => .alt (expand parts a p) (expand parts a q)
+  | .notP p => .notP (expand parts a p)
+  | .guard p q => .seq (.notP (.notP (expand parts a p))) (expand parts a q)
+
+/-- Argument evaluation precedes every caller-side control tree. Dependent
+leaves recapture that argument; independent leaves receive an empty capture. -/
+def normalize {n : Nat} (parts : List (Part n)) (plans : List Plan) : Arg → Arg
   | .user i a => match plans[i]? with
     | none => .notP (.lit [])
-    | some p => .seq (.notP (.notP (normalize plans a))) (expand (normalize plans a) p)
-  | .seq a b => .seq (normalize plans a) (normalize plans b)
-  | .alt a b => .alt (normalize plans a) (normalize plans b)
-  | .notP a => .notP (normalize plans a)
-  | .star a => .star (normalize plans a)
+    | some p => .seq (.notP (.notP (normalize parts plans a))) (expand parts (normalize parts plans a) p)
+  | .seq a b => .seq (normalize parts plans a) (normalize parts plans b)
+  | .alt a b => .alt (normalize parts plans a) (normalize parts plans b)
+  | .notP a => .notP (normalize parts plans a)
+  | .star a => .star (normalize parts plans a)
   | .lit w => .lit w
   | .param k => .param k
 
 def coreEntries {n : Nat} (parts : List (Part n)) : Entries n := fun i =>
-  match parts[i]? with | some r => r.entry | none => .replay
+  match parts[i]? with | some r => if r.closed then .replay else r.entry | none => .replay
 
 def coreBodies {n : Nat} (parts : List (Part n)) (plans : List Plan) : List Arg :=
-  parts.map (fun r => normalize plans r.body)
+  parts.map (fun r => normalize parts plans r.body)
 
 abbrev core {n : Nat} (M : Machine n) (parts : List (Part n)) (plans : List Plan) :=
   RecursiveScannerProductCompiler.source M (coreEntries parts) (coreBodies parts plans)
@@ -41,12 +81,12 @@ abbrev core {n : Nat} (M : Machine n) (parts : List (Part n)) (plans : List Plan
 abbrev target {n : Nat} (M : Machine n) (parts : List (Part n)) (plans : List Plan) :=
   RecursiveScannerProductCompiler.target M (coreEntries parts) (coreBodies parts plans)
 abbrev targetExpr {n : Nat} (M : Machine n) (parts : List (Part n)) (plans : List Plan) (e : Arg) :=
-  RecursiveScannerProductCompiler.plain M (coreBodies parts plans) [] (normalize plans e)
+  RecursiveScannerProductCompiler.plain M (coreBodies parts plans) [] (normalize parts plans e)
 
 def sourceLeaf {n : Nat} (M : Machine n) (parts : List (Part n)) (j : Nat) : MExp :=
   match parts[j]? with
   | none => MExp.failAlways
-  | some r => .seq (sourceHeader r.entry) (sourceExpr M r.body)
+  | some r => if r.closed then sourceExpr M r.body else .seq (sourceHeader r.entry) (sourceExpr M r.body)
 
 def rules {n : Nat} (M : Machine n) (parts : List (Part n)) (plans : List Plan) : List MRule :=
   plans.map (fun p => ⟨1,p.exp (sourceLeaf M parts)⟩)
@@ -67,7 +107,7 @@ def scopeCheck (plans : List Plan) : Arg → Bool
   | _ => true
 
 theorem scope_sound (plans : List Plan) : ∀ a, scopeCheck plans a=true → Scoped plans a
-  | .user i a,h => ⟨of_decide_eq_true (Bool.and_eq_true_iff.mp h).1,scope_sound plans a (Bool.and_eq_true_iff.mp h).2⟩
+  | .user _i a,h => ⟨of_decide_eq_true (Bool.and_eq_true_iff.mp h).1,scope_sound plans a (Bool.and_eq_true_iff.mp h).2⟩
   | .seq a b,h | .alt a b,h => ⟨scope_sound plans a (Bool.and_eq_true_iff.mp h).1,scope_sound plans b (Bool.and_eq_true_iff.mp h).2⟩
   | .notP a,h | .star a,h => scope_sound plans a h
   | .lit _,_ | .param _,_ => True.intro
@@ -78,11 +118,11 @@ def planCheck {n : Nat} (parts : List (Part n)) : Plan → Bool
   | .notP a => planCheck parts a
 
 def readyCheck {n : Nat} (parts : List (Part n)) (plans : List Plan) : Bool :=
-  plans.all (planCheck parts) && parts.all (fun r => scopeCheck plans r.body)
+  plans.all (planCheck parts) && parts.all (fun r => scopeCheck plans r.body && (!r.closed || independent r.body))
 
 def Ready {n : Nat} (parts : List (Part n)) (plans : List Plan) : Prop :=
   (∀ p∈plans, p.All (fun j => ∃ r, parts[j]?=some r)) ∧
-  (∀ r∈parts, Scoped plans r.body)
+  (∀ r∈parts, Scoped plans r.body ∧ (r.closed=true → independent r.body=true))
 
 theorem plan_sound {n : Nat} (parts : List (Part n)) :
     ∀ p, planCheck parts p=true → p.All (fun j => ∃ r, parts[j]?=some r)
@@ -96,13 +136,15 @@ theorem ready_sound {n : Nat} (parts : List (Part n)) (plans : List Plan)
     (h : readyCheck parts plans=true) : Ready parts plans := by
   have hh := Bool.and_eq_true_iff.mp h
   exact ⟨fun p hp => plan_sound parts p ((List.all_eq_true.mp hh.1) p hp),
-    fun r hr => scope_sound plans r.body ((List.all_eq_true.mp hh.2) r hr)⟩
+    fun r hr => by
+      have hpart := Bool.and_eq_true_iff.mp ((List.all_eq_true.mp hh.2) r hr)
+      exact ⟨scope_sound plans r.body hpart.1,fun hc => by simpa [hc] using hpart.2⟩⟩
 
-theorem expand_source {n : Nat} (M : Machine n) (a : Arg) : ∀ p,
-    sourceExpr M (expand a p)=p.exp (fun j => sourceExpr M (.user j a))
+theorem expand_source {n : Nat} (M : Machine n) (parts : List (Part n)) (a : Arg) : ∀ p,
+    sourceExpr M (expand parts a p)=p.exp (fun j => sourceExpr M (.user j (callArg parts j a)))
   | .leaf _ => rfl
-  | .alt p q | .guard p q => by simp only [expand,sourceExpr,Plan.exp,MExp.andP,expand_source M a p,expand_source M a q]
-  | .notP p => by simp only [expand,sourceExpr,Plan.exp,expand_source M a p]
+  | .alt p q | .guard p q => by simp only [expand,sourceExpr,Plan.exp,MExp.andP,expand_source M parts a p,expand_source M parts a q]
+  | .notP p => by simp only [expand,sourceExpr,Plan.exp,expand_source M parts a p]
 
 theorem original_firstOrder {n : Nat} (M : Machine n) (parts : List (Part n)) (plans : List Plan) :
     (original M parts plans).FirstOrder := by
@@ -115,8 +157,12 @@ theorem original_firstOrder {n : Nat} (M : Machine n) (parts : List (Part n)) (p
     simp only [sourceLeaf]
     cases parts[j]? with
     | none => trivial
-    | some r => exact ⟨RecursiveScannerProductCompiler.sourceHeader_firstOrder r.entry,
-        RecursiveScannerProductCompiler.sourceExpr_firstOrder M r.body⟩
+    | some r =>
+      change (if r.closed then sourceExpr M r.body else .seq (sourceHeader r.entry) (sourceExpr M r.body)).FirstOrder
+      split
+      · exact RecursiveScannerProductCompiler.sourceExpr_firstOrder M r.body
+      · exact ⟨RecursiveScannerProductCompiler.sourceHeader_firstOrder r.entry,
+          RecursiveScannerProductCompiler.sourceExpr_firstOrder M r.body⟩
 
 theorem original_rule {n : Nat} (M : Machine n) (parts : List (Part n)) (plans : List Plan)
     (i : Nat) (p : Plan) (hi : plans[i]?=some p) :
@@ -125,7 +171,7 @@ theorem original_rule {n : Nat} (M : Machine n) (parts : List (Part n)) (plans :
 
 theorem core_lookup {n : Nat} (parts : List (Part n)) (plans : List Plan)
     (j : Nat) (r : Part n) (hr : parts[j]?=some r) :
-    (coreBodies parts plans)[j]?=some (normalize plans r.body) := by simp [coreBodies,hr]
+    (coreBodies parts plans)[j]?=some (normalize parts plans r.body) := by simp [coreBodies,hr]
 
 /-- Closed scanner rows agree across these two actual grammar extensions;
 replayed values and all origin guards are evaluated in the same environment. -/
@@ -156,26 +202,29 @@ theorem header_extension {n : Nat} (M : Machine n) (left right : List MRule)
 def Rows {n : Nat} (M : Machine n) (parts : List (Part n)) (plans : List Plan) (x : List Char) (k : Nat) : Prop :=
   ∀ i p, plans[i]?=some p → ∀ w pos, pos≤x.length →
     valAt (tblV (original M parts plans) x .callByValuePar k (offset M+i) [w]) pos=
-      p.eval (fun j => valAt (tblV (core M parts plans) x .callByValuePar k (offset M+j) [w]) pos) pos
+      p.eval (fun j => valAt (tblV (core M parts plans) x .callByValuePar k (offset M+j) [captureValue parts j w]) pos) pos
 
 theorem leaf_call {n : Nat} (M : Machine n) (parts : List (Part n)) (plans : List Plan)
     (x : List Char) (k : Nat) (E : List (List Char)) (a : Arg) (p q j : Nat)
-    (r : Part n) (hr : parts[j]?=some r)
+    (r : Part n) (hr : parts[j]?=some r) (hp : p≤x.length)
     (harg : evV (core M parts plans) x .callByValuePar
       (tblV (core M parts plans) x .callByValuePar k) E (sourceExpr M a) p=some (some q)) :
     evV (core M parts plans) x .callByValuePar (tblV (core M parts plans) x .callByValuePar k) E
-      (sourceExpr M (.user j a)) p=
-      valAt (tblV (core M parts plans) x .callByValuePar k (offset M+j) [pre x p q]) p := by
-  rw [show sourceExpr M (.user j a)=.call (offset M+j) [sourceExpr M a] from rfl,
+      (sourceExpr M (.user j (callArg parts j a))) p=
+      valAt (tblV (core M parts plans) x .callByValuePar k (offset M+j) [captureValue parts j (pre x p q)]) p := by
+  rw [show sourceExpr M (.user j (callArg parts j a))=
+      .call (offset M+j) [sourceExpr M (callArg parts j a)] from rfl,
     evV_call_par (RecursiveScannerProductCompiler.source_rule M (coreEntries parts) (coreBodies parts plans)
-      j (normalize plans r.body) (core_lookup parts plans j r hr)) rfl (by decide)]
-  simp only [evParArgs,harg]
+      j (normalize parts plans r.body) (core_lookup parts plans j r hr)) rfl (by decide)]
+  cases hc : r.closed with
+  | false => simp [callArg,captureValue,hr,hc,evParArgs,harg]
+  | true => simp [callArg,captureValue,hr,hc,sourceExpr,evParArgs,evV,Shallot.stripPrefix?,length_sfx x hp,pre]
 
 theorem evaluator_of_rows {n : Nat} (M : Machine n) (parts : List (Part n)) (plans : List Plan)
     (hReady : Ready parts plans) (x : List Char) (k : Nat) (hRows : Rows M parts plans x k) :
     ∀ e, Scoped plans e → ∀ E p, p≤x.length →
     evV (original M parts plans) x .callByValuePar (tblV (original M parts plans) x .callByValuePar k) E (sourceExpr M e) p=
-    evV (core M parts plans) x .callByValuePar (tblV (core M parts plans) x .callByValuePar k) E (sourceExpr M (normalize plans e)) p
+    evV (core M parts plans) x .callByValuePar (tblV (core M parts plans) x .callByValuePar k) E (sourceExpr M (normalize parts plans e)) p
   | .user i a,he,E,p,hp => by
     obtain ⟨P,hP⟩ : ∃ P, plans[i]?=some P := ⟨plans[i]'he.1,List.getElem?_eq_getElem he.1⟩
     simp only [normalize,hP,sourceExpr,expand_source]
@@ -187,7 +236,7 @@ theorem evaluator_of_rows {n : Nat} (M : Machine n) (parts : List (Part n)) (pla
       apply Plan.all_imp (t:=P) _ (hReady.1 P (List.mem_of_getElem? hP))
       intro j hj
       obtain ⟨r,hr⟩ := hj
-      exact leaf_call M parts plans x k E (normalize plans a) p q j r hr harg
+      exact leaf_call M parts plans x k E (normalize parts plans a) p q j r hr hp harg
   | .lit _,_,_,_,_ | .param _,_,_,_,_ => rfl
   | .seq a b,he,E,p,hp => by
     have hh := evaluator_of_rows M parts plans hReady x k hRows a he.1 E p hp
@@ -230,28 +279,45 @@ theorem tables_rows {n : Nat} (M : Machine n) (parts : List (Part n)) (plans : L
     apply Plan.all_imp (t:=P) _ (hReady.1 P (List.mem_of_getElem? hP))
     intro j hj
     obtain ⟨r,hr⟩ := hj
-    rw [show sourceLeaf M parts j=.seq (sourceHeader r.entry) (sourceExpr M r.body) from by simp [sourceLeaf,hr],
-      valAt_tblV_succ (RecursiveScannerProductCompiler.source_rule M (coreEntries parts) (coreBodies parts plans)
-        j (normalize plans r.body) (core_lookup parts plans j r hr)) [w] hp]
-    simp only [coreEntries,hr]
-    have hh := header_extension M (rules M parts plans)
-      (RecursiveScannerProductCompiler.sourceRules M (coreEntries parts) (coreBodies parts plans)) x k [w] r.entry p
-    change evV (original M parts plans) x .callByValuePar (tblV (original M parts plans) x .callByValuePar k) [w] (sourceHeader r.entry) p=
-      evV (core M parts plans) x .callByValuePar (tblV (core M parts plans) x .callByValuePar k) [w] (sourceHeader r.entry) p at hh
-    cases hv : evV (original M parts plans) x .callByValuePar (tblV (original M parts plans) x .callByValuePar k) [w] (sourceHeader r.entry) p with
-    | none => rw [evV_seq_none hv,evV_seq_none (hh.symm.trans hv)]
-    | some result => cases result with
-      | none => rw [evV_seq_fail hv,evV_seq_fail (hh.symm.trans hv)]
-      | some q =>
-        rw [evV_seq_ok hv,evV_seq_ok (hh.symm.trans hv)]
-        exact evaluator_of_rows M parts plans hReady x k ih r.body (hReady.2 r (List.mem_of_getElem? hr)) [w] q
-          (evV_ok (tblV_ok _ _ _ k) _ p hp q hv)
+    cases hc : r.closed with
+    | true =>
+      rw [show sourceLeaf M parts j=sourceExpr M r.body from by simp [sourceLeaf,hr,hc]]
+      rw [show captureValue parts j w=[] from by simp [captureValue,hr,hc]]
+      rw [valAt_tblV_succ (RecursiveScannerProductCompiler.source_rule M (coreEntries parts) (coreBodies parts plans)
+        j (normalize parts plans r.body) (core_lookup parts plans j r hr)) [[]] hp]
+      have he : evV (core M parts plans) x .callByValuePar
+          (tblV (core M parts plans) x .callByValuePar k) [[]] (sourceHeader (coreEntries parts j)) p=some (some p) := by
+        simp [coreEntries,hr,hc,sourceHeader,evV,Shallot.stripPrefix?,length_sfx x hp]
+      rw [evV_seq_ok he]
+      rw [independent_environment M (original M parts plans) x
+        (tblV (original M parts plans) x .callByValuePar k) [w] [[]] r.body
+        ((hReady.2 r (List.mem_of_getElem? hr)).2 hc)]
+      exact evaluator_of_rows M parts plans hReady x k ih r.body
+        (hReady.2 r (List.mem_of_getElem? hr)).1 [[]] p hp
+    | false =>
+      rw [show captureValue parts j w=w from by simp [captureValue,hr,hc]]
+      rw [show sourceLeaf M parts j=.seq (sourceHeader r.entry) (sourceExpr M r.body) from by simp [sourceLeaf,hr,hc],
+        valAt_tblV_succ (RecursiveScannerProductCompiler.source_rule M (coreEntries parts) (coreBodies parts plans)
+          j (normalize parts plans r.body) (core_lookup parts plans j r hr)) [w] hp]
+      simp only [coreEntries,hr,hc,Bool.false_eq_true,if_false]
+      have hh := header_extension M (rules M parts plans)
+        (RecursiveScannerProductCompiler.sourceRules M (coreEntries parts) (coreBodies parts plans)) x k [w] r.entry p
+      change evV (original M parts plans) x .callByValuePar (tblV (original M parts plans) x .callByValuePar k) [w] (sourceHeader r.entry) p=
+        evV (core M parts plans) x .callByValuePar (tblV (core M parts plans) x .callByValuePar k) [w] (sourceHeader r.entry) p at hh
+      cases hv : evV (original M parts plans) x .callByValuePar (tblV (original M parts plans) x .callByValuePar k) [w] (sourceHeader r.entry) p with
+      | none => rw [evV_seq_none hv,evV_seq_none (hh.symm.trans hv)]
+      | some result => cases result with
+        | none => rw [evV_seq_fail hv,evV_seq_fail (hh.symm.trans hv)]
+        | some q =>
+          rw [evV_seq_ok hv,evV_seq_ok (hh.symm.trans hv)]
+          exact evaluator_of_rows M parts plans hReady x k ih r.body (hReady.2 r (List.mem_of_getElem? hr)).1 [w] q
+            (evV_ok (tblV_ok _ _ _ k) _ p hp q hv)
 
 theorem evaluator_eq {n : Nat} (M : Machine n) (parts : List (Part n)) (plans : List Plan)
     (hReady : readyCheck parts plans=true) (e : Arg) (he : scopeCheck plans e=true)
     (x : List Char) (k : Nat) (E : List (List Char)) (p : Nat) (hp : p≤x.length) :
     evV (original M parts plans) x .callByValuePar (tblV (original M parts plans) x .callByValuePar k) E (sourceExpr M e) p=
-    evV (core M parts plans) x .callByValuePar (tblV (core M parts plans) x .callByValuePar k) E (sourceExpr M (normalize plans e)) p :=
+    evV (core M parts plans) x .callByValuePar (tblV (core M parts plans) x .callByValuePar k) E (sourceExpr M (normalize parts plans e)) p :=
   evaluator_of_rows M parts plans (ready_sound parts plans hReady) x k
     (tables_rows M parts plans (ready_sound parts plans hReady) x k) e (scope_sound plans e he) E p hp
 
@@ -259,14 +325,14 @@ theorem normalized_observations_iff {n : Nat} (M : Machine n) (parts : List (Par
     (hReady : readyCheck parts plans=true) (e : Arg) (he : scopeCheck plans e=true)
     (x : List Char) (rest : Option (List Char)) :
     SObs (original M parts plans) .callByValuePar (sourceExpr M e) x rest ↔
-      SObs (core M parts plans) .callByValuePar (sourceExpr M (normalize plans e)) x rest := by
+      SObs (core M parts plans) .callByValuePar (sourceExpr M (normalize parts plans e)) x rest := by
   rw [←decideObsV_iff (original_firstOrder M parts plans) (by decide)
       (RecursiveScannerProductCompiler.sourceExpr_firstOrder M e),
     ←decideObsV_iff (RecursiveScannerProductCompiler.source_firstOrder M (coreEntries parts) (coreBodies parts plans))
-      (by decide) (RecursiveScannerProductCompiler.sourceExpr_firstOrder M (normalize plans e))]
+      (by decide) (RecursiveScannerProductCompiler.sourceExpr_firstOrder M (normalize parts plans e))]
   unfold decideObsV
   rw [ScannerPairFusion.stable_result_eq (original M parts plans) (core M parts plans) x .callByValuePar .callByValuePar
-    (sourceExpr M e) (sourceExpr M (normalize plans e))
+    (sourceExpr M e) (sourceExpr M (normalize parts plans e))
     (fun k => evaluator_eq M parts plans hReady e he x k [] x.length (Nat.le_refl _))]
 
 /-- One actual fixed first-order Seq grammar preserves all finite
@@ -278,14 +344,14 @@ theorem observations_iff {n : Nat} (M : Machine n) (parts : List (Part n)) (plan
     (hH : RecursiveCaptureProfiles.scannerCheck M H=true)
     (hC : RecursiveCaptureProfiles.grammarCheck M (coreEntries parts) (coreBodies parts plans) H C=true)
     (hB : ProfileCheckedScannerCorrespondence.bodiesCheck M (coreEntries parts) (coreBodies parts plans) C A=true)
-    (hRoot : ProfileCheckedScannerCorrespondence.check M (coreEntries parts) (coreBodies parts plans) C A [] (normalize plans e)=true)
+    (hRoot : ProfileCheckedScannerCorrespondence.check M (coreEntries parts) (coreBodies parts plans) C A [] (normalize parts plans e)=true)
     (x : List Char) (rest : Option (List Char)) :
     SObs (original M parts plans) .callByValuePar (sourceExpr M e) x rest ↔
       SObs (RecursiveScannerProductCompiler.target M (coreEntries parts) (coreBodies parts plans)) .callByValueSeq
-        (RecursiveScannerProductCompiler.plain M (coreBodies parts plans) [] (normalize plans e)) x rest :=
+        (RecursiveScannerProductCompiler.plain M (coreBodies parts plans) [] (normalize parts plans e)) x rest :=
   (normalized_observations_iff M parts plans hReady e he x rest).trans
     (ProfileCheckedScannerCorrespondence.observations_iff M (coreEntries parts) (coreBodies parts plans)
-      H C A hH hC hB (normalize plans e) hRoot x rest)
+      H C A hH hC hB (normalize parts plans e) hRoot x rest)
 
 theorem language_translation {n : Nat} (M : Machine n) (parts : List (Part n)) (plans : List Plan)
     (hReady : readyCheck parts plans=true) (e : Arg) (he : scopeCheck plans e=true)
@@ -294,12 +360,12 @@ theorem language_translation {n : Nat} (M : Machine n) (parts : List (Part n)) (
     (hH : RecursiveCaptureProfiles.scannerCheck M H=true)
     (hC : RecursiveCaptureProfiles.grammarCheck M (coreEntries parts) (coreBodies parts plans) H C=true)
     (hB : ProfileCheckedScannerCorrespondence.bodiesCheck M (coreEntries parts) (coreBodies parts plans) C A=true)
-    (hRoot : ProfileCheckedScannerCorrespondence.check M (coreEntries parts) (coreBodies parts plans) C A [] (normalize plans e)=true) :
+    (hRoot : ProfileCheckedScannerCorrespondence.check M (coreEntries parts) (coreBodies parts plans) C A [] (normalize parts plans e)=true) :
     ∃ (g : MGrammar) (start : MExp), g.FirstOrder ∧ start.FirstOrder ∧ ∀ x,
       SObs (original M parts plans) .callByValuePar (sourceExpr M e) x (some []) ↔
         SObs g .callByValueSeq start x (some []) :=
   ⟨_,_,RecursiveScannerProductCompiler.target_firstOrder M (coreEntries parts) (coreBodies parts plans),
-    RecursiveScannerProductCompiler.plain_firstOrder M (coreBodies parts plans) [] (normalize plans e),
+    RecursiveScannerProductCompiler.plain_firstOrder M (coreBodies parts plans) [] (normalize parts plans e),
     fun x => observations_iff M parts plans hReady e he H C A hH hC hB hRoot x (some [])⟩
 
 theorem defined_iff {n : Nat} (M : Machine n) (parts : List (Part n)) (plans : List Plan)
@@ -309,14 +375,14 @@ theorem defined_iff {n : Nat} (M : Machine n) (parts : List (Part n)) (plans : L
     (hH : RecursiveCaptureProfiles.scannerCheck M H=true)
     (hC : RecursiveCaptureProfiles.grammarCheck M (coreEntries parts) (coreBodies parts plans) H C=true)
     (hB : ProfileCheckedScannerCorrespondence.bodiesCheck M (coreEntries parts) (coreBodies parts plans) C A=true)
-    (hRoot : ProfileCheckedScannerCorrespondence.check M (coreEntries parts) (coreBodies parts plans) C A [] (normalize plans e)=true)
+    (hRoot : ProfileCheckedScannerCorrespondence.check M (coreEntries parts) (coreBodies parts plans) C A [] (normalize parts plans e)=true)
     (x : List Char) (v : Option Nat) :
     (∃ k, evV (original M parts plans) x .callByValuePar
       (tblV (original M parts plans) x .callByValuePar k) [] (sourceExpr M e) x.length=some v) ↔
     (∃ k, evV (target M parts plans) x .callByValueSeq
       (tblV (target M parts plans) x .callByValueSeq k) [] (targetExpr M parts plans e) x.length=some v) := by
   have hb := ProfileCheckedScannerCorrespondence.defined_iff M (coreEntries parts) (coreBodies parts plans)
-    H C A hH hC hB (normalize plans e) hRoot x v
+    H C A hH hC hB (normalize parts plans e) hRoot x v
   constructor
   · rintro ⟨k,hk⟩
     exact hb.mp ⟨k,(evaluator_eq M parts plans hReady e he x k [] x.length (Nat.le_refl _)).symm.trans hk⟩
@@ -331,7 +397,7 @@ theorem undefined_iff {n : Nat} (M : Machine n) (parts : List (Part n)) (plans :
     (hH : RecursiveCaptureProfiles.scannerCheck M H=true)
     (hC : RecursiveCaptureProfiles.grammarCheck M (coreEntries parts) (coreBodies parts plans) H C=true)
     (hB : ProfileCheckedScannerCorrespondence.bodiesCheck M (coreEntries parts) (coreBodies parts plans) C A=true)
-    (hRoot : ProfileCheckedScannerCorrespondence.check M (coreEntries parts) (coreBodies parts plans) C A [] (normalize plans e)=true)
+    (hRoot : ProfileCheckedScannerCorrespondence.check M (coreEntries parts) (coreBodies parts plans) C A [] (normalize parts plans e)=true)
     (x : List Char) :
     (∀ k, evV (original M parts plans) x .callByValuePar
       (tblV (original M parts plans) x .callByValuePar k) [] (sourceExpr M e) x.length=none) ↔

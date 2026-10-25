@@ -9,10 +9,10 @@ set_option maxHeartbeats 0
 set_option maxRecDepth 100000
 
 def parts : List (Part 3) := [
-  ⟨.shift 0 residuals,ScannerReplayResidualExamples.shifted⟩,
-  ⟨.scan 2,.seq (.lit ['X']) (.seq (.param 0) (.lit ['Z']))⟩,
-  ⟨.scan 2,ScannerReplayResidualExamples.scanned⟩,
-  ⟨.replay,.lit []⟩]
+  ⟨.shift 0 residuals,ScannerReplayResidualExamples.shifted,false⟩,
+  ⟨.scan 2,.seq (.lit ['X']) (.seq (.param 0) (.lit ['Z'])),false⟩,
+  ⟨.scan 2,ScannerReplayResidualExamples.scanned,false⟩,
+  ⟨.replay,.lit [],false⟩]
 def plans : List ReplayControlFusion.Plan := [.alt (.leaf 0) (.notP (.leaf 1)),.leaf 2,.leaf 3]
 def root : Arg := .user 0 (.user 2 argument)
 def input : List Char := ScannerReplayResidualExamples.input
@@ -29,7 +29,7 @@ theorem checked :
     RecursiveCaptureProfiles.scannerCheck machine scanners=true ∧
     RecursiveCaptureProfiles.grammarCheck machine (coreEntries parts) (coreBodies parts plans) scanners summary=true ∧
     ProfileCheckedScannerCorrespondence.bodiesCheck machine (coreEntries parts) (coreBodies parts plans) summary inputs=true ∧
-    ProfileCheckedScannerCorrespondence.check machine (coreEntries parts) (coreBodies parts plans) summary inputs [] (normalize plans root)=true := by
+    ProfileCheckedScannerCorrespondence.check machine (coreEntries parts) (coreBodies parts plans) summary inputs [] (normalize parts plans root)=true := by
   decide +kernel
 
 theorem positive_source :
@@ -75,7 +75,7 @@ theorem preflight_required :
       (sourceExpr machine failedRoot) rollbackInput.length=some none ∧
     evV (core machine parts plans) rollbackInput .callByValuePar
       (tblV (core machine parts plans) rollbackInput .callByValuePar 14) []
-      (sourceExpr machine (expand failedArg (plans[0]))) rollbackInput.length=some (some rollbackInput.length) := by decide +kernel
+      (sourceExpr machine (expand parts failedArg (plans[0]))) rollbackInput.length=some (some rollbackInput.length) := by decide +kernel
 
 theorem failed_target : ∃ k,
     evV (target machine parts plans) rollbackInput .callByValueSeq

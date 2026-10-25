@@ -45,7 +45,8 @@ theorem layout_and_entry_checks :
     ScannerReplayResidual.entryCheck machine residuals 0=true ∧
     ScannerReplayResidual.check machine (fun _ => some "ab".toList)=false ∧
     TotalCaptureSafety.wordCheck machine "aba".toList=false ∧
-    RecursiveScannerProductHeader.entryCheck (entries 0) (CaptureTransitionProfile.profile D ['b'])=false := by
+    ScannerFrontierCertificate.check (CaptureTransitionProfile.profile D ['b']) (0 : Fin 3)=false ∧
+    RecursiveScannerProductHeader.entryCheck machine (entries 0) (CaptureTransitionProfile.profile D ['b'])=true := by
   decide +kernel
 
 theorem noncommuting : "ab".toList++"aba".toList≠"aba".toList++"ab".toList := by decide

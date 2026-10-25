@@ -61,12 +61,12 @@ header 出力 profile は選択で和、guard で tail の集合となり、quer
 の任意有限制御木 `Plan` として与える。leaf 本体内と実引数内には同じ user 群の
 再帰・相互再帰・任意の Arg の連結／選択／否定／star を許す。
 `normalize` は caller の元位置でまず `&normalizedArg` を評価し、制御木の各 leaf を
-同じ実引数を渡す unary call へ展開する。元 user の引数評価を飛ばさないため、
+依存 leaf には同じ実引数、非依存 leaf には空文字列を渡す unary call へ展開する。元 user の引数評価を飛ばさないため、
 引数の失敗が否定 leaf の空成功へ変わることはない。
 
 生成した leaf 規則と元 Plan 規則の実行表を、同じ通常 physical 段数で対応させた。
 共通補助 scanner の全実行行が両実文法拡張で一致することと、元引数の実再捕捉を
-使い、構文帰納と user 段数帰納で対応を導く。`readyCheck` は有限の参照範囲検査のみで、
+使い、構文帰納と user 段数帰納で対応を導く。`readyCheck` は有限の参照範囲と非依存構文の検査で、
 成功／行／捕捉形 oracle を要求しない。正規化後の実 core 文法の有限 profile 検査と
 合成して、元実 Plan 文法から固定一階 Seq 文法への全入力 SObs・同じ元文字列言語・
 physical 定義／全 clock 未定義を証明した。
@@ -82,6 +82,112 @@ nullable 引数の全入力・全 clock 未定義も kernel で検査した。
 全体本体には capture 終点以後という制約を課さないが、各消費 leaf の入口形式は
 指定した replay／scanner／認証済み shift とその制御である。
 任意 PEG prefix、独立複数 source 捕捉、一般 Par/Seq 一致／分離は未解決のままである。
+
+さらに `Part.closed` の leaf は header を置かず、元位置で直接 Arg 本体を評価する。
+有限の `independent` 検査は、先読み内や実引数内も含めて caller の param 参照を禁じる。
+呼び先の本体は新しく捕捉した値を使ってよく、閉じた leaf から同じ user への再帰や
+捕捉依存 user への呼出しも許す。任意の実 recursive table と二つの環境での全 partial
+評価一致を構文帰納で導き、成功・停止性・行の仮定なしに旧捕捉値を空に置き換える。
+生成先ではその leaf に空引数を渡し、replay の空 header を経て元位置で本体を実行する。
+元実引数の preflight は残し、失敗や未定義が値消去によって消えないようにする。
+この分岐を既存の同 physical 段数の Plan 行帰納へ統合しており、最終の全入力 SObs、
+元文字列言語、physical 定義・全 clock 未定義の定理は同じ有限検査から得られる。
+
+`CaptureIndependentOriginExamples` は abc を捕捉して a だけを消費する実行と生成 Seq の
+同じ終点を確認する。同じ user の選択では非依存 a 枝と完全再照合枝が混在し、
+bbc 上では後者が全捕捉を消費する。同じ文法内の c 再帰から、非有界捕捉・scanner・再照合を使う
+既存の親子再帰へ入り、全値復帰と全入力の固定 Seq 言語変換を接続する。
+abc 引数が ab 上で失敗すると本体 a は実行されず、nullable 引数は全入力・全 clock で
+未定義のままになる。query や実引数に隠した旧 param は有限検査で拒否する。
+非依存 leaf には capture 終点以後の制約がなくなったが、旧値を使う消費 leaf の
+指定入口形式、unary、共通 machine、成功する有限 profile 注釈は引き続き制約である。
+
+固定 shift の捕捉にも、可読性による事前制限を弱めた。
+`ScannerReplayResidual.completeCheck` は、ラベル付き状態がラベル先頭文字の遷移を
+実際に持つことを有限検査する。従来の `check` は存在する全 arc の回転だけを検査し、
+必要な arc がない場合も通るので、二つの検査を区別する。実入力の捕捉 prefix w と
+入口の成功から `w ++ tail = u ++ w ++ rest` が得られ、二つの有限検査により
+その w の全体が実 residual machine に可読だと帰納できる。従って非可読なら
+実元入口 `lit u; param0` は、任意の文法・実 table・clock で有限失敗する。
+
+profile 経路の `entryCheck M` は shift について、従来の実 profile 可読性または
+この機械の完全性を受け入れる。可読時は従来の回転、非可読時は実入口の有限失敗を
+導き、既存の失敗を生成する targetHeader/shiftedBody へ接続した。plain/product 行、
+選択を確定する header 制御、caller の元位置 Plan、有限 grammar/body/root 検査と
+全入力 SObs・固定 Seq 元文字列言語・physical 定義未定義の定理にそのまま合成する。
+元の actual 引数評価は残り、未定義が失敗に置き換わることはない。
+
+`UncheckedShiftCaptureExamples` の一つの実引数は `(ab)*;c` と従来の非有界引数を選ぶ。
+前者の `abababc` は実 unary call で捕捉に成功するが、ab 残余周期には非可読であり、
+旧可読性検査は false、新入口検査は true となる。shift 呼出しは有限失敗し、その負の
+query を通る別 user は元位置で a を一文字だけ消費する。後者の枝では既存の
+親・子の全捕捉を再利用する再帰が成功する。両方を生成 Seq の物理実行と全入力言語へ
+接続し、nullable 実引数は全入力全 clock で未定義を保つ。必要 arc を欠く一状態機械は
+旧 sound-label 検査に通っても、実 a 捕捉から a 再照合に成功し得る。この機械を
+completeCheck と弱化後の入口検査が拒否する反例も kernel で確認する。
+完全な residual machine の shift では捕捉の可読性制約が不要になった。
+
+`PrefixCaptureQuery` は、生の元本体 `lit u; &param0` / `lit u; !param0` も扱う。
+`prefix_query` は任意の式 a/b・文法・strategy・実 table・環境について
+`a; &b = &(a;b); a` と `a; !b = !(a;b); a` の全 partial 結果一致を証明する。
+検査後は同じ元位置で a を決定的に再実行するため、有限失敗・未定義も保存する。
+この恒等式自体は一般の prefix に成り立つが、ここで完成した有限 compiler への
+合成は固定 literal prefix と旧 capture の query に限る。
+
+有限 `linkCheck` は独立 literal leaf と、同じ literal の shift 入口＋空継続の実 leaf を
+構文で結び付ける。異なる literal や非空継続は拒否する。生の正負 query と既存 leaf の
+選択・否定・guard を持つ Body を、元位置の query と独立消費を行う Plan へ変換する。
+`SemanticBodyRewrite` は同じ呼出し番号と arity を保つ本体の全 partial 書換えから、
+実再帰表全体の各 physical 段数での一致を導く。`syntaxCheck` からこの書換えを
+実元規則ごとに証明するので、行一致を最終入力にせず、実引数内・本体内の同 user
+再帰や相互再帰にも適用する。既存の有限 profile 検査へ合成し、生の元文法から
+固定一階 Seq への全入力観測・元文字列言語・physical 定義／全 clock 未定義を得る。
+
+`PrefixCaptureQueryExamples` の実元 rule は `ab; !param0` そのものである。
+`(ab)*;c` を含む実 unary 引数が abababc を7文字捕捉した後、旧値を否定照合して
+ab の2文字だけを消費する。正の query では実捕捉 ababa の全5文字を必要とし、
+abababa 上で2文字だけ消費、ababa 上の短い再照合は失敗する。
+同じ正 query user が c を読み、入力依存の `c*;ababa` を新しく捕捉して自身へ再帰する。
+cccabababa 上で複数回入れ直して正 query に至り、後続が残りの ababa を消費する。
+これらの生成 Seq の実物理結果と、否定 query 後続／同 user 再帰の全入力固定言語を
+証明し、nullable 実引数は全入力全 clock で未定義を保つ。
+生の固定 prefix query まで到達したが、保持値を使う任意 PEG prefix・独立複数 capture・
+一般 Par/Seq 一致／分離は引き続き未解決である。
+
+入力依存の可変長 prefix にも、断片捕捉の既存 compiler を使って接続した。
+`FragmentMixedRecursive` へ独立 scanner leaf（tails.length+1）を追加し、
+その元本体は `A = a*#` だけを評価する。生成先は元位置で空引数を渡す独立 scanner 行を
+追加し、実引数の preflight を先に保つ。純粋な scanner を直に置くと clock 0 でだけ
+元 user の未定義とずれるため、実 unary 行を使って全 ordinary physical clock を合わせた。
+従来の consuming/replay/stuck leaf と同じ Plan 内で混在できる。旧アドレスは保持する。
+
+`FragmentPrefixQuery` の実元 user Body は `A; &param0` / `A; !param0` そのものである。
+有限 `copyCheck` で shift-kind と空継続の実 leaf を結び、共通の predicate-push 恒等式で
+その copy を元位置から先読みしてから独立 A を消費する Plan へ変換する。
+既存の selected-fragment 引数 `star(step G); H` を ternary/unary target 呼出しへ分ける
+変換が、A の終点より後で捕捉が終わる場合も受け持つ。source の捕捉は一つのままで、
+target の三つの引数はその捕捉の断片であり、独立複数の source 捕捉ではない。
+SemanticBodyRewrite から実元／Plan 文法の各 physical 段数一致を導き、断片 compiler の
+対応へ合成して、全入力 SObs・固定一階 Seq 元文字列言語・physical 定義／全 clock 未定義を
+有限 Body/link 検査だけから得る。停止や実行行の oracle を入力にしない。
+
+`FragmentPrefixQueryExamples` は長さの異なる a-run を読み、aa#a の全捕捉を確認しても
+A の aa# だけで成功する。短い aa# コピーは正 query を拒否し、負 query を通す。
+H の正 query は同じ元 user を新しい空捕捉で呼び、その後外側の完全な捕捉へ戻る。
+同じ固定開始式が n=1,2,4 の反復語で全入力を消費し、その文法全体に全入力言語変換を
+接続する。scanner 単独なら成功する a# 上でも実 aa 引数の失敗を先に保ち、preview を
+省いた素朴な呼出しだけが誤成功する。clock 0 の実未定義、nullable H の全入力全 clock
+未定義、非空継続や replay-kind を copy として指定した場合の有限拒否も kernel で確認する。
+
+これで固定 literal に限らず、この入力依存で非有界の区切り scanner prefix に進んだ。
+実引数は既存の G/H で選択する codeword＋a-fragment family に限定し、prefix も A に限定する。
+有限状態 scanner compiler との任意混在、任意 PEG prefix／実引数、独立複数捕捉、および
+一般 Par/Seq 一致・分離は依然未解決である。
+
+
+任意の捕捉依存 PEG prefix、独立複数捕捉、一般 Par/Seq 一致・分離は未解決である。
+
+
 
 `ParSimulation.translate source start` は元の文法と開始式だけから一つの固定文法を作る。
 `translate_recognizes` は、全ての元の文字列 `x : List Char` について、
