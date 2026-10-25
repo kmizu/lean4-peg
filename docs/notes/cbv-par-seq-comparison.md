@@ -126,6 +126,34 @@ query を通る別 user は元位置で a を一文字だけ消費する。後�
 旧 sound-label 検査に通っても、実 a 捕捉から a 再照合に成功し得る。この機械を
 completeCheck と弱化後の入口検査が拒否する反例も kernel で確認する。
 完全な residual machine の shift では捕捉の可読性制約が不要になった。
+
+`PrefixCaptureQuery` は、生の元本体 `lit u; &param0` / `lit u; !param0` も扱う。
+`prefix_query` は任意の式 a/b・文法・strategy・実 table・環境について
+`a; &b = &(a;b); a` と `a; !b = !(a;b); a` の全 partial 結果一致を証明する。
+検査後は同じ元位置で a を決定的に再実行するため、有限失敗・未定義も保存する。
+この恒等式自体は一般の prefix に成り立つが、ここで完成した有限 compiler への
+合成は固定 literal prefix と旧 capture の query に限る。
+
+有限 `linkCheck` は独立 literal leaf と、同じ literal の shift 入口＋空継続の実 leaf を
+構文で結び付ける。異なる literal や非空継続は拒否する。生の正負 query と既存 leaf の
+選択・否定・guard を持つ Body を、元位置の query と独立消費を行う Plan へ変換する。
+`SemanticBodyRewrite` は同じ呼出し番号と arity を保つ本体の全 partial 書換えから、
+実再帰表全体の各 physical 段数での一致を導く。`syntaxCheck` からこの書換えを
+実元規則ごとに証明するので、行一致を最終入力にせず、実引数内・本体内の同 user
+再帰や相互再帰にも適用する。既存の有限 profile 検査へ合成し、生の元文法から
+固定一階 Seq への全入力観測・元文字列言語・physical 定義／全 clock 未定義を得る。
+
+`PrefixCaptureQueryExamples` の実元 rule は `ab; !param0` そのものである。
+`(ab)*;c` を含む実 unary 引数が abababc を7文字捕捉した後、旧値を否定照合して
+ab の2文字だけを消費する。正の query では実捕捉 ababa の全5文字を必要とし、
+abababa 上で2文字だけ消費、ababa 上の短い再照合は失敗する。
+同じ正 query user が c を読み、入力依存の `c*;ababa` を新しく捕捉して自身へ再帰する。
+cccabababa 上で複数回入れ直して正 query に至り、後続が残りの ababa を消費する。
+これらの生成 Seq の実物理結果と、否定 query 後続／同 user 再帰の全入力固定言語を
+証明し、nullable 実引数は全入力全 clock で未定義を保つ。
+生の固定 prefix query まで到達したが、保持値を使う任意 PEG prefix・独立複数 capture・
+一般 Par/Seq 一致／分離は引き続き未解決である。
+
 任意の捕捉依存 PEG prefix、独立複数捕捉、一般 Par/Seq 一致・分離は未解決である。
 
 

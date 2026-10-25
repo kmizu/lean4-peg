@@ -1,3 +1,6 @@
+import MacroPeg.CBV.PrefixCaptureQueryExamples
+import MacroPeg.CBV.PrefixCaptureQuery
+import MacroPeg.CBV.SemanticBodyRewrite
 import MacroPeg.CBV.UncheckedShiftCaptureExamples
 import MacroPeg.CBV.CaptureIndependentOriginExamples
 import MacroPeg.CBV.ScannerOriginControl
