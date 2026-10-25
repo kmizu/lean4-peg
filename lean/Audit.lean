@@ -1,3 +1,9 @@
+import MacroPeg.CBV.WordExpansionRefinement
+import MacroPeg.CBV.FiniteBodyRewrite
+import MacroPeg.CBV.ForwardingHeadExpansion
+import MacroPeg.CBV.ForwardingHeadBounds
+import MacroPeg.CBV.ForwardingHeadNormalization
+import MacroPeg.CBV.ForwardingHeadExamples
 import MacroPeg.CBV.ForwardingPrefixCycles
 import MacroPeg.CBV.ForwardingPrefixTrace
 import MacroPeg.CBV.ForwardingCycleElimination
@@ -26308,3 +26314,147 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.ForwardingCycleExamples.acyclic_classified' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ForwardingCycleExamples.acyclic_classified
+
+-- Finite scoped forwarding-head expansion and physical-clock bounds.
+
+/-- info: 'Shallot.MacroPeg.CBV.WordExpansionRefinement.antisymm' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordExpansionRefinement.antisymm
+
+/-- info: 'Shallot.MacroPeg.CBV.WordExpansionRefinement.context_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordExpansionRefinement.context_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.WordExpansionRefinement.expanded' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordExpansionRefinement.expanded
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteBodyRewrite.arities' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteBodyRewrite.arities
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteBodyRewrite.forward_tables' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteBodyRewrite.forward_tables
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteBodyRewrite.backward_tables' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteBodyRewrite.backward_tables
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteBodyRewrite.defined_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteBodyRewrite.defined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteBodyRewrite.undefined_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteBodyRewrite.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteBodyRewrite.observations' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteBodyRewrite.observations
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingHeadExpansion.complete_of_trace' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingHeadExpansion.complete_of_trace
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingHeadExpansion.expanded_complete' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingHeadExpansion.expanded_complete
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingHeadExpansion.source_body_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingHeadExpansion.source_body_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingHeadExpansion.code_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingHeadExpansion.code_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingHeadExpansion.canonical_body' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingHeadExpansion.canonical_body
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingHeadExpansion.bounds' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingHeadExpansion.bounds
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingHeadExpansion.expanded_bounds' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingHeadExpansion.expanded_bounds
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingHeadNormalization.rule' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingHeadNormalization.rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingHeadNormalization.firstOrder' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingHeadNormalization.firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingHeadNormalization.related' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingHeadNormalization.related
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingHeadNormalization.physical_bounds' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingHeadNormalization.physical_bounds
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingHeadNormalization.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingHeadNormalization.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingHeadNormalization.undefined_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingHeadNormalization.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingHeadExamples.chain_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingHeadExamples.chain_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingHeadExamples.chain_complete' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingHeadExamples.chain_complete
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingHeadExamples.chain_source' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingHeadExamples.chain_source
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingHeadExamples.chain_normalized' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingHeadExamples.chain_normalized
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingHeadExamples.clock_gap' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingHeadExamples.clock_gap
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingHeadExamples.chain_language' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingHeadExamples.chain_language
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingHeadExamples.returning_source' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingHeadExamples.returning_source
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingHeadExamples.returning_normalized' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingHeadExamples.returning_normalized
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingHeadExamples.cyclic_component' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingHeadExamples.cyclic_component
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingHeadExamples.scoped_environment' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingHeadExamples.scoped_environment
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingHeadExamples.committed_choice' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingHeadExamples.committed_choice

@@ -16,6 +16,37 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 非循環の転送headをスコープ付きで有限展開
+
+`ForwardingHeadExpansion` は、転送headをn+1段まで辿って実callee本体へ展開する。
+元の規則数をnとすると、その深さで打切りが使われないことを転送headの有限グラフについての
+非fuel切れ定理から証明する。閉路ならpreflight付き未定義へ、非転送規則または
+未定義calleeならその本体へ止まる。展開中も実引数を再照合する検査を残す。
+
+各callee本体には`subst [param0]`を施す。これにより、calleeの範囲外parameterは失敗へ写り、
+親に余分な保持値がある環境でも漏れ出さない。選択の括弧も
+`((A / B); parentTail) / parentFallback` のまま保ち、sequenceへ分配しない。
+`WordExpansionRefinement` は、任意のWord引数に対し、このスコープ付き展開の情報順序を
+実引数評価込みで持ち上げる。
+
+`ForwardingHeadBounds` は元本体のclock kを展開本体のclock kへ、展開本体のclock kを
+元本体のclock k+n+1へ写す。`FiniteBodyRewrite` は、実source表でのこの有限遅延を
+文法全体の実source/target表へ接続する。`ForwardingHeadNormalization` の生成文法は
+Par文法であり、元clock k≤展開clock k、展開clock k≤元clock(n+2)kを証明する。
+一階性、元文字列上の全有限観測・有限失敗・全clock未定義を保存する。
+意味論的行oracle、外部の停止仮定、捕捉語paletteは渡さない。
+
+kernel実行は、転送から3倍再帰へ入る非循環経路、2段転送の親継続への復帰、閉路、
+捕捉語abの1/3/9コピーを確認する。元clock1が未定義なのに展開clock1では成功する例を
+直接検証し、同clock一致を仮定していない。余分な親parameterを読む誤った展開と、
+選択を分配して誤受理する実反例も検証する。
+
+これはこの規則族のPar側の有限head正規化である。展開後の選択木とスコープ付きcallee本体を
+保持値viewのSeq compilerへ接続する証明、コピー以外の更新、独立複数捕捉、および一般の
+Par/Seq一致・分離は引き続き未解決である。
+検証は全1124 jobs（Auditを含む）、関連1167定理の標準Lean公理／公理なしの依存検査、
+新規33guard（PR66計172guard）。
+
 ## 倍率1の転送閉路を自動判定して除去
 
 倍率1を含む同じ規則族に対し、`ForwardingPrefixTrace.classify` は各規則の先頭の
@@ -43,7 +74,7 @@ callee行を呼ぶため、閉路に入ると有限失敗でfallbackへ移るこ
 kernel検証する。成長規則へ続く非循環転送は、cycleに分類されないことも確認する。
 
 これはPar側の文法正規化であり、倍率1と成長を一般的に混ぜたSeq compilerへの接続は
-まだ完了していない。非循環の転送経路の有限インライン化、選択の括弧を保存する継続の変換、
+まだ完了していない。上記の有限head展開をSeqへつなぐ選択木と継続の変換、
 独立複数捕捉、および一般Par/Seq一致・分離は引き続き未解決である。
 検証は全1118 jobs（Auditを含む）、関連1134定理の標準Lean公理／公理なしの依存検査、
 新規40guard（PR66計139guard）。
