@@ -16,6 +16,32 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 消費前の情報を有限個の捕捉へ平坦化する方式の限界
+
+`FiniteCaptureInterface` は、独立prefixの残余を「prefixだけから選んだ有限状態と、
+固定上限個の捕捉値」へ渡す方式を退ける。旧`FiniteResidualControl`の単一捕捉の場合を、
+空文字・複製・分割・prefixに応じた個数変更を許す任意のtupleへ拡張した。
+各値の長さには上限を置かない。値の生成や状態選択の計算可能性も仮定しない。
+
+`shape_agree` は、非空値が残り入力の全suffixで再照合不能なら、tupleの各slotは
+空か非空かだけで観測が決まると示す。任意の一階再帰文法・両CBV戦略について、
+既存の`CaptureObservability.observations_iff`へ接続する。
+`no_bounded_dead_interface` は、この有限signatureと有限状態の組から、全n,mに対する
+残り入力c^m上の「n=mなら全入力受理」を再現する継続が存在しないと証明する。
+
+`no_balanced_factorization` は実際のmacro-free規則`B <- 'a' B 'c' / 'b'`へ適用する。
+a^n bを消費してc^mへ入ったあと、任意個数上限のa/b文字列を保持しても、
+Bの全入力受理を再現できない。分割した捕捉や複数の古い値を追加するだけでは、
+一般のprefix残余問題を解決しない。
+
+これは言語クラスの分離ではない。B自身がSeqでも動き、継続中の無制限の呼出しstackや、
+残り入力も調べて選ぶ入口状態、消費前の原点で独立計算を完了する方式は排除していない。
+次の一般変換では、この有限tupleだけの境界分解を仮定せず、そのような計算構造を扱う
+必要がある。一般Par/Seqの一致・分離は未解決。
+
+検証: `lake build`（Audit込み）1,407 jobs成功。新規6定理の公理依存は
+標準Lean公理のみで、すべてAuditにguardを追加した。
+
 ## 消費した分岐の後続を、束縛済みの保持環境へ融合する
 
 `RetainedContinuationSyntax/Algebra/Compiler` は、`(P.exp leaves); C`という元headerを

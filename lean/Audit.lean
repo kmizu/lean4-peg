@@ -1,3 +1,4 @@
+import MacroPeg.CBV.FiniteCaptureInterface
 import MacroPeg.CBV.RetainedContinuationSyntax
 import MacroPeg.CBV.RetainedContinuationAlgebra
 import MacroPeg.CBV.RetainedContinuationCompiler
@@ -39188,3 +39189,31 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.RetainedContinuationProofs.outer_capture_length_unbounded' depends on axioms: [propext] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.RetainedContinuationProofs.outer_capture_length_unbounded
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteCaptureInterface.shape_mem' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteCaptureInterface.shape_mem
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteCaptureInterface.shape_agree' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteCaptureInterface.shape_agree
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteCaptureInterface.no_finite_encoding' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteCaptureInterface.no_finite_encoding
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteCaptureInterface.no_bounded_dead_interface' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteCaptureInterface.no_bounded_dead_interface
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteCaptureInterface.prefix_alphabet_dead' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteCaptureInterface.prefix_alphabet_dead
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteCaptureInterface.no_balanced_factorization' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteCaptureInterface.no_balanced_factorization
