@@ -16,6 +16,73 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+固定文字列を消費してから保持値を再照合する入口も、走査・直接再照合と
+同じ `RecursiveScannerProductCompiler` へ統合した。`Entry.shift q R` の元入口は
+`lit (R q); param0` で、生成先は実捕捉の終点から `lit (R r)` を消費する。
+`r` は捕捉全体の有限 profile から決まる実 scanner 到達状態である。
+`ScannerReplayResidual.check` は、ラベル付き状態の実遷移がラベル先頭を読み、
+その文字を末尾へ回すことを有限検査する。未ラベル状態には別の走査を置ける。
+この検査と開始状態での捕捉の可読性から `u ++ w = w ++ v` を導き、
+成功・有限失敗を含む入口の全 partial 結果を保存する。`u` と `w` の可換性は要求しない。
+
+残余ラベルの検査を既存の有限 body 検査に含め、plain/product 行の同時帰納、
+実元規則の出力 profile 証明、全入力の有限観測・固定 Seq 元文字列言語・
+physical 定義／全 clock 未定義の対応まで接続した。成功や row の oracle、
+全状態 Total は新しい profile 経路の最終入力にない。`ScannerReplayResidualExamples`
+では `ab; param0` と別状態の a/b 走査と直接再照合を同じ文法へ置き、
+`(ab; &aba)*; a` の入力依存・語数非有界の捕捉を実 unary 再照合呼出しで取得し、
+親 `aba` →走査側 `b` →子 `ababa`、その後の両親の全値再利用を検査する。
+`ab ++ aba ≠ aba ++ ab` でも残余 `ba` が正しい。有限注釈と指定入口形式という
+制約は残り、任意 PEG prefix や独立複数捕捉、一般の一致／分離は未解決である。
+
+入口は単一 leaf に限定せず、`Entry.alt` と `Entry.guard positive test tail`
+による任意有限の入れ子へ拡張した。leaf は直接再照合・scanner・認証済み固定 shift
+から選び、guard の test と tail は同じ元位置から評価する。生成先の `targetHeader`
+は捕捉終点で同じ全 partial 結果を返し、正／負の query をその場所で評価してから
+対応する tail へ進む。優先選択では plain header の正先読みと負ガードで枝を固定し、
+本体の失敗や未定義によって別入口へ戻らない。単純な本体の枝配布は使わない。
+
+有限 layout／entry-state 検査は両枝・全 test を再帰的に検査する。実元規則の
+header 出力 profile は選択で和、guard で tail の集合となり、query 自体の評価は
+残る。この形を既存の plain/product 同時帰納と全入力言語・physical 定義／未定義
+へ合成した。`EntryControlScannerExamples` は同じ user で正 shift query→別状態走査と
+負 shift query→直接再照合を切り替え、再帰捕捉と親復帰を確認する。`ab!` の
+直接再照合／走査の選択では、選択済み replay の本体失敗を保持し、素朴な枝配布だけが
+誤受理する差も kernel で確認する。
+
+全ての成功する header の消費終点が実 capture 終点以後になる構成であり、
+負 query 単独のように元位置へ空成功で戻る本体は、この入口変換だけでは扱えない。
+その場合は以下の呼出し側正規化を使う。
+任意 PEG prefix、別 compiler との統合、独立複数 capture、および一般一致／分離は
+引き続き未解決である。
+
+`ScannerOriginControl` は、各 unary user の実元本体を、
+`sourceHeader entry; sourceExpr body` という有限 leaf の選択・否定・正先読み guard
+の任意有限制御木 `Plan` として与える。leaf 本体内と実引数内には同じ user 群の
+再帰・相互再帰・任意の Arg の連結／選択／否定／star を許す。
+`normalize` は caller の元位置でまず `&normalizedArg` を評価し、制御木の各 leaf を
+同じ実引数を渡す unary call へ展開する。元 user の引数評価を飛ばさないため、
+引数の失敗が否定 leaf の空成功へ変わることはない。
+
+生成した leaf 規則と元 Plan 規則の実行表を、同じ通常 physical 段数で対応させた。
+共通補助 scanner の全実行行が両実文法拡張で一致することと、元引数の実再捕捉を
+使い、構文帰納と user 段数帰納で対応を導く。`readyCheck` は有限の参照範囲検査のみで、
+成功／行／捕捉形 oracle を要求しない。正規化後の実 core 文法の有限 profile 検査と
+合成して、元実 Plan 文法から固定一階 Seq 文法への全入力 SObs・同じ元文字列言語・
+physical 定義／全 clock 未定義を証明した。
+
+`ScannerOriginControlExamples` では、従来の非有界 `(ab;&aba)*;a` を実 unary call で
+捕捉し、親 `aba`→scanner 側 `b`→子 `ababa` と両親への復帰を確認する。
+別入力 `ababaX` では実引数 `aba` を成功捕捉しても、元本体の負 leaf が
+元の位置へ空成功で戻り、後続が同じ全入力を読める。生成 Seq の実通常表にも
+その元位置への復帰を導いた。preflight を省くと失敗引数が空成功になる差、
+nullable 引数の全入力・全 clock 未定義も kernel で検査した。
+負 leaf は scanner と `X` の後に新捕捉値を読み、`ababaXabaZ` なら否定失敗、
+短いコピーの `ababaXabZ` なら元位置へ空成功となる両方を生成 Seq へ接続した。
+全体本体には capture 終点以後という制約を課さないが、各消費 leaf の入口形式は
+指定した replay／scanner／認証済み shift とその制御である。
+任意 PEG prefix、独立複数 source 捕捉、一般 Par/Seq 一致／分離は未解決のままである。
+
 `ParSimulation.translate source start` は元の文法と開始式だけから一つの固定文法を作る。
 `translate_recognizes` は、全ての元の文字列 `x : List Char` について、
 生成先 Par の全消費成功とソース Seq の全消費成功が同値であることを証明する。

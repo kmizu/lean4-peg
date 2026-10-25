@@ -52,7 +52,7 @@ theorem valid_scoped {n : Nat} (M : Machine n) (entries : Entries n) (bodies : L
   | .lit _,_ | .param _,_ => True.intro
 
 def bodiesCheck {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg) (C : Summary) (A : Inputs) : Bool :=
-  bodies.zipIdx.all (fun (b,i) => (profiles (observer M)).all (fun P =>
+  entriesCheck M entries bodies && bodies.zipIdx.all (fun (b,i) => (profiles (observer M)).all (fun P =>
     !inputCheck entries A i P || check M entries bodies C A [P] b))
 
 theorem body_checked {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
@@ -61,7 +61,7 @@ theorem body_checked {n : Nat} (M : Machine n) (entries : Entries n) (bodies : L
     (hp : inputCheck entries A i P=true) : check M entries bodies C A [P] b=true := by
   have hm : (b,i)∈bodies.zipIdx := List.mem_of_getElem? (show bodies.zipIdx[i]?=some (b,i) from by
     simp [List.getElem?_zipIdx,hi])
-  have hh := (List.all_eq_true.mp ((List.all_eq_true.mp h) (b,i) hm)) P hP
+  have hh := (List.all_eq_true.mp ((List.all_eq_true.mp (Bool.and_eq_true_iff.mp h).2) (b,i) hm)) P hP
   simpa [hp] using hh
 
 def Rows {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg) (A : Inputs) (x : List Char) (k : Nat) : Prop :=
@@ -301,14 +301,16 @@ theorem tables_rows {n : Nat} (M : Machine n) (entries : Entries n) (bodies : Li
     · rw [source_step M entries bodies x k i b hi [w] p hp,
         target_step M entries bodies x k i b hi _ (CaptureTransitionProfile.profile_mem (observer M) (valid M) w)
           none (mode_plain_mem M) [w] j hj]
-      exact (RecursiveScannerProductHeader.entry_plain_body M entries bodies (entries i) b w x p j k k hp hj hcap
+      exact (RecursiveScannerProductHeader.entry_plain_body M entries bodies (entries i)
+        (entry_checked M entries bodies (Bool.and_eq_true_iff.mp hB).1 i b hi) b w x p j k k hp hj hcap
         (Bool.and_eq_true_iff.mp hw).2
         (fun z hz => (hBody z hz).1)).symm
     · intro q t hq ht
       rw [target_step M entries bodies x k i b hi _ (CaptureTransitionProfile.profile_mem (observer M) (valid M) w)
           (some (q,t)) (mode_filter_mem M q t hq ht) [w] j hj,
         source_step M entries bodies x k i b hi [w] p hp]
-      exact RecursiveScannerProductHeader.entry_product_body M entries bodies (entries i) b w x p j k k hp hj hcap
+      exact RecursiveScannerProductHeader.entry_product_body M entries bodies (entries i)
+        (entry_checked M entries bodies (Bool.and_eq_true_iff.mp hB).1 i b hi) b w x p j k k hp hj hcap
         (Bool.and_eq_true_iff.mp hw).2 ⟨q,hq⟩ t ht
         (fun z hz u hu => (hBody z hz).2 u t hu ht)
 
