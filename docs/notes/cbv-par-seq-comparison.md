@@ -61,12 +61,12 @@ header 出力 profile は選択で和、guard で tail の集合となり、quer
 の任意有限制御木 `Plan` として与える。leaf 本体内と実引数内には同じ user 群の
 再帰・相互再帰・任意の Arg の連結／選択／否定／star を許す。
 `normalize` は caller の元位置でまず `&normalizedArg` を評価し、制御木の各 leaf を
-同じ実引数を渡す unary call へ展開する。元 user の引数評価を飛ばさないため、
+依存 leaf には同じ実引数、非依存 leaf には空文字列を渡す unary call へ展開する。元 user の引数評価を飛ばさないため、
 引数の失敗が否定 leaf の空成功へ変わることはない。
 
 生成した leaf 規則と元 Plan 規則の実行表を、同じ通常 physical 段数で対応させた。
 共通補助 scanner の全実行行が両実文法拡張で一致することと、元引数の実再捕捉を
-使い、構文帰納と user 段数帰納で対応を導く。`readyCheck` は有限の参照範囲検査のみで、
+使い、構文帰納と user 段数帰納で対応を導く。`readyCheck` は有限の参照範囲と非依存構文の検査で、
 成功／行／捕捉形 oracle を要求しない。正規化後の実 core 文法の有限 profile 検査と
 合成して、元実 Plan 文法から固定一階 Seq 文法への全入力 SObs・同じ元文字列言語・
 physical 定義／全 clock 未定義を証明した。
@@ -82,6 +82,26 @@ nullable 引数の全入力・全 clock 未定義も kernel で検査した。
 全体本体には capture 終点以後という制約を課さないが、各消費 leaf の入口形式は
 指定した replay／scanner／認証済み shift とその制御である。
 任意 PEG prefix、独立複数 source 捕捉、一般 Par/Seq 一致／分離は未解決のままである。
+
+さらに `Part.closed` の leaf は header を置かず、元位置で直接 Arg 本体を評価する。
+有限の `independent` 検査は、先読み内や実引数内も含めて caller の param 参照を禁じる。
+呼び先の本体は新しく捕捉した値を使ってよく、閉じた leaf から同じ user への再帰や
+捕捉依存 user への呼出しも許す。任意の実 recursive table と二つの環境での全 partial
+評価一致を構文帰納で導き、成功・停止性・行の仮定なしに旧捕捉値を空に置き換える。
+生成先ではその leaf に空引数を渡し、replay の空 header を経て元位置で本体を実行する。
+元実引数の preflight は残し、失敗や未定義が値消去によって消えないようにする。
+この分岐を既存の同 physical 段数の Plan 行帰納へ統合しており、最終の全入力 SObs、
+元文字列言語、physical 定義・全 clock 未定義の定理は同じ有限検査から得られる。
+
+`CaptureIndependentOriginExamples` は abc を捕捉して a だけを消費する実行と生成 Seq の
+同じ終点を確認する。同じ user の選択では非依存 a 枝と完全再照合枝が混在し、
+bbc 上では後者が全捕捉を消費する。同じ文法内の c 再帰から、非有界捕捉・scanner・再照合を使う
+既存の親子再帰へ入り、全値復帰と全入力の固定 Seq 言語変換を接続する。
+abc 引数が ab 上で失敗すると本体 a は実行されず、nullable 引数は全入力・全 clock で
+未定義のままになる。query や実引数に隠した旧 param は有限検査で拒否する。
+非依存 leaf には capture 終点以後の制約がなくなったが、旧値を使う消費 leaf の
+指定入口形式、unary、共通 machine、成功する有限 profile 注釈は引き続き制約である。
+
 
 `ParSimulation.translate source start` は元の文法と開始式だけから一つの固定文法を作る。
 `translate_recognizes` は、全ての元の文字列 `x : List Char` について、

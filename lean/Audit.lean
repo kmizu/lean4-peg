@@ -1,3 +1,4 @@
+import MacroPeg.CBV.CaptureIndependentOriginExamples
 import MacroPeg.CBV.ScannerOriginControl
 import MacroPeg.CBV.ScannerOriginControlExamples
 import MacroPeg.CBV.EntryControlScannerExamples
@@ -21663,3 +21664,104 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ScannerOriginControlExamples.negative_capture_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControl.independent_environment' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControl.independent_environment
+
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.checked' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.before_capture_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.before_capture_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.before_capture_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.before_capture_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.dependent_fallback_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.dependent_fallback_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.dependent_fallback_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.dependent_fallback_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.recursive_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.recursive_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.recursive_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.recursive_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.language' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.language
+
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.argument_failure_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.argument_failure_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.argument_failure_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.argument_failure_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.nullable_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.nullable_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.nullable_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.nullable_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.rejects_hidden_parameters' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.rejects_hidden_parameters
+
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.short_language' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.short_language
