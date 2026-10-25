@@ -1,3 +1,4 @@
+import MacroPeg.CBV.CaptureInputSafety
 import MacroPeg.CBV.ScannerLanguageSafety
 import MacroPeg.CBV.SelectedCaptureSafety
 import MacroPeg.CBV.SequentialRecursiveScanner
@@ -10,12 +11,22 @@ open CaptureTransitionProfile (profile profiles)
 open SequentialRecursiveScanner (state)
 open StatefulScannerProduct (right)
 abbrev Arg := SequentialRecursiveObserver.Expr
-/-- Each user either scans from its own state or replays its retained value. -/
-abbrev Entries (n : Nat) := Nat → Option (Fin n)
+/-- Replay entries can retain arbitrary words. Scanner entries and the
+explicit safe-replay entry require a certified total argument. -/
+inductive Entry (n : Nat) where
+  | replay
+  | safeReplay
+  | scan (q : Fin n)
 
-def sourceHeader {n : Nat} : Option (Fin n) → MExp
-  | none => .param 0
-  | some q => .call q.val []
+abbrev Entries (n : Nat) := Nat → Entry n
+
+def Entry.inputSafe {n : Nat} : Entry n → Bool
+  | .replay => false
+  | .safeReplay | .scan _ => true
+
+def sourceHeader {n : Nat} : Entry n → MExp
+  | .replay | .safeReplay => .param 0
+  | .scan q => .call q.val []
 
 abbrev Mode := Option (Nat × Nat)
 abbrev valid {n : Nat} (M : Machine n) := DynamicScannerCapture.observer_valid M
@@ -96,11 +107,11 @@ def scannerBody {n : Nat} (M : Machine n) (q : Fin n) (bodies : List Arg)
 
 /-- A replay row removes exactly the captured prefix; a scanner row
 resumes from the state determined by that same complete capture. -/
-def targetBody {n : Nat} (M : Machine n) (entry : Option (Fin n)) (bodies : List Arg)
+def targetBody {n : Nat} (M : Machine n) (entry : Entry n) (bodies : List Arg)
     (P : List Nat) (mode : Mode) (b : Arg) : MExp :=
   match entry with
-  | some q => scannerBody M q bodies P mode b
-  | none => match mode with
+  | .scan q => scannerBody M q bodies P mode b
+  | .replay | .safeReplay => match mode with
     | none => plain M bodies [P] b
     | some (a,z) => if ha : a<(observer M).width then
         filter M bodies [P] b (state M P ⟨a,ha⟩).val z
@@ -127,36 +138,54 @@ def primitive {n : Nat} (M : Machine n) (i : Nat) : Bool :=
 def selected {n : Nat} (M : Machine n) (safeUsers : Nat) (i : Nat) : Bool :=
   if i<offset M then helperSafe M || primitive M i else decide (i<offset M+safeUsers)
 
-def argumentCheck {n : Nat} (M : Machine n) (safeUsers : Nat) : Arg → Bool :=
-  fun a => SelectedCaptureSafety.check M (selected M safeUsers) (sourceExpr M a)
+def argumentCheck {n : Nat} (M : Machine n) (safeUsers : Nat) (trusted : Bool) : Arg → Bool :=
+  fun a => CaptureInputSafety.check M (selected M safeUsers) trusted (sourceExpr M a)
 
-/-- Only positive calls on a consuming argument path require a certified
-source component. Calls inside queries retain their ordinary semantics. -/
-def check {n : Nat} (M : Machine n) (bodies : List Arg) (safeUsers : Nat) : Arg → Bool
-  | .user i a => decide (i<bodies.length) && (argumentCheck M safeUsers a && check M bodies safeUsers a)
-  | .seq a b | .alt a b => check M bodies safeUsers a && check M bodies safeUsers b
-  | .star a | .notP a => check M bodies safeUsers a
+/-- Only callees requiring safe captures constrain the argument's consumed
+characters. Every nested call retains its own entry-specific check. -/
+def check {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
+    (safeUsers : Nat) (trusted : Bool) : Arg → Bool
+  | .user i a => decide (i<bodies.length) &&
+      ((!((entries i).inputSafe) || argumentCheck M safeUsers trusted a) && check M entries bodies safeUsers trusted a)
+  | .seq a b | .alt a b => check M entries bodies safeUsers trusted a && check M entries bodies safeUsers trusted b
+  | .star a | .notP a => check M entries bodies safeUsers trusted a
   | _ => true
 
 def sourceSafe {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg) (safeUsers : Nat) : Bool :=
   decide (safeUsers≤bodies.length) &&
     SelectedCaptureSafety.certifiedCheck M (source M entries bodies) (selected M safeUsers) (primitive M)
 
-def Valid {n : Nat} (M : Machine n) (bodies : List Arg) (safeUsers : Nat) : Arg → Prop
-  | .user i a => i<bodies.length ∧ argumentCheck M safeUsers a=true ∧ Valid M bodies safeUsers a
-  | .seq a b | .alt a b => Valid M bodies safeUsers a ∧ Valid M bodies safeUsers b
-  | .star a | .notP a => Valid M bodies safeUsers a
+def Valid {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
+    (safeUsers : Nat) (trusted : Bool) : Arg → Prop
+  | .user i a => i<bodies.length ∧ ((entries i).inputSafe=true → argumentCheck M safeUsers trusted a=true) ∧
+      Valid M entries bodies safeUsers trusted a
+  | .seq a b | .alt a b => Valid M entries bodies safeUsers trusted a ∧ Valid M entries bodies safeUsers trusted b
+  | .star a | .notP a => Valid M entries bodies safeUsers trusted a
   | _ => True
 
-theorem check_sound {n : Nat} (M : Machine n) (bodies : List Arg) (safeUsers : Nat) :
-    ∀ e, check M bodies safeUsers e=true → Valid M bodies safeUsers e
-  | .user _ a, h => ⟨of_decide_eq_true (Bool.and_eq_true_iff.mp h).1,
-      (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp h).2).1,
-      check_sound M bodies safeUsers a (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp h).2).2⟩
+theorem check_sound {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
+    (safeUsers : Nat) (trusted : Bool) :
+    ∀ e, check M entries bodies safeUsers trusted e=true → Valid M entries bodies safeUsers trusted e
+  | .user i a, h => by
+    have hh := Bool.and_eq_true_iff.mp h
+    have ha := Bool.and_eq_true_iff.mp hh.2
+    refine ⟨of_decide_eq_true hh.1,?_,check_sound M entries bodies safeUsers trusted a ha.2⟩
+    intro hi
+    simpa [hi] using ha.1
   | .seq a b, h | .alt a b, h =>
-      ⟨check_sound M bodies safeUsers a (Bool.and_eq_true_iff.mp h).1,check_sound M bodies safeUsers b (Bool.and_eq_true_iff.mp h).2⟩
-  | .star a, h | .notP a, h => check_sound M bodies safeUsers a h
+      ⟨check_sound M entries bodies safeUsers trusted a (Bool.and_eq_true_iff.mp h).1,
+        check_sound M entries bodies safeUsers trusted b (Bool.and_eq_true_iff.mp h).2⟩
+  | .star a, h | .notP a, h => check_sound M entries bodies safeUsers trusted a h
   | .lit _, _ | .param _, _ => True.intro
+
+def bodiesCheck {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg) (safeUsers : Nat) : Bool :=
+  bodies.zipIdx.all (fun (b,i) => check M entries bodies safeUsers (entries i).inputSafe b)
+
+theorem body_checked {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
+    (safeUsers : Nat) (h : bodiesCheck M entries bodies safeUsers=true) (i : Nat) (b : Arg)
+    (hi : bodies[i]?=some b) : check M entries bodies safeUsers (entries i).inputSafe b=true := by
+  exact (List.all_eq_true.mp h) (b,i) (List.mem_of_getElem? (show bodies.zipIdx[i]?=some (b,i) from by
+    simp [List.getElem?_zipIdx,hi]))
 
 abbrev sourceTable {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg) (x : List Char) (k : Nat) :=
   RecursiveParserStability.frozen (helperBodies M) (source M entries bodies) x .callByValuePar k
@@ -213,14 +242,14 @@ theorem scannerBody_firstOrder {n : Nat} (M : Machine n) (q : Fin n) (bodies : L
       · exact ObservedScannerDispatch.dispatch_firstOrder _ _ _ _ (fun t => filter_firstOrder M bodies [P] b _ _)
       · trivial
 
-theorem sourceHeader_firstOrder {n : Nat} (entry : Option (Fin n)) :
+theorem sourceHeader_firstOrder {n : Nat} (entry : Entry n) :
     (sourceHeader entry).FirstOrder := by cases entry <;> trivial
 
-theorem targetBody_firstOrder {n : Nat} (M : Machine n) (entry : Option (Fin n)) (bodies : List Arg)
+theorem targetBody_firstOrder {n : Nat} (M : Machine n) (entry : Entry n) (bodies : List Arg)
     (P : List Nat) (mode : Mode) (b : Arg) : (targetBody M entry bodies P mode b).FirstOrder := by
   cases entry with
-  | some q => exact scannerBody_firstOrder M q bodies P mode b
-  | none =>
+  | scan q => exact scannerBody_firstOrder M q bodies P mode b
+  | replay | safeReplay =>
     cases mode with
     | none => exact plain_firstOrder M bodies [P] b
     | some pair =>

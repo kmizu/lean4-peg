@@ -11,12 +11,12 @@ its capture safety from the finite certified prefix, with arbitrary other
 user bodies outside that prefix. -/
 theorem argument_capture {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
     (safeUsers : Nat) (hSafe : sourceSafe M entries bodies safeUsers=true)
-    (a : Arg) (ha : argumentCheck M safeUsers a=true) (x : List Char) (k : Nat)
-    (E : List (List Char)) (hE : TotalCaptureSafety.Environment M E) (p j : Nat) (hp : p≤x.length)
+    (a : Arg) (trusted : Bool) (ha : argumentCheck M safeUsers trusted a=true) (x : List Char) (k : Nat)
+    (E : List (List Char)) (hE : CaptureInputSafety.EnvironmentFor M trusted E) (p j : Nat) (hp : p≤x.length)
     (hv : evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) E (sourceExpr M a) p=some (some j)) :
     TotalCaptureSafety.Total M (pre x p j) ∧ sfx x p=pre x p j++sfx x j :=
   ParameterizedCaptureSafety.capture_of_shape M x p j hp
-    (SelectedCaptureSafety.suffix_shape M (source M entries bodies) x .callByValuePar _ E hE
+    (CaptureInputSafety.suffix_shape M (source M entries bodies) x .callByValuePar _ E trusted hE
       (selected M safeUsers) (RecursiveScannerProductCapture.frozen_rows M entries bodies safeUsers hSafe x k)
       (sourceExpr M a) ha p j hp hv)
 
@@ -125,9 +125,9 @@ theorem replay_prefix (g : MGrammar) (x w : List Char) (s : Strategy) (T : Clock
   simp only [evV,List.getElem?_cons_zero,hs,length_sfx x hj]
 
 theorem entry_plain_body {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
-    (entry : Option (Fin n)) (b : Arg) (w x : List Char) (p j k l : Nat)
+    (entry : Entry n) (b : Arg) (w x : List Char) (p j k l : Nat)
     (hp : p≤x.length) (hj : j≤x.length) (hcap : sfx x p=w++sfx x j)
-    (hw : TotalCaptureSafety.Total M w)
+    (hw : entry.inputSafe=true → TotalCaptureSafety.Total M w)
     (hBody : ∀ z, z≤x.length →
       evV (target M entries bodies) x .callByValueSeq (targetTable M entries bodies x l) [w]
         (plain M bodies [profile (observer M) w] b) z=
@@ -137,16 +137,16 @@ theorem entry_plain_body {n : Nat} (M : Machine n) (entries : Entries n) (bodies
     evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [w]
       (.seq (sourceHeader entry) (sourceExpr M b)) p := by
   cases entry with
-  | some q => exact plain_body M entries bodies q b w x p j k l hp hj hcap hw hBody
-  | none =>
-    rw [show sourceHeader (none : Option (Fin n))=.param 0 from rfl,
-      evV_seq_ok (replay_prefix _ x w .callByValuePar _ p j hj hcap)]
+  | scan q => exact plain_body M entries bodies q b w x p j k l hp hj hcap (hw rfl) hBody
+  | replay | safeReplay =>
+    simp only [sourceHeader]
+    rw [evV_seq_ok (replay_prefix _ x w .callByValuePar _ p j hj hcap)]
     exact hBody j hj
 
 theorem entry_product_body {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
-    (entry : Option (Fin n)) (b : Arg) (w x : List Char) (p j k l : Nat)
+    (entry : Entry n) (b : Arg) (w x : List Char) (p j k l : Nat)
     (hp : p≤x.length) (hj : j≤x.length) (hcap : sfx x p=w++sfx x j)
-    (hw : TotalCaptureSafety.Total M w)
+    (hw : entry.inputSafe=true → TotalCaptureSafety.Total M w)
     (a : Fin (observer M).width) (t : Nat) (ht : t<(observer M).width)
     (hBody : ∀ z, z≤x.length → ∀ u, u<(observer M).width →
       evV (target M entries bodies) x .callByValueSeq (targetTable M entries bodies x l) [w]
@@ -159,14 +159,14 @@ theorem entry_product_body {n : Nat} (M : Machine n) (entries : Entries n) (bodi
       (evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [w]
         (.seq (sourceHeader entry) (sourceExpr M b)) p) := by
   cases entry with
-  | some q => exact product_body M entries bodies q b w x p j k l hp hj hcap hw a t ht hBody
-  | none =>
+  | scan q => exact product_body M entries bodies q b w x p j k l hp hj hcap (hw rfl) a t ht hBody
+  | replay | safeReplay =>
     rw [targetBody]
     simp only [dif_pos a.isLt]
     rw [SequentialRecursiveScanner.state_actual]
     rw [hBody j hj _ (ObservedScanner.finish (observer M) (valid M) a w).isLt]
-    rw [show sourceHeader (none : Option (Fin n))=.param 0 from rfl,
-      evV_seq_ok (replay_prefix _ x w .callByValuePar _ p j hj hcap)]
+    simp only [sourceHeader]
+    rw [evV_seq_ok (replay_prefix _ x w .callByValuePar _ p j hj hcap)]
     exact (CapturePrefixRows.filter_prefix (observer M) x w p j a.val t hp hj hcap
       (evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [w] (sourceExpr M b) j)
       (fun z h => DependentCaptureFilter.success_prefix (by decide)

@@ -25,7 +25,7 @@ theorem target_ok {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List
 
 def Rows {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg) (x : List Char) (k : Nat) : Prop :=
   ∀ i b, bodies[i]?=some b → ∀ w p j, p≤x.length → j≤x.length → sfx x p=w++sfx x j →
-    TotalCaptureSafety.Total M w →
+    ((entries i).inputSafe=true → TotalCaptureSafety.Total M w) →
     (valAt (sourceTable M entries bodies x k (offset M+i) [w]) p=
       valAt (targetTable M entries bodies x k (address M bodies i (profile (observer M) w) none) [w]) j) ∧
     (∀ q t, q<(observer M).width → t<(observer M).width →
@@ -59,8 +59,9 @@ theorem selected_call {n : Nat} (M : Machine n) (entries : Entries n) (bodies : 
 theorem user_correct {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
     (safeUsers : Nat) (hSafe : sourceSafe M entries bodies safeUsers=true)
     (x : List Char) (k : Nat) (hRows : Rows M entries bodies x k) (i : Nat) (b : Arg) (hi : bodies[i]?=some b)
-    (a : Arg) (ha : argumentCheck M safeUsers a=true) (S : List (List Nat)) (E : List (List Char))
-    (hE : TotalCaptureSafety.Environment M E) (p : Nat) (hp : p≤x.length)
+    (a : Arg) (trusted : Bool)
+    (ha : (entries i).inputSafe=true → argumentCheck M safeUsers trusted a=true) (S : List (List Nat)) (E : List (List Char))
+    (hE : CaptureInputSafety.EnvironmentFor M trusted E) (p : Nat) (hp : p≤x.length)
     (hplain : evV (target M entries bodies) x .callByValueSeq (targetTable M entries bodies x k) E (plain M bodies S a) p=
       evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) E (sourceExpr M a) p)
     (hfilter : ∀ q r, q<(observer M).width → r<(observer M).width →
@@ -84,7 +85,9 @@ theorem user_correct {n : Nat} (M : Machine n) (entries : Entries n) (bodies : L
       | none => rfl
       | some j =>
         obtain ⟨hj,hcap⟩ := harg j hp hv
-        have hw := (RecursiveScannerProductHeader.argument_capture M entries bodies safeUsers hSafe a ha x k E hE p j hp hv).1
+        have hw : (entries i).inputSafe=true → TotalCaptureSafety.Total M (pre x p j) := by
+          intro hs
+          exact (RecursiveScannerProductHeader.argument_capture M entries bodies safeUsers hSafe a trusted (ha hs) x k E hE p j hp hv).1
         exact (hRows i b hi _ p j hp hj hcap hw).1.symm
   · intro q r hq hr
     simp only [filter,sourceExpr]
@@ -97,16 +100,18 @@ theorem user_correct {n : Nat} (M : Machine n) (entries : Entries n) (bodies : L
       | none => rfl
       | some j =>
         obtain ⟨hj,hcap⟩ := harg j hp hv
-        have hw := (RecursiveScannerProductHeader.argument_capture M entries bodies safeUsers hSafe a ha x k E hE p j hp hv).1
+        have hw : (entries i).inputSafe=true → TotalCaptureSafety.Total M (pre x p j) := by
+          intro hs
+          exact (RecursiveScannerProductHeader.argument_capture M entries bodies safeUsers hSafe a trusted (ha hs) x k E hE p j hp hv).1
         exact (hRows i b hi _ p j hp hj hcap hw).2 q r hq hr
 
 /-- The source argument syntax and recursive user rows are separate
 inductions. Captures are certified from the actual source component. -/
 theorem evaluator_of_rows {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
     (safeUsers : Nat) (hSafe : sourceSafe M entries bodies safeUsers=true)
-    (x : List Char) (k : Nat) (hRows : Rows M entries bodies x k) :
-    ∀ e, Valid M bodies safeUsers e → ∀ S E, DependentCaptureFilter.Accurate (observer M) S E →
-      TotalCaptureSafety.Environment M E → ∀ p, p≤x.length →
+    (x : List Char) (k : Nat) (hRows : Rows M entries bodies x k) (trusted : Bool) :
+    ∀ e, Valid M entries bodies safeUsers trusted e → ∀ S E, DependentCaptureFilter.Accurate (observer M) S E →
+      CaptureInputSafety.EnvironmentFor M trusted E → ∀ p, p≤x.length →
     (evV (target M entries bodies) x .callByValueSeq (targetTable M entries bodies x k) E (plain M bodies S e) p=
       evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) E (sourceExpr M e) p) ∧
     (∀ q r, q<(observer M).width → r<(observer M).width →
@@ -126,13 +131,13 @@ theorem evaluator_of_rows {n : Nat} (M : Machine n) (entries : Entries n) (bodie
   | .user i a, ha, S, E, hS, hE, p, hp => by
     have hib : i<bodies.length := ha.1
     have hr : bodies[i]?=some bodies[i] := List.getElem?_eq_getElem hib
-    have ih := evaluator_of_rows M entries bodies safeUsers hSafe x k hRows a ha.2.2 S E hS hE p hp
-    apply user_correct M entries bodies safeUsers hSafe x k hRows i bodies[i] hr a ha.2.1 S E hE p hp ih.1
+    have ih := evaluator_of_rows M entries bodies safeUsers hSafe x k hRows trusted a ha.2.2 S E hS hE p hp
+    apply user_correct M entries bodies safeUsers hSafe x k hRows i bodies[i] hr a trusted ha.2.1 S E hE p hp ih.1
     intro q t hq ht
     rw [ih.1]
     exact ih.2 q t hq ht
   | .seq a b, ha, S, E, hS, hE, p, hp => by
-    have hA := evaluator_of_rows M entries bodies safeUsers hSafe x k hRows a ha.1 S E hS hE p hp
+    have hA := evaluator_of_rows M entries bodies safeUsers hSafe x k hRows trusted a ha.1 S E hS hE p hp
     have he : evV (target M entries bodies) x .callByValueSeq (targetTable M entries bodies x k) E (plain M bodies S (.seq a b)) p =
         evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) E (sourceExpr M (.seq a b)) p := by
       change (match evV _ _ _ _ E (plain M bodies S a) p with
@@ -145,7 +150,7 @@ theorem evaluator_of_rows {n : Nat} (M : Machine n) (entries : Entries n) (bodie
       | some result => cases result with
         | none => rfl
         | some z =>
-          exact (evaluator_of_rows M entries bodies safeUsers hSafe x k hRows b ha.2 S E hS hE z
+          exact (evaluator_of_rows M entries bodies safeUsers hSafe x k hRows trusted b ha.2 S E hS hE z
             (evV_ok (source_ok M entries bodies x k) _ p hp z hv)).1
     refine ⟨he,?_⟩
     intro q t hq ht
@@ -156,12 +161,12 @@ theorem evaluator_of_rows {n : Nat} (M : Machine n) (entries : Entries n) (bodie
       _ _ p hp (by intro q t hq ht; rw [hA.1]; exact hA.2 q t hq ht)
       (by
         intro z hz q t hq ht
-        have hB := evaluator_of_rows M entries bodies safeUsers hSafe x k hRows b ha.2 S E hS hE z hz
+        have hB := evaluator_of_rows M entries bodies safeUsers hSafe x k hRows trusted b ha.2 S E hS hE z hz
         rw [hB.1]
         exact hB.2 q t hq ht) q t hq ht
   | .alt a b, ha, S, E, hS, hE, p, hp => by
-    have hA := evaluator_of_rows M entries bodies safeUsers hSafe x k hRows a ha.1 S E hS hE p hp
-    have hB := evaluator_of_rows M entries bodies safeUsers hSafe x k hRows b ha.2 S E hS hE p hp
+    have hA := evaluator_of_rows M entries bodies safeUsers hSafe x k hRows trusted a ha.1 S E hS hE p hp
+    have hB := evaluator_of_rows M entries bodies safeUsers hSafe x k hRows trusted b ha.2 S E hS hE p hp
     have he : evV (target M entries bodies) x .callByValueSeq (targetTable M entries bodies x k) E (plain M bodies S (.alt a b)) p =
         evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) E (sourceExpr M (.alt a b)) p := by
       change (match evV _ _ _ _ E (plain M bodies S a) p with
@@ -198,7 +203,7 @@ theorem evaluator_of_rows {n : Nat} (M : Machine n) (entries : Entries n) (bodie
   | .star a, ha, S, E, hS, hE, p, hp => by
     have he : evV (target M entries bodies) x .callByValueSeq (targetTable M entries bodies x k) E (plain M bodies S (.star a)) p =
         evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) E (sourceExpr M (.star a)) p :=
-      evStar_congr p (fun z hz => (evaluator_of_rows M entries bodies safeUsers hSafe x k hRows a ha S E hS hE z (by omega)).1)
+      evStar_congr p (fun z hz => (evaluator_of_rows M entries bodies safeUsers hSafe x k hRows trusted a ha S E hS hE z (by omega)).1)
     refine ⟨he,?_⟩
     intro q t hq ht
     rw [←he]
@@ -207,11 +212,11 @@ theorem evaluator_of_rows {n : Nat} (M : Machine n) (entries : Entries n) (bodie
       E _ (plain_firstOrder M bodies S a) _
       (by
         intro q t z hq ht hz
-        have hA := evaluator_of_rows M entries bodies safeUsers hSafe x k hRows a ha S E hS hE z hz
+        have hA := evaluator_of_rows M entries bodies safeUsers hSafe x k hRows trusted a ha S E hS hE z hz
         rw [hA.1]
         exact hA.2 q t hq ht) q t p hq hp
   | .notP a, ha, S, E, hS, hE, p, hp => by
-    have hA := evaluator_of_rows M entries bodies safeUsers hSafe x k hRows a ha S E hS hE p hp
+    have hA := evaluator_of_rows M entries bodies safeUsers hSafe x k hRows trusted a ha S E hS hE p hp
     have he : evV (target M entries bodies) x .callByValueSeq (targetTable M entries bodies x k) E (plain M bodies S (.notP a)) p =
         evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) E (sourceExpr M (.notP a)) p := by
       simp only [plain,sourceExpr,evV,hA.1]
@@ -271,7 +276,7 @@ theorem target_step {n : Nat} (M : Machine n) (entries : Entries n) (bodies : Li
 finite syntax checks and the finite certified source prefix remain. -/
 theorem tables_rows {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
     (safeUsers : Nat) (hSafe : sourceSafe M entries bodies safeUsers=true)
-    (hB : bodies.all (check M bodies safeUsers)=true) (x : List Char) (k : Nat) :
+    (hB : bodiesCheck M entries bodies safeUsers=true) (x : List Char) (k : Nat) :
     Rows M entries bodies x k := by
   induction k with
   | zero =>
@@ -283,12 +288,13 @@ theorem tables_rows {n : Nat} (M : Machine n) (entries : Entries n) (bodies : Li
       rfl
   | succ k ih =>
     intro i b hi w p j hp hj hcap hw
-    have hvalid := check_sound M bodies safeUsers b ((List.all_eq_true.mp hB) b (List.mem_of_getElem? hi))
-    have hE : TotalCaptureSafety.Environment M [w] := by
-      intro v hv
+    have hvalid := check_sound M entries bodies safeUsers (entries i).inputSafe b
+      (body_checked M entries bodies safeUsers hB i b hi)
+    have hE : CaptureInputSafety.EnvironmentFor M (entries i).inputSafe [w] := by
+      intro hs v hv
       simp only [List.mem_cons,List.not_mem_nil,or_false] at hv
-      subst v; exact hw
-    have hBody := fun z hz => evaluator_of_rows M entries bodies safeUsers hSafe x k ih b hvalid
+      subst v; exact hw hs
+    have hBody := fun z hz => evaluator_of_rows M entries bodies safeUsers hSafe x k ih (entries i).inputSafe b hvalid
       [profile (observer M) w] [w] (DependentCaptureFilter.environment_accurate (observer M) [w]) hE z hz
     constructor
     · rw [source_step M entries bodies x k i b hi [w] p hp,
@@ -305,33 +311,33 @@ theorem tables_rows {n : Nat} (M : Machine n) (entries : Entries n) (bodies : Li
 
 theorem evaluator_eq {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
     (safeUsers : Nat) (hSafe : sourceSafe M entries bodies safeUsers=true)
-    (hB : bodies.all (check M bodies safeUsers)=true) (x : List Char) (k : Nat)
-    (e : Arg) (he : check M bodies safeUsers e=true) (S : List (List Nat)) (E : List (List Char))
-    (hS : DependentCaptureFilter.Accurate (observer M) S E) (hE : TotalCaptureSafety.Environment M E)
+    (hB : bodiesCheck M entries bodies safeUsers=true) (x : List Char) (k : Nat)
+    (trusted : Bool) (e : Arg) (he : check M entries bodies safeUsers trusted e=true) (S : List (List Nat)) (E : List (List Char))
+    (hS : DependentCaptureFilter.Accurate (observer M) S E) (hE : CaptureInputSafety.EnvironmentFor M trusted E)
     (p : Nat) (hp : p≤x.length) :
     evV (target M entries bodies) x .callByValueSeq (targetTable M entries bodies x k) E (plain M bodies S e) p=
       evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) E (sourceExpr M e) p :=
   (evaluator_of_rows M entries bodies safeUsers hSafe x k (tables_rows M entries bodies safeUsers hSafe hB x k)
-    e (check_sound M bodies safeUsers e he) S E hS hE p hp).1
+    trusted e (check_sound M entries bodies safeUsers trusted e he) S E hS hE p hp).1
 
 theorem filter_eq {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
     (safeUsers : Nat) (hSafe : sourceSafe M entries bodies safeUsers=true)
-    (hB : bodies.all (check M bodies safeUsers)=true) (x : List Char) (k : Nat)
-    (e : Arg) (he : check M bodies safeUsers e=true) (S : List (List Nat)) (E : List (List Char))
-    (hS : DependentCaptureFilter.Accurate (observer M) S E) (hE : TotalCaptureSafety.Environment M E)
+    (hB : bodiesCheck M entries bodies safeUsers=true) (x : List Char) (k : Nat)
+    (trusted : Bool) (e : Arg) (he : check M entries bodies safeUsers trusted e=true) (S : List (List Nat)) (E : List (List Char))
+    (hS : DependentCaptureFilter.Accurate (observer M) S E) (hE : CaptureInputSafety.EnvironmentFor M trusted E)
     (p : Nat) (hp : p≤x.length) (q t : Nat) (hq : q<(observer M).width) (ht : t<(observer M).width) :
     evV (target M entries bodies) x .callByValueSeq (targetTable M entries bodies x k) E (filter M bodies S e q t) p=
       filtered (observer M) x q t p
         (evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) E (sourceExpr M e) p) :=
   (evaluator_of_rows M entries bodies safeUsers hSafe x k (tables_rows M entries bodies safeUsers hSafe hB x k)
-    e (check_sound M bodies safeUsers e he) S E hS hE p hp).2 q t hq ht
+    trusted e (check_sound M entries bodies safeUsers trusted e he) S E hS hE p hp).2 q t hq ht
 
 /-- The fixed generated Seq grammar preserves all finite observations on
 the same unchanged original strings. Actual helper stabilization removes
 the frozen analysis clock; no recursive row oracle is an input. -/
 theorem observations_iff {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
     (safeUsers : Nat) (hSafe : sourceSafe M entries bodies safeUsers=true)
-    (hB : bodies.all (check M bodies safeUsers)=true) (e : Arg) (he : check M bodies safeUsers e=true)
+    (hB : bodiesCheck M entries bodies safeUsers=true) (e : Arg) (he : check M entries bodies safeUsers true e=true)
     (x : List Char) (rest : Option (List Char)) :
     SObs (source M entries bodies) .callByValuePar (sourceExpr M e) x rest ↔
       SObs (target M entries bodies) .callByValueSeq (plain M bodies [] e) x rest := by
@@ -345,8 +351,8 @@ theorem observations_iff {n : Nat} (M : Machine n) (entries : Entries n) (bodies
     ClockFreezing.observations_iff (target_firstOrder M entries bodies) x .callByValueSeq (by decide)
       (RecursiveParserStability.pick (helperBodies M)) (RecursiveParserStability.floor (helperBodies M) x) ht
       (plain M bodies [] e) (plain_firstOrder M bodies [] e) rest]
-  have hE : TotalCaptureSafety.Environment M [] := by intro w hw; cases hw
-  have hEq := fun k => evaluator_eq M entries bodies safeUsers hSafe hB x k e he [] []
+  have hE : CaptureInputSafety.EnvironmentFor M true [] := by intro _ w hw; cases hw
+  have hEq := fun k => evaluator_eq M entries bodies safeUsers hSafe hB x k true e he [] []
     (DependentCaptureFilter.environment_accurate (observer M) []) hE x.length (Nat.le_refl _)
   constructor
   · rintro ⟨k,v,hv,hr⟩
@@ -356,7 +362,7 @@ theorem observations_iff {n : Nat} (M : Machine n) (entries : Entries n) (bodies
 
 theorem language_translation {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
     (safeUsers : Nat) (hSafe : sourceSafe M entries bodies safeUsers=true)
-    (hB : bodies.all (check M bodies safeUsers)=true) (e : Arg) (he : check M bodies safeUsers e=true) :
+    (hB : bodiesCheck M entries bodies safeUsers=true) (e : Arg) (he : check M entries bodies safeUsers true e=true) :
     ∃ (g : MGrammar) (root : MExp), g.FirstOrder ∧ root.FirstOrder ∧ ∀ x,
       SObs (source M entries bodies) .callByValuePar (sourceExpr M e) x (some []) ↔
         SObs g .callByValueSeq root x (some []) :=
@@ -365,7 +371,7 @@ theorem language_translation {n : Nat} (M : Machine n) (entries : Entries n) (bo
 
 theorem defined_iff {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
     (safeUsers : Nat) (hSafe : sourceSafe M entries bodies safeUsers=true)
-    (hB : bodies.all (check M bodies safeUsers)=true) (e : Arg) (he : check M bodies safeUsers e=true)
+    (hB : bodiesCheck M entries bodies safeUsers=true) (e : Arg) (he : check M entries bodies safeUsers true e=true)
     (x : List Char) (v : Option Nat) :
     (∃ k, evV (source M entries bodies) x .callByValuePar (tblV (source M entries bodies) x .callByValuePar k) [] (sourceExpr M e) x.length=some v) ↔
     (∃ k, evV (target M entries bodies) x .callByValueSeq (tblV (target M entries bodies) x .callByValueSeq k) [] (plain M bodies [] e) x.length=some v) := by
@@ -375,8 +381,8 @@ theorem defined_iff {n : Nat} (M : Machine n) (entries : Entries n) (bodies : Li
     (RecursiveScannerProductHelpers.installed M (targetRules M entries bodies)) x .callByValueSeq
   rw [←ClockFreezing.defined_iff (source M entries bodies) x .callByValuePar _ _ hs [] (sourceExpr M e) x.length v,
     ←ClockFreezing.defined_iff (target M entries bodies) x .callByValueSeq _ _ ht [] (plain M bodies [] e) x.length v]
-  have hE : TotalCaptureSafety.Environment M [] := by intro w hw; cases hw
-  have heq := fun k => evaluator_eq M entries bodies safeUsers hSafe hB x k e he [] []
+  have hE : CaptureInputSafety.EnvironmentFor M true [] := by intro _ w hw; cases hw
+  have heq := fun k => evaluator_eq M entries bodies safeUsers hSafe hB x k true e he [] []
     (DependentCaptureFilter.environment_accurate (observer M) []) hE x.length (Nat.le_refl _)
   constructor
   · rintro ⟨k,hk⟩; exact ⟨k,(heq k).trans hk⟩
@@ -384,7 +390,7 @@ theorem defined_iff {n : Nat} (M : Machine n) (entries : Entries n) (bodies : Li
 
 theorem undefined_iff {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
     (safeUsers : Nat) (hSafe : sourceSafe M entries bodies safeUsers=true)
-    (hB : bodies.all (check M bodies safeUsers)=true) (e : Arg) (he : check M bodies safeUsers e=true)
+    (hB : bodiesCheck M entries bodies safeUsers=true) (e : Arg) (he : check M entries bodies safeUsers true e=true)
     (x : List Char) :
     (∀ k, evV (source M entries bodies) x .callByValuePar (tblV (source M entries bodies) x .callByValuePar k) [] (sourceExpr M e) x.length=none) ↔
     (∀ k, evV (target M entries bodies) x .callByValueSeq (tblV (target M entries bodies) x .callByValueSeq k) [] (plain M bodies [] e) x.length=none) := by

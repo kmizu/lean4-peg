@@ -8478,11 +8478,12 @@ also validates calls nested inside queries.
 This avoids requiring unused scanner helpers to consume words defined from
 every M state. A partial scanner can have different readable characters in
 different states while certified replay users build safe arguments.
-Consuming calls into an uncertified scanner user remain rejected. Safe
-incoming retained values are required by the open-environment evaluator
-theorem and are derived for every actual new capture; root language
-preservation starts with an empty environment. Actual consuming captures
-still need the stated finite selected-rule and literal checks.
+Consuming calls into an uncertified scanner user remain rejected when
+proving safety of their output. Replay users can now retain arbitrary words,
+including characters outside M and profiles reaching the total observer's
+sink. Only arguments to scanner entries or explicitly safe replay entries
+need the finite selected-rule and literal checks. Root language preservation
+starts with an empty environment.
 
 `observations_iff` preserves all finite observations, including failure,
 on every unchanged original input. `language_translation` supplies one fixed
@@ -8539,9 +8540,43 @@ physical grammar accepts and short copies fail; the fixed Seq translation
 preserves the whole source language on all inputs. Earlier mixed-entry and
 partial-scanner examples remain checked.
 
+`CaptureInputSafety` removes the global safe-environment requirement for
+replay users. Entries are `replay`, `safeReplay`, or `scan q`; the first two
+have the same actual replay prefix, while `safeReplay` additionally requires
+checked safe arguments. A body's check uses its own entry's input-safety
+flag. Every nested call is checked, including calls inside queries, but only
+callees requiring safe inputs demand a capture certificate. The
+open-environment correspondence likewise makes the retained-value safety
+premise conditional on the entry. Whole-capture observer profiles remain
+accurate for arbitrary words, including sink profiles.
+
+When checking an argument in an arbitrary replay environment,
+`CaptureInputSafety.withoutParams` forbids consuming uncertified retained
+values while allowing their actual use in zero-output queries. Its
+`suffix_shape` theorem derives safe output without assuming that the
+incoming environment is safe. In a safe environment the existing selected
+capture checker remains available. Thus safe values can still be forwarded
+through `safeReplay` users into scanner calls; arbitrary values can be
+constructed, passed between replay users, and reused after return. The
+final all-input observation, language, definedness, and undefinedness
+results take only finite checks, without a new semantic safety oracle.
+
+A mixed example captures an input-dependent z*# through a positive
+parameterized replay call, retains z#, constructs z#z for a recursive child,
+and reuses both complete values after returning. Those words fail M's
+all-state word check. The same arbitrary retained value is queried in the
+argument `!param 0; a` to a scanner call, whose new capture is safe. The
+scanner consumes an extra b and then reuses its own a; the parent query
+cannot be erased, as different retained values change its actual result.
+Directly consuming the arbitrary retained value as a scanner argument is
+rejected by the finite check. Kernel examples verify longer initial
+captures, three short-copy failures, and all-input/all-clock nullable
+argument divergence, and instantiate the fixed-Seq all-input language
+theorem for this grammar.
+
 The remaining restrictions include unary source users, the stated argument
-syntax, replay or scanner entry forms, a common machine M, and the finite
-consuming-capture checks. Arbitrary PEG prefixes, mixed-fragment compiler
+syntax, replay or scanner entry forms, a common machine M, and finite
+capture checks for calls requiring safe inputs. Arbitrary PEG prefixes, mixed-fragment compiler
 integration, independently captured multiple source arguments, and
 unrestricted first-order Par/Seq class equality or separation remain
 unresolved.
