@@ -1,3 +1,6 @@
+import MacroPeg.CBV.AutomaticFiniteOriginExamples
+import MacroPeg.CBV.AutomaticFiniteOrigin
+import MacroPeg.CBV.AlphabetOriginControl
 import MacroPeg.CBV.AutomaticFinitePrefixExamples
 import MacroPeg.CBV.AutomaticFinitePrefix
 import MacroPeg.CBV.FinitePrefixMachines

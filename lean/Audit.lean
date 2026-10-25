@@ -1,3 +1,6 @@
+import MacroPeg.CBV.AutomaticFiniteOriginExamples
+import MacroPeg.CBV.AutomaticFiniteOrigin
+import MacroPeg.CBV.AlphabetOriginControl
 import MacroPeg.CBV.AutomaticFinitePrefixExamples
 import MacroPeg.CBV.AutomaticFinitePrefix
 import MacroPeg.CBV.FinitePrefixMachines
@@ -24713,3 +24716,309 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.AutomaticFinitePrefixExamples.Binary.language
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AlphabetOriginControl.expand_literal' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AlphabetOriginControl.expand_literal
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AlphabetOriginControl.normalize_literal' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AlphabetOriginControl.normalize_literal
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AlphabetOriginControl.core_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AlphabetOriginControl.core_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AlphabetOriginControl.certificates' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AlphabetOriginControl.certificates
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AlphabetOriginControl.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AlphabetOriginControl.observations_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AlphabetOriginControl.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AlphabetOriginControl.language_translation
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AlphabetOriginControl.defined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AlphabetOriginControl.defined_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AlphabetOriginControl.undefined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AlphabetOriginControl.undefined_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.plan_annotation' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.plan_annotation
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.ready_annotation' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.ready_annotation
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.annotated_lookup' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.annotated_lookup
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.supported' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.supported
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.certificates' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.certificates
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.source_rule' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.source_rule
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.leaf_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.leaf_eval
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.body_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.body_eval
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.rawLeaf_firstOrder' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.rawLeaf_firstOrder
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.source_firstOrder' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.source_firstOrder
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.related' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.related
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.observations_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.language_translation
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.defined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.defined_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.undefined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.undefined_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.automatic_check' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.automatic_check
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.root_literal_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.root_literal_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.automatic_language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOrigin.automatic_language_translation
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.ready' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.ready
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.shape' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.shape
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.generated_certificates' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.generated_certificates
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.old_universal_rejected' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.old_universal_rejected
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.recursive_captures' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.recursive_captures
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.positive_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.positive_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.origin_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.origin_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.positive_targets' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.positive_targets
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.origin_targets' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.origin_targets
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.direct_loop_and_origin' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.direct_loop_and_origin
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.origin_product_correspondence' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.origin_product_correspondence
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.closed_before_capture' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.closed_before_capture
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.guarded_origin' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.guarded_origin
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.failed_argument' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.failed_argument
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.empty_capture' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.empty_capture
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.language' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.language
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.closed_language' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.closed_language
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.invalid_closed_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.invalid_closed_rejected
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.invalid_plan_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.invalid_plan_rejected
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.Nullable.ready' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.Nullable.ready
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.Nullable.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.Nullable.checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.Nullable.source_none' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.Nullable.source_none
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.Nullable.target_none' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.Nullable.target_none
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.Nullable.direct' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.Nullable.direct
+
+
+/-- info: 'Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.Nullable.failure_stays_failure' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AutomaticFiniteOriginExamples.Nullable.failure_stays_failure

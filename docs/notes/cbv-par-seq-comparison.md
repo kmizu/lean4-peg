@@ -493,6 +493,33 @@ binary では ab／aba の非可換残余 ba、長い捕捉内で完成した li
 configured frontier を検証する。否定内部の probe や選択後の全連結 offset の収集、範囲外 user と
 不完全 alphabet の拒否も有限検査する。
 
+`AlphabetOriginControl` は、caller-origin の Plan 正規化を alphabet-derived backend へ接続する。
+`normalize_literal` は実引数の preflight、閉 leaf へ渡す空捕捉、選択／否定／guard を通して
+source literal 条件が保存されることを示す。各 leaf の header と実生成 profile frontier の有限検査から
+`coreEntries`／`coreBodies` の検査を導き、元の実 Plan 文法の全入力観測・固定 Seq 元文字列言語・
+定義性／全 clock 未定義へつなぐ。旧 universal frontend が拒否する literalQuery 原子を含められる。
+
+`AutomaticFiniteOrigin` は、注釈なし有限prefix control と recursive Arg 本体を持つ dependent leaf、
+または保持値から独立した closed leaf を、Plan の選択／否定／guard で組む実 source 文法を定義する。
+source rule の leaf は `rawControl; param0; body` または closed body そのものなので、
+whole user 本体は捕捉終点以後に終わる形へ限定しない。機械／read／finish／alphabet を構文から生成し、
+生の leaf の全 partial 評価を任意環境／table 下で正規化して全 physical clock の rule-body 同値へ上げる。
+その後の caller-origin 正規化と alphabet backend へ合成する。
+`automatic_language_translation` の仮定は、Plan／user 参照範囲と closed leaf の構造的 capture 独立性、
+root の参照範囲という実行可能な source 検査だけである。新しい成功行／capture 形の注釈は要求しない。
+否定は捕捉前の元位置へ、独立 leaf は捕捉終点より前の消費終点へ返ることができる。ただし dependent
+leaf 内の消費原子は依然として retained query を伴い、その header は全保持値を再照合する。
+任意の全再照合なし依存継続を扱えたという主張ではない。
+`AutomaticFiniteOriginExamples` は実再帰で捕捉長1／4／10と親復帰を検証し、loop leaf の失敗を
+否定すると、alphabet 外の X を含む入力で whole user が元位置へ空成功で戻る例を示す。
+独立 leaf が捕捉4文字に対して1文字だけ消費する場合は、生成 Seq を通常 clock8で直接検証する。
+単純な loop／原点復帰は通常 clock2で実行し、独立 leaf の user 呼出しを実引数とする product ケースは
+行対応から同じ生成 Seq の通常 clock 実行の存在を導く。全 profile 文法を kernel で直接展開する大きい
+product 実行検査は、この環境のメモリ消費が大きいため完了していない。nullable loop の否定／代替枝も
+全 clock で未定義のままで、初期引数の有限失敗は空成功へ変わらない。引数 preflight を省くと誤受理する
+対照と、closed 依存／範囲外 Plan の拒否も kernel 検証した。
+
+
 
 これは各消費原子の後にも全旧値が照合できる guarded step の PEG 制御である。
 任意 PEG prefix、捕捉の照合を保たない一般の依存 step／消費 user 呼出し、全保持値の再照合を
