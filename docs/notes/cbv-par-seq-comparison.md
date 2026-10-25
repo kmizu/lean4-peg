@@ -16,6 +16,714 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 保持語を読み進めた後の選択・否定を含むコピー本体
+
+`CopyBodyControl/Evaluation/Projections/Emission` と
+`ControlledCopySyntax/Correspondence/Compiler` は、従来の平坦な parameter 列から、
+`param_i;d` を原子とする有限本体へ拡張する。空成功・失敗・連接・優先選択・否定と、
+構造上零幅の operand の反復を許す。元の捕捉 tuple は保ったまま、消費後の位置で別の
+保持語を否定したり、選択したりできる。消費する反復と本体内の一般再帰は対象外である。
+
+本体を有限の構文履歴へ正規化し、元のコピー呼出し位置から履歴の語列を検査する unary Seq
+規則を生成する。有限なのは parameter index の履歴で、捕捉文字列の辞書ではない。
+CPS の成功・失敗継続を分け、選択肢が成功した後の継続の失敗で別の選択肢へ戻らない性質を保存する。
+全 actual を元の順に評価する preflight と nullary 初期化 gate を置き、空本体でも
+clock 0 の未定義と、gate より先に起こる actual の失敗・未定義を保存する。
+
+`ControlledCaptureEffects` は実 source grammar に対する条件付き alphabet 保存を一般化し、
+親を正に消費する actual、parameterized recursive producer、子での新捕捉、帰還後の親語の復帰を
+この本体翻訳と接続する。全 raw 宣言・root の一致、参照 scope、actual の捕捉効果、client ごとの親条件、
+実 tail の戻り値効果の閉包を有限検査する。`ControlledCopyCompiler.physical` は全入力・全 clock の
+実評価一致を示し、元文字列言語、残余、有限失敗、定義性、全 clock 未定義性を導く。
+
+具体例は 5 規則 `[0,0,1,1,4]` から 97 規則（独立 helper 2、unary client 2、初期化 1、
+unary projection 92）への固定翻訳である。実捕捉 tuple は
+`[a^(2n)b c^(2n), a^n, a^(2n), a^(2n)b]`。
+先頭の語を消費後、否定・選択が異なる経路を通る入力を両方の実評価で確認した。
+任意の `n` と再帰深さについて、子が親語を倍にして捕捉し、帰還後に親の語を復帰させる
+source/target の受理を証明した。
+
+選択へ継続を誤って分配する書換えの反例、空本体で初期化 gate を除く clock 0 の誤成功、
+preflight を除くと未定義 actual を飛ばす反例、初期化前の actual 失敗を検証した。
+零幅反復は保持値との照合結果によって空成功または全 clock 未定義になる。
+範囲外 parameter・消費する反復・元宣言不一致を checker が拒否する。
+
+この拡張でも、独立 nullary helper、先頭で親語を再照合する unary client、共通の arity・区切り・本体、
+区切りを含まない新捕捉語という制約は残る。一般の複数親、任意 PEG 本体、消費する反復、
+先頭再照合なしの client、無制限の Par/Seq クラス一致・分離は未解決である。
+以下の平坦な本体に関する記述は、この拡張前の frontend の範囲を記録している。
+
+## 親を正に消費する actual と、実再帰 producer の消費効果
+
+`RetainedCaptureEffects` と `ConsumingPatternChecks/Correspondence/Compiler` は、コピー actual の
+正の消費経路へ `parent` と parameterized client 呼出しを許す。
+client ごとの「親語が alphabet 内である必要がある」有限 Bool 列を検査し、その client への全呼出しで
+実引数の捕捉語が条件を満たすことを構文から確認する。
+root は親を持たず、その client に入る初回捕捉も検査する。親を必要としない client は任意の親語を保持できる。
+この Bool 列は実行時の文字列・終点・停止性を教える oracle ではなく、元の全呼出しと照合される有限条件である。
+
+戻り値効果は、**新しい引数語が alphabet 内なら、先頭再照合と tail が消費する語も alphabet 内**という条件付きの性質である。
+client tail から候補 Bool 列を計算し、有効な候補すべての閉包を有限検査する。
+`RetainedCaptureEffects.evaluator_safe` と `physical_rows` は、実際の source 行を clock で帰納し、この性質を導出する。
+`captured_alpha` が実捕捉語の alphabet 条件を与えるため、実引数内の client 呼出しも正の producer として使える。
+コピー規則の本体は区切りを消費するので、この戻り値効果を持つとは判定せず、正の actual に入れると拒否する。
+成功時の消費だけを述べ、停止・成功・非空出力を要求しない。
+
+`ConsumingPatternCorrespondence.Rows` は client の親条件を伴う実表対応で、条件が必要な呼出しの実捕捉からその条件を証明する。
+新しい検査から全元入力の同 clock 観測・言語・残余・有限失敗・有限実行存在・全 clock 未定義を保存する。
+既存の元/生成 grammar 構成を再利用し、親の実語や新捕捉を有限 view へ縮めない。
+独立 nullary helper 群、unary client の先頭再照合、任意 arity の共有 param+d コピー本体は引き続き使う。
+入力自体を alphabet 内へ制限したり、最大 scanner frontier や語長上限を要求したりはしない。
+
+主例は親 `w=a^n` に対して、正の actual 列
+`[balanced, parent, producer(parent), short]` が実際に
+`[a^(2n)b c^(2n), a^n, a^(2n), a^(2n)b]` を捕捉する。
+producer の source 本体は `z; ((z; !"a") / ("a"; producer(z)))` という実再帰で、生成側は先頭 z を除いた本体。
+n の例では2番目の z が残る親語を消費して `ww` を返し、空引数なら任意長の a-run を再帰で返す。
+計算した戻り値効果は `[false,true]`、親条件は `[true,false]`。
+source arity `[0,0,1,1,4]` から固定 Seq `[0,0,1,1,1,1,1,1]` を生成する。
+
+`ConsumingPatternProofs.actual_captures` は任意 n・任意後続についてこの実 actual 捕捉列を導出する。
+`source_and_target_all_trees` は任意親長・任意再帰深さで子の実捕捉 `w→ww` と帰還後の親復帰を含む双方受理を証明する。
+`four_unbounded` は任意の固定上限を4つの捕捉長が同時に超えることを示す。
+`recursive_producer_source/capture/target` は空引数から返る任意長 a^m の実再帰消費・実捕捉を証明する。
+直接 kernel 実行では親の正消費・producer の返却語・深さ0/1/2・空親・短子/子値漏出の拒否を確認した。
+旧 query-only 検査はこの実宣言を拒否する。親条件の削除、不正な初回 `a#` 捕捉、区切りを消費する client の positive actual 化を拒否し、
+条件を要求しない producer を通常呼出しする場合には `a#` 親を許すことも確認した。
+
+戻り値効果 true の停止不能 client を正の actual に置いても検査は受理し、元・生成側は全入力・全 clock で未定義のまま対応する。
+全実引数の元順 preflight を省くと、先のコピー不一致で有限失敗へ変わる反例も検証した。
+複数の親保持語、先頭再照合なしの任意 client、区切り付き parameter 列以外の任意複数値本体、
+および Par/Seq 言語クラス全体の一致・分離は引き続き未解決である。
+
+## 一つの実保持語に依存する実引数と、子の捕捉後の親復帰
+
+`ParentPatternTransfer` と `RetainedPatternSyntax/Correspondence/Compiler` は、一つの親保持語を
+**長さ無制限の実文字列のまま**持つ再帰 client と、任意 arity の区切り付きコピー規則を統合する。
+source client の実本体は `param_0;tail`、生成 unary Seq client の本体は変換した `tail`。
+client の呼出し引数では親の語を消費・連接・再捕捉でき、子から戻った継続では元の親の語を再照合できる。
+コピー actual は closed でなくてもよく、親の語や unary client 呼出しを先読みで調べ、実際に捕捉する語を選べる。
+
+`ParentPatternTransfer.captured_free` は任意の caller 保持環境で capture alphabet の有限検査を正当化し、
+`physical` は source/target で異なる actual 式列をその**同じ親環境**のまま評価する。
+生成 unary copy 規則の実環境は新しい捕捉語へ切り替わるが、actual 評価時の親環境と混同しない。
+`RetainedPatternCorrespondence.Rows` は、元の共通原点から親語を再照合した位置と Seq 引数終点を対応させる。
+実際の source/target 表を physical clock で一斉に帰納し、再帰 actual・子の新捕捉・親の継続を接続する。
+独立 nullary helpers の表対応も実際の両文法から導く。
+元の全宣言・開始式、helper/client 参照、親 parameter の scope、コピー arity/添字、capture alphabet を有限検査し、
+全元文字列の観測・受理言語・残余・有限失敗・有限実行存在・全 clock 未定義を同じ clock で保存する。
+
+`RetainedPatternExamples` の source arity `[0,0,1,1,4]` は固定 Seq `[0,0,1,1,1,1,1,1]` へ。
+実際の親が `a` か `aaa` かによって、同じ現在入力から第2 actual が `ab` か `abc` を捕捉する。
+この判定は actual 内で、親の語を引数にする実 unary client 呼出しを先読みする。
+親に `#` を含む語 `a#` を保持したままコピー規則を動かす例も双方で成功し、親の値を alphabet 内へ制限しない。
+copy の捕捉語にだけ、区切りを含まない条件を課す。
+
+主再帰例は親 `w=a^n` を保持して4つの新語 `[a^n b c^n,a^n b,a^n,ε]` をコピー照合し、
+子の実引数 `param_0;param_0` で `ww` を新しく捕捉する。帰還後は `":";param_0` で元の親 `w` を使う。
+`RetainedPatternProofs.actual_captures` は任意 n と任意後続について、親を実 literal として代入した実 actual の捕捉列を導出する。
+`source_and_target_all_trees` は任意 n・任意再帰深さについて元/生成双方の受理を証明する。
+実語が `w→ww→wwww` と伸びても、各継続では自分の親の値へ戻る。
+直接 kernel 実行では深さ0/1/2、長さ1/2、空親、短い子捕捉の拒否、子値が漏れた場合の余分な照合語の拒否を確認した。
+親依存コピー actual の真の循環と、空親を再照合する nullable star は全入力・全 clock で未定義である。
+親環境での preflight 省略の有限失敗反例、root の未束縛 parent・範囲外 user・不正元宣言の拒否も検証した。
+
+残る条件は、独立した nullary helper 群、先頭で自分の新捕捉を再照合する unary clients、
+一つの選択した arity/区切り/添字列を共有する param+d 列のコピー本体である。
+旧 RetainedPattern のコピー actual の正の消費経路では親語や unary client を許さず、
+先読み・その結果による producer 選択を扱う。上記 ConsumingPattern は有限検査で親の条件と戻り値効果を接続してこの制限を緩める。client の通常の本体・呼出し引数では親語を直接消費できる。
+複数の親保持語を任意本体へ同時に渡す一般変換、先頭再照合なしの任意 client、任意の複数保持値本体と、
+Par/Seq 言語クラス全体の一致・分離は引き続き未解決である。
+
+## 任意 arity のコピー本体と、実引数を通る相互再帰の統合
+
+`DelimitedPatternCallTransfer` と `RecursivePatternSyntax/Correspondence/Compiler` は、任意 arity の
+区切り付き本体を、コピー規則へ戻る nullary client の相互再帰と統合する。
+元の client 本体と開始式のコピー呼出しをすべて Seq 用へ変換し、その任意個の actual も再帰的に変換する。
+actual の先読みへコピー式を直接入れることも、client → コピー規則 → actual 内の client → コピー規則
+という循環も扱う。独立 helper library、凍結した共通表、停止性の仮定は使わない。
+コピー本体の添字列は任意の非空列で、同じ保持語の任意順・任意回数の再照合、未使用引数、空捕捉を許す。
+
+`DelimitedPatternCallTransfer.physical` は source と target で**異なる actual 式列**を対応させる。
+各 actual の対応から実捕捉列と評価順序を接続し、任意個の unary projection の同一 clock 対応へ持ち上げる。
+`RecursivePatternCorrespondence.expression_physical/arguments_physical` は入れ子の式列を相互に帰納し、
+`tables_related` が全 client の実際の source/target 行を一斉に physical clock で閉じる。
+seq/優先選択/not/star の任意文脈、全元入力・全残余の成功、有限失敗、実行存在、全 clock 未定義を保存する。
+元の全宣言・開始式、全 client 参照、各コピーの arity、添字範囲と source actual の区切り除外を有限検査する。
+入力を alphabet 内へ制限する条件や、有限候補語辞書はない。
+
+`RecursivePatternExamples` の source arity `[0,0,0,0,0,0,0,4]` は固定 Seq
+`[0,0,0,0,0,0,0,1,1,1,1]` へ。
+実捕捉は `[a^n b c^n,a^n b,a^n,ε]`、コピー本体の添字列は `[0,2,1,0,3,2,1]`。
+4つの actual は現在の7区間を先読みで飛ばし、後続ブロックを同じコピー client へ問い合わせてから捕捉する。
+後続が不正なら現在の actual も失敗し、旧独立 library 検査はこの実宣言を拒否する。
+`RecursivePatternStreamProofs.source_block_and_actuals` は任意 n・任意の後続ブロック長リストについて、
+実 Par 捕捉列と現在ブロック後の残余を導出する。
+`source_and_target_all_streams` は任意長・任意個のブロック列の双方受理を証明する。
+3つの消費する捕捉長は、既存の `DelimitedPatternCaptureProofs.three_unbounded` の語列そのものである。
+
+直接 kernel 実行でも異なるブロック長、空捕捉、後続不正検出、残余、actual 内の直接コピーを検証した。
+同位置へ戻る本物の copy/actual 循環と後の actual の循環は全入力・全 clock で未定義のまま対応する。
+元順の preflight を省くと先のコピー不一致で有限失敗へ変わる反例、誤 arity・範囲外参照・区切り捕捉・不正元宣言の拒否も確認した。
+
+残る構文条件は nullary clients、closed actuals、一つの選択した arity/区切り/添字列を共有するコピー規則、
+区切りを含まない実捕捉、parameter と区切りを並べたコピー本体である。
+同じ区切りを消費する内側コピーの正の出力を外側 actual として捕捉することはこの検査では許さず、
+先読み内部のコピー照合を扱う。親依存 actual は上記 RetainedPattern が一つの実保持語について扱う。任意の複数保持値本体と、
+Par/Seq 言語クラス全体の一致・分離は引き続き未解決である。
+
+## 任意個の保持語を任意順・任意回数で使う区切り付き本体
+
+`DelimitedWordPattern/DelimitedPatternPasses/Evaluation/Compiler` は、固定の二語本体
+`v#u#v#` を、任意の正 arity と任意の非空 parameter 添字列へ一般化する。
+元の本体は添字列 `[j₀,…,jₘ]` から生成する
+`param_j₀;d;…;param_jₘ;d`。同じ保持語の出現回数・順序、使わない引数、空の実捕捉も扱う。
+arity・出現回数・捕捉長に固定上限はない。Seq 側は保持語ごとに unary 規則を一つ生成し、
+最後の検査以外を元の原点からの先読みとする。先に全実引数を元の順で preflight する。
+
+各実捕捉が区切りを含まないため、成功時はどの捕捉終点も最初の区切りより手前にある。
+自分の語を先頭で再照合する検査は、実引数が既に消費したその語の直後から区切りを照合する。
+それ以外は終点から最初の区切りまで進み、後の区間で自分の語だけを再照合する。
+`source_iff_views` と `source_iff_after` は任意個のこの検査の同時成立を証明する。
+`matches_endpoint_unique` は別々の検査が異なる区切り境界・異なる最終残余を選べないことを示す。
+`DelimitedPatternPasses.run_eq` は成功だけでなく有限失敗も含む元の suffix 変換との等式である。
+
+`DelimitedPatternEvaluation.physical` は実際の source Par 呼出しと生成 Seq 呼出しを同 physical clock で対応させる。
+引数が先に失敗・未定義になる場合と、引数成功後の header 行が clock 0 で未確定な場合も含む。
+`DelimitedPatternCompiler` は元の全宣言・開始式、非空 arity/本体、参照範囲、closed lexical actual と
+実捕捉 alphabet の区切り除外を有限検査する。入力の符号化、停止性の仮定、語長上限、最大 scanner frontier は使わない。
+全元文字列の受理言語、任意残余の成功、有限失敗、実行存在、全 clock 未定義を保存する。
+
+`DelimitedPatternExamples` の source arity `[0,0,4]` は固定 Seq `[0,0,1,1,1,1]` へ。
+実捕捉列は `[a^n b c^n, a^n b, a^n, ε]`、本体の添字列は `[0,2,1,0,3,2,1]` である。
+`DelimitedPatternCaptureProofs.actual_captures` は任意 n・任意後続についてこの実 Par 捕捉列を導出する。
+`all_lengths` は任意 n の双方受理、`three_unbounded` は任意の固定上限を三つの捕捉長が同時に超えることを証明する。
+n=0/1/2/4 の直接 kernel 実行、コピー違いの拒否、残余 `!X` の保存、別のコピー順序、
+後の実引数の循環が全入力・全 clock で未定義であることと、preflight を省くと有限失敗になる反例も検証した。
+空 arity/本体、範囲外添字、区切りを捕捉する actual、不正な元宣言を拒否する。
+
+この任意 arity frontend の actual library は**独立した nullary 規則群**であり、元 root はコピー規則への一呼出しである。
+この独立 library 版の上に、上記 RecursivePattern が任意 arity と相互再帰・式文脈を統合する。
+区切り付き parameter 列以外の任意本体、親の保持 parameter に依存する actual、区切りを含む捕捉の一般処理と、
+Par/Seq 言語クラス全体の一致・分離は未解決である。
+
+## コピー検査へ戻る相互再帰と、実引数内部のコピー呼出し
+
+`DelimitedCopyCallTransfer` と `RecursiveCopySyntax/Correspondence/Compiler` は、下記の区切り付き
+二語コピー変換から、**nullary library の独立性条件を外す**。元の client 本体も Seq 用へ変換し、
+client → コピー規則 → 実引数内の client → コピー規則という相互再帰を許す。
+閉じた実引数の先読みへコピー呼出しを直接入れることもできる。
+実際の元・生成表の client 行を一斉に physical clock で帰納し、停止性や固定された helper 表を仮定せず、
+全入力・全残余の成功、有限失敗、実行存在、全 clock 未定義と元文字列言語を保存する。
+元の全宣言・開始式の AST 一致、参照範囲、各コピー実引数の消費 alphabet を有限検査する。
+
+`RecursiveCopyExamples` は source arity `[0,0,0,0,0,2]` から固定 Seq
+`[0,0,0,0,0,1,1]` を生成する。`u=a^n b`, `v=a^n b c^n` の捕捉前に、現在の
+`v#u#v#` を先読みで飛ばし、その次のブロックへ同じコピー client を再帰呼出しする。
+後続が不正なら現在の実引数も失敗するため、独立した実引数 library への変形では扱えない。
+旧独立性検査がこの実宣言を拒否し、新検査が受理することも kernel で確認した。
+`RecursiveCopyStreamProofs.source_block_and_actuals` は任意の n と任意の後続ブロック長リストについて、
+実捕捉列 `[u,v]` と現在ブロック消費後の残余を導出する。
+`source_and_target_all_streams` は任意個・任意長のこのブロック列の双方での受理を証明する。
+長さやブロック数に固定上限は置かない。
+
+成功する前進再帰に加え、同じ位置へ戻るコピー client/actual の循環は任意入力・全 clock で未定義のまま対応する。
+後の実引数が循環する場合も、元の実引数順の preflight を省くと有限失敗へ変わる反例を検証した。
+実引数内コピーの直接実行、後続不正ブロックの拒否、不正参照・実宣言の拒否も確認した。
+
+残る条件は nullary clients、closed actuals、区切りを消費しない実捕捉、固定の二保持値本体
+`param_1;d;param_0;d;param_1;d` である。先読み内部は区切りを読めるが、
+区切りを含む内側コピーの正の出力を、同じ区切りを使う外側コピーの実捕捉にはできない。
+親の保持 parameter に依存する actual、任意の二保持値本体、および一般の Par/Seq 一致・分離は未解決である。
+
+## 二つの無制限捕捉を原点からの独立検査へ分ける
+
+`DelimitedCopyProjection/DelimiterTemplate/DelimitedCopyTemplates/CaptureDelimiterSafety/DelimitedCopySyntax/Evaluation/Compiler`は、
+二つの元のPar実捕捉`u`/`v`を有限viewに縮めず、コピー検査を別々のSeq呼出しへ分ける。
+元の二引数規則の実本体は`param_1;d;param_0;d;param_1;d`という形、すなわち
+入力の`v d u d v d`部分を消費する。双方の参照は無guardで、捕捉長の上限や候補語辞書は使わない。
+二つのactualは独立したnullary再帰PEG libraryを呼ぶ任意のclosed式で、元の成功終端をscanner frontierへ
+合わせたり、長いactualを短いactualと差分parserへ構文分解したりする条件はない。
+
+Seq側は二つのunary規則を作る。第1の呼出しは実語`u`を捕捉し、残る最初の区間を区切りまで読み飛ばして
+`u`のコピーを検査し、その後の区間も区切りまで読む。第2の呼出しは元の入力位置から実語`v`を捕捉し、
+中間区間を読み飛ばして`v`のコピーを検査する。第1検査は先読みなので、両方とも元の入力位置でactualを評価する。
+実actualの左から右の先読みを先行させ、後のactualが未定義のときに第1コピー検査の有限失敗で短絡しない。
+各検査は一つの無制限実語だけを保持し、同時に二つの重なった語をSeqへ渡す差分parserは作らない。
+
+境界を一意にするため、**実捕捉語に区切り`d`を含めない**条件を有限検査する。
+`MaskedScannerAbsorption`の候補mask生成と閉包検査を再利用し、actualの消費経路が`d`を含まない有限alphabet内であることを確認する。
+これは最大run終端の条件ではない。負の先読み内部は消費経路へ含めず、未定義の再帰helperも停止仮定なしで扱う。
+libraryの全宣言はnullaryで参照範囲を有限検査し、コピー規則へcallbackしない。
+元の全宣言と開始式も有限AST一致で確認する。入力全体をそのalphabetへ制限したり、入力を符号化したりしない。
+
+`block_run_eq`は、両actualの物理的な共通原点とdelimiter freedomから、実際の後続suffix変換そのものの一致を証明する。
+第1・第2検査が異なるコピー境界を選ばないことも、区切りの一意性から導く。
+実Par/Seq表は同physical clockで対応し、clock0の未確定行も保存する。
+`DelimitedCopyCompiler.Term`はコピー区間・通常helper・文字・seq/alt/not/starの任意の組合せを許し、
+その全入力・全残余・有限失敗・有限実行存在・全clock未定義と、元文字列受理言語を保存する。
+語の意味、停止性、差分parserの存在をコンパイラへの仮定として渡さない。
+
+主例は`A=a* b`、`B ← a B c / b`の二つの独立parserで、元arity`[0,0,0,0,2]`から
+固定Seq `[0,0,0,0,1,1]`へ。実捕捉は`u=a^n b`と`v=a^n b c^n`で、
+任意n・任意後続suffixについてその`DerivesArgsPar`を証明した。
+任意の固定上限を両方の実捕捉長が超えることと、任意nの`v#u#v#`を元・生成双方が受理することも証明した。
+n=0/1/2/4の双方clock12直接実行、二種類のコピー違いと初回balance違いの拒否、
+残余`!X`の保存、異なる長さのblockをstarで反復する例、選択・否定・後続literalの文脈をkernel検証した。
+`A`の実終端はalphabet最大runの途中にあり、従来のfrontier条件を満たさない。
+後のactualの循環は全入力・全clock未定義、逆順の有限失敗も保存する。
+先読みpreflight省略で未定義が有限失敗になる反例、区切りを捕捉した場合の誤変換と検査拒否、
+不正な実本体の拒否、pure actualのclock0/1対応も検証した。
+
+`FiniteResidualControl.no_finite_summary`は、残り入力が`c^m`だけで、opaqueな`a^n b`と
+prefixだけから選んだ有限状態を渡すインターフェースの不可能性である。
+今回のコピー言語は後で元の語が再出現し、上記の検査は入力原点からparserを実行する。
+その不可能性定理を破ったとも、今回の言語がSeqを分離するとも主張しない。
+旧独立library版に対して、上記 RecursiveCopy は nullary callback を扱う。一般の独立actualの差分生成、
+任意の二保持値本体・parameter依存actualへの一般化と、
+Par/Seq言語クラス全体の一致・分離は引き続き未解決である。
+
+## 一つの無制限保持語と他の有限viewを同時に運ぶ全体変換
+
+`SubstringCaptureView`と`RetainedViewFusionSyntax/Declarations/Atoms/Dispatch/Evaluation/Correspondence/Compiler`は、
+有限viewへの値消去だけでなく、**長さに上限のない最初の保持語を実文字列としてSeq側へ運ぶ**。
+この語の直接再照合`param_0`には有限suffix guardを要求しない。実引数内の再照合・否定・反復、
+parameterized user呼出しにも使え、子が新しい語を捕捉しても親の語は復帰後に残る。
+他の保持語は引き続き有限suffix領域でのみ参照し、有限viewへ消去する。
+
+入力は有限のseed語列、arityと残余本体からなる規則列、開始式である。
+seedのsuffix閉包を`R`、そのprefix集合（seedの全連続部分語）を観測辞書とする。
+元の正arity規則は実宣言が`param_0;残余本体`であることを要求する。
+nullary規則は`eps;残余本体`で、混在・相互再帰を許す。
+残余本体・実引数はseq/alt/not/star/文字/range/any/literal、無guardの最初の保持語参照、
+`guard(R);param_i`、任意arity user呼出しからなる。実引数は親依存・actual内userを含め任意で、
+最初の捕捉が最長、scanner frontier、共通producer、捕捉長やアルファベットの上限は要求しない。
+この規則頭の形は一般Par文法の正規形だとは主張しない。
+
+通常結果と候補語DFA出力を同時に生成し、各実引数のviewを元の順序で観測する。
+観測後も最初のactualは実parserとして残し、実捕捉語を単一引数へ渡す。
+途中のPar文法はすべて`param_0;生成残余本体`というunary規則で、
+既存`ReplayFusion`を合成して、Seq側のactual消費と元の先頭再照合を合わせる。
+最終Seqも固定unary文法で、元のparameterized表や入力符号化は使わない。
+原開始式は空環境の特殊化を通常のliteral代入で閉じ、規則追加やclockの追加をしない。
+実Par/生成Seqの同physical clock対応、全残余・有限失敗・有限実行存在・全clock未定義と
+同じ元文字列言語を、全宣言・開始式の有限AST検査から保存する。
+
+`SubstringCaptureView.advance_observe`は、任意の実保持語を候補DFAの任意状態から読んだ結果を
+部分語viewだけで復元する。候補外の語はsinkへ着くが、**実payloadは消さない**。
+prefixだけの観測では候補`ab`に対する`b`/`c`を同じOtherにしてしまい、
+中間状態1からは`b`だけが受理状態2へ進む。この実反例と生成フィルタの直接実行で部分語閉包の必要性を確認した。
+
+主例の元arityは`[2,0,1]`、生成Seqは固定182規則・全arity1。
+親の`a^n`から、actual内のunary userを通して`a^(n+1)`を新捕捉し、
+別の同原点actualはnullary userの後で`a`を捕捉する。親子はともにOther viewでも実payloadが異なる。
+`(n,深さ)=(1,0),(2,1),(4,2)`を元・生成ともclock8でkernel直接実行し、
+親`aa`→子`aaa`の実捕捉、復帰後の親コピー、子payload漏出・空payload置換の誤りも検証した。
+有限`R`の外で長さ2/4/7の実保持語を消費する例が通る。
+最初の捕捉が長さ1、別の捕捉が長さ2/4という元・生成双方の受理も確認し、最長条件は使っていない。
+任意n・任意clockで、同原点の実捕捉`[a^(n+1),a]`を証明した。
+無guardの空payload反復は全入力・全clock未定義を保存し、先頭再照合を欠く実宣言は有限検査が拒否する。
+
+一般の逆包含・分離は引き続き未解決である。
+このbackendで残る制限は、正arity規則の先頭再照合と、最初以外の保持語の有限suffix参照である。
+任意位置で複数の独立した無制限保持語を再照合する一般のPar文法はまだ変換できていない。
+
+## 親依存actualの出力観測を含む有限suffix文法の全体変換
+
+`FiniteSuffixObservedSyntax/Declarations/Atoms/Dispatch/Evaluation/Correspondence/Compiler`は、
+保持値の直接参照が`guard(R);param_k`である一般の一階Par文法を、固定の全nullary Seq文法へ変換する。
+userの個数・arityは任意で混在でき、規則本体と実引数はともに任意のseq/alt/not/star、
+文字・範囲・any・literal、同じguard付き保持値参照、相互再帰user呼出しで組み立てる。
+**実引数の独立helper条件を外し、親依存actualとactual内のparameterized user呼出しを含めた。**
+元のparameterized callee表は生成文法に残さない。
+入力の符号化、入力・捕捉長やアルファベットの制限、scanner frontier、停止性仮定は使わない。
+
+各規則のarityに応じた候補語／その他viewと、通常結果または候補語ごとのDFA状態対をキーとして
+固定nullary規則を列挙する。候補語ごとのstrict exact-word機械は、候補を読み終えた後の余分な文字を
+sinkへ送る。各実引数について、まず元の通常結果を先読みし、その実捕捉語の等値queryから新しい
+viewを選んでから次の実引数へ進む。選んだ継続が失敗・未定義でも別のviewへ落ちない。
+すべての生成callは引数なしで、bodyは元のPar呼出し位置から始まる。
+親のviewは継続に構文的に残るので、子から戻っても失われない。
+
+通常行と全DFA出力行を同時に帰納し、**実際のPar/Seq表を同じphysical clockで対応**させる。
+前のhelper固定backendと異なり、helperの安定化を待つ段数変換は不要。
+seqは全DFA中間状態（sinkを含む）を扱い、選択は元の優先順位を維持し、starは既存の
+`GeneralStarFilter`へ接続する。`any`/rangeの出力行は次の実文字による機械遷移を生成し、
+候補語にない文字も扱う。有限アルファベットの列挙や全Unicode文字の展開はしない。
+実引数の失敗・未定義の順序、不正arity/範囲外callで実引数を評価しない動作も保存する。
+
+`FiniteSuffixObservedCompiler.check`は元の全宣言と開始式を有限AST一致で確認する。
+全入力・全残余・有限失敗・有限実行存在・全clock未定義と、同じ元文字列上の受理言語を保存する。
+外部から実引数の意味、出力profile、文法変換の正しさを仮定として渡さない。
+
+主例の元文法は5規則・arity `[2,2,1,1,0]`、生成Seqは固定1,230規則・全nullary。
+親の`a`/`ab`を調べる実引数内でparameterized wrapperを呼び、wrapperが実再帰balanced parserから
+新たに`ab`を捕捉する。子は逆順`ab`/`a`を保持し、親子相互再帰から戻ったouterは自身の`ab`を実消費する。
+深さ0/1/2を元・生成とも同じclock8で直接kernel実行し、実依存引数の捕捉列、
+子のview漏出の拒否、balanced捕捉n=1/2/4も確認した。
+候補外`X`のany/star・range/star実引数の受理、親の空保持値を非空suffix `ab`上で反復する
+依存actualの全clock未定義、actual内user循環の全入力全clock未定義、
+引数の失敗と未定義の順序、不正callの評価省略、guard欠落の検査拒否も検証した。
+
+このbackendは**有限の残りsuffix guardを引き続き要求する**。
+その条件なしで任意の保持語を任意位置で再照合する全体変換、または一般の言語クラス分離は未解決。
+以下の共有表による有限view同一視と独立helper版はこの全体変換の前段である。
+
+## 親依存actualを含む有限view同一視
+
+`FiniteSuffixDependentView`は、有限suffix guardを残した一般の式構文で、
+実引数を任意の式列へ広げる。実引数内で親の保持値を参照し、さらにuserを呼び出してよい。
+`specialize`は任意の実表`T`（通常の位置範囲不変条件のみ）について、
+現在の親の保持値を有限viewのliteral/失敗へ代入しても評価結果が変わらないことを証明する。
+Par実引数列の**実捕捉語列全体**と、Seq実引数列の実捕捉語列・終点も一致する。
+呼出し先には元と同じ実捕捉語を渡し、同じ`T i W`を参照する。
+
+したがって`environment_congr`は、同じviewを持つ任意の二つの親環境を同一視できる。
+`physical_environment_congr`は実際の`tblV`の各clockへ、`rows_factor`は
+この構文で書いた任意の相互再帰sourceの実user行へ接続する。
+どちらも親依存actualやactual内callを独立helperへ制限していない。
+直接例では、長い親`aabb`の否定再照合を含むactual内userが実語`a`を捕捉し、
+外側userがその`a`を再照合する。親参照を特殊化した式も直接実行で同じ結果になる。
+親`bbaa`とは全clock一致し、親を候補語`ab`へ変えると実引数の否定が失敗する。
+
+**これはcallee表を共有する式とsource行の同一視であり、生成Seq文法の定理ではない。**
+新たに捕捉した語のviewを、独立helper以外の実引数についても固定の生成規則で観測し、
+共有したparameterized表への依存を消す部分は、上記`FiniteSuffixObserved`で接続した。
+この補題単独はその全体変換とは区別する。下記の旧backendは独立helperに限られ、一般のPar/Seq一致・分離は未解決。
+
+## 有限suffix再照合を持つ異なるarityのuser相互再帰
+
+`FiniteSuffixRecursiveSyntax/Helpers/Selection/Evaluation/Correspondence/Compiler`は、
+下記の単一callee backendを、任意個・異なるarityのuser規則の相互再帰へ拡張する。
+各直接参照は引き続き`guard(R);param_k`で、実引数は独立したnullary再帰helperの呼出し列に限る。
+本体ではseq/alt/not/star、独立helper呼出し、他のuserへの呼出しを自由に組み合わせる。
+calleeごとのarityと有限viewの組合せから固定nullary規則を列挙し、実捕捉列を等値queryで選ぶ。
+user呼出しの有限arity/参照検査に失敗した場合は、元の失敗式へ下げて実引数を評価しない。
+
+helper prefixだけを実安定表で固定した後、user段数について全user行を同時帰納する。
+行不変条件は、規則のarityに合う任意の実保持文字列列を、その正確な候補語／その他viewへ対応させる。
+親のviewは継続へ構文的に残り、子の新しいviewで上書きされない。
+元helperも生成product helperも実宣言から閉じ、helperの意味や停止性を外部の仮定として渡さない。
+有限な全宣言・開始式の一致検査から、元文字列言語・全残余・有限失敗・有限実行の存在と
+全physical clock未定義を保存する。helper固定後のuser段数対応であり、同physical clock対応ではない。
+
+主例の元arityは`[0,0,0,0,0,0,0,0,2,2,1]`、生成Seqは固定844規則・全nullary。
+非空の二語`a`/`ab`を親子で逆順に保持する相互再帰を、深さ0/1/2で元・生成双方直接実行した。
+再照合は空でないsuffix `ab`上で行う。outerは子から戻った後に自身の保持値`ab`を実際に消費する。
+子のviewが親へ漏れた場合と実引数を逆順に渡した場合は失敗することも直接実行した。
+balanced `a^n b^n`の実捕捉をn=1/2/4で確認し、候補外の長い値を否定再照合で使う
+元・生成双方の成功と、短い`ab`に変えた場合の失敗を確認した。
+user循環は全入力・全clock未定義、空捕捉の反復は非空suffix `ab`上で全clock未定義。
+未定義実引数の先行は全入力・全clock未定義を保存し、失敗実引数を先へ移すと有限失敗になる。
+preflight省略の誤った有限失敗、guard欠落の検査拒否、不正arity/範囲外userが
+未定義実引数を評価せず失敗する動作も検証した。
+
+この拡張でuser本体の相互再帰という制限は外れたが、親依存actualおよびactual内のuser呼出しは未対応。
+EOF backendはそれらを既に扱える一方、直接参照にEOFを要求する。
+両方の長所を合わせる有限内容観測は上記`FiniteSuffixObserved`へ接続した。
+任意位置での無guard再照合と、Par/Seq言語クラスの一般一致・分離は依然として未解決である。
+
+## 有限suffix領域で実内容を保つ捕捉再照合
+
+`FiniteSuffixCallCompiler`は、EOFだけでなく、残り入力が指定した有限集合`R`に入る位置で
+保持値を再照合する文法をSeqへ変換する。元の直接参照は`guard(R);param_k`という形で、
+`guard`は現在のsuffixが`R`の一語と**完全一致**する零幅検査である。
+`suffixes alphabet bound`を使えば、残り長さの上限と有限アルファベットによる領域にもできる。
+入力全体や、元の実捕捉値の長さを制限する条件ではない。
+
+観測する候補は`R`の全prefixから自動生成する。保持値が候補語ならその語自体を、
+それ以外なら`none`（その他）を保持する有限viewへ写す。
+元の捕捉語が候補外でも入力から捨てたりcallを拒否したりしない。
+`R`に入るsuffixへ一致する語は必ずそのprefixなので、その他の語はその位置で一致しない。
+この性質により、選択・否定・star、任意の消費prefixと独立helper呼出しを含む本体で、
+実値を候補リテラルまたは失敗へ置き換えられる。候補外の長い値を否定で検査して成功する動作も保存する。
+
+`ExactWordCaptureMachine`は、候補語を読み終えた後の一文字をsinkへ送る有限機械を作る。
+空語を含む全語について、受理終状態へ着くことと実捕捉語の完全一致を証明した。
+機械の有限和と既存`RegularCaptureProduct`の実再帰parser出力フィルタを再利用し、
+候補ごとの等値queryからviewを生成する。全遷移profileの巨大な列挙は不要。
+元parserの先読みが失敗・未定義の順序を保存し、継続失敗によって別の捕捉候補へ落ちない。
+
+元文法は、独立したnullary再帰helper群と一つの任意arity calleeからなる。
+実引数はhelper呼出し列、本体の呼出しも独立helperに限る。このbackendではuser本体の相互再帰や
+親依存actualは扱っていない。前節までのEOF backendを全面的に置き換えるものではない。
+元のhelper宣言を変更せず、固定Seq側だけに出力フィルタ規則を生成する。
+全宣言・開始式・helperの参照範囲を有限に検査し、実安定表の対応から
+全入力・全残余・有限失敗・有限実行の存在・全clock未定義と元文字列受理言語を保存する。
+新backendについて同clockや一定clock倍率は主張しない。
+
+主例は元9規則から固定656規則・全nullaryのSeqへ。
+`a`/`b`の内容による受理・拒否、同原点の二捕捉`a`/`ab`、候補外の長い保持値を拒否せず使う本体を検証した。
+別のsuffix領域`{ab}`では`a`/`ab`を異なる非空語として保持し、再照合で`a`だけを消費して
+非空の残余`b`を後続が読む元・Seq双方の直接実行を検証した。
+balanced a/b再帰helperによる実捕捉もn=1,2,4で確認し、n=2の元・Seq双方を直接実行した。
+nullableな実捕捉値の反復は空でない残り入力上でも全clock未定義を保存する。
+未定義helperが先行する引数列は全入力・全clock未定義、逆順の有限失敗も保存する。
+空dictionary、アルファベット外文字、guard省略の誤った一般化とその有限検査での拒否も検証した。
+
+条件は引き続き**再照合する現在位置の有限suffix領域**である。
+このguardなしでは、候補外の長い保持値が普通に一致する実反例がある。
+任意の位置での無制限な再照合、任意user本体、および一般のPar/Seq一致・分離は未解決である。
+
+## EOFで保持値を再照合する相互再帰文法の全体変換
+
+`EmptyObservedSyntax`から`EmptyObservedCompiler`は、保持値の直接の再照合が
+`(!any);param_k`（入力末尾の検査後の再照合）という形に限られる一階Par文法を、
+固定の全nullary Seq文法へ変換する。この位置では、空の保持値だけが成功する。
+この参照を含むseq/alt/not/starや、任意arityのuser呼出しと実引数の相互再帰は許す。
+引数内でも親の保持値を同じ操作で調べたり、他のuserを呼び出して消費したりできる。
+独立したnullary引数、scanner終端、固定アルファベット、捕捉長の上限は要求しない。
+
+各calleeのarityに応じて有限個の空／非空パターンを列挙し、それぞれ通常結果と空成功だけを
+残す二系統のnullary規則を生成する。実Par引数の左から右へのpreflight後、
+実際の捕捉列の空性に従って規則番号を選ぶ。捕捉内容を列挙したり、値を入力へ符号化したりしない。
+callee行の不変条件は、arityの合う**任意の実保持文字列列**について成り立つ。
+空性判定も同じ相互再帰の一部として構成し、外部の停止判定や引数意味の仮定は受け取らない。
+
+通常版／空成功版の式・引数の対応から実規則表の同clock対応を帰納的に証明した。
+全入力の全残余・有限失敗・全clock未定義と、元文字列上の受理言語を保存する。
+`EmptyObservedCompiler`は実際の全規則（arity/body）と開始式を有限構文比較で確認してから
+この定理を適用する。コンパイラは通常版と空成功版を一緒に扱う構造再帰で、生成した実文法の
+kernel直接実行も可能である。
+
+具体例の元文法はarity `[0,2,2,1]`、Seqは固定22規則・全てarity0。
+balanced a/bの再帰helperからの捕捉、親子で逆になる空／非空パターン、親の保持値への復帰、
+親依存queryを含む実引数、実引数内のparameterized user呼出しを直接kernel実行で検証した。
+三つの捕捉長（1/2/4組のa/b）と親子長1/3・3/1を確認し、任意入力文字列そのものを捕捉できる
+実引数列の全入力・全clockの定理もある。同じ元文法をそのままSeqで動かすと失敗する例は、
+文法変換の必要性を示す実行例であり、言語クラス分離ではない。
+parameter依存の再帰実引数とnullableなparameter反復は、空入力で全clock未定義のまま。
+preflightの評価順序、不正arityや範囲外calleeで引数を評価しない動作も検証した。
+
+この変換は**EOFでの保持値参照という条件を残す**。元の実入力`ab!a`から得た二捕捉`a`/`ab`は
+両方非空でも、`ab!`を消費した先では片方だけが再照合できる。
+この実反例は空／非空だけでは一般の再照合を置き換えられないことを示す。
+無guardのparameterを持つ実規則は有限検査が拒否する。
+一般のPar/Seq言語クラスの一致・分離は未解決である。
+
+## scannerによらない実捕捉の空／非空判定
+
+`EmptyResultObservation`は、任意のnullary再帰PEG（引数なしの規則だけからなる文法）を、
+元結果を保存する規則と空成功だけを残す規則の二系統へ変換する。規則数は元の2倍。
+実Par表と実Seq表の同clockの関係を証明し、全入力・全有効位置・全clockで、
+空成功をそのまま保存し、消費成功だけを有限失敗へ写し、元の有限失敗と未定義を保存する。
+左右再帰・相互再帰・優先選択・否定・nullableなstarも構文として制限しない。
+外部の停止判定やnullable判定は使わない。
+
+seq/alt/starの空成功候補には、元の処理全体の先読みgateを置く。
+空にならない前半を早く失敗させると後半の未定義が消えるため、このgateが必要になる。
+優先選択では、先行枝が非空成功したときに後続の空成功へ落ちないよう元の先行枝の否定も保つ。
+starは元の全反復を先読みしてから最初の本体の失敗を検査し、nullableな本体を有限失敗に変えない。
+
+`EmptyCaptureDecision`はこの判定器を任意個の独立したnullary PEG引数へ接続する。
+元Par引数を左から右へ全て先読みした後、実際の捕捉文字列列の`List.isEmpty`に従って
+固定のSeq式が継続を選ぶ。捕捉長・捕捉数・停止終端のscanner条件は要求しない。
+選ばれた継続は入力を消費してよく、first-order性も保存する。
+ただし公開定理は、元の実`evParArgs`の結果と生成式の同clockの対応であり、
+捕捉内容全体の復元や、任意のparameterized callee本体の文法変換までは証明していない。
+前節までの`CapturedOriginCompiler`の適用条件をこの部品だけで取り除いたとは主張しない。
+
+例では再帰する`a^n b^n`、`a*`、空式から得る互いに異なる三捕捉と消費する継続、
+全て空の捕捉、失敗→無限再帰／無限再帰→失敗、未完成clockから有限結果への遷移を検証した。
+前半消費後の無限再帰とnullable-starは全clock（後者は全入力）で未定義のまま。
+seq/starのgate、選択の優先条件、引数preflightを省くと結果が変わる実反例もkernel検証した。
+クラス全体の一致・分離は引き続き未解決である。
+
+## 再照合後に別の保持値も読む入れ子検査
+
+`CapturedOriginQuery.Plan.follow`は`&(param_k;plan)`を追加し、再照合後のplanでも
+他の保持値を再照合できるようにした。従来のafter leafのclosed後続条件は維持するが、
+入れ子のplan自体は親の両保持値を参照してよい。
+
+新しい`ScannerFrontierValues`は、非空の最大文字集合scannerを読んだ終端では、
+同じ原点からの非空捕捉は先頭文字が一致せず再照合できないと証明する。
+他方の捕捉がscanner由来でなくても、元入力のprefixであれば同じ局所性質が成り立つ。
+空の値だけはその場で再照合できる。入口の2ビットの空/非空検査から後続planを特殊化し、
+最初の値が空の場合は原点に留まる通常のquery変換へ戻す。
+seq/alt/not/starと再帰するclosed queryを含む既存の実テーブル対応・元文字列言語変換へ接続した。
+
+元とSeqで両停止順序、親子順序反転、片方だけ空・両方空、空の値から非空の値へ進む
+二段の再照合を検証した。`star(&(param0;&(param1;eps)))`は、片方でも空なら全clock未定義で、
+両方非空なら本体の有限失敗でstarを抜ける。この条件を任意入力と実表で証明した。
+二つとも非空なら後続のnullableな式へ入る前に再照合が失敗し、他方が空なら後続で未定義になる例も検証した。
+
+この終端分類はstatelessな文字集合scannerの現在位置についてのもの。
+状態が変わるscannerでは保持したabが終端の残りabへ再照合できる反例があり、
+この規則を一般finite-state scannerや全ての後続位置へ拡張することはできない。
+最大scanner終端・指定消費head・planの零幅制御という条件と、クラス全体の一致/分離は未解決。
+
+## 保持値を再照合した先の検査を入口へ
+
+`CapturedOriginQuery`は、元位置から`&(param0;C)`または`&(param1;C)`を実行する検査を扱う。
+Cの両render先がclosedであることを有限検査し、実scanner引数から得た保持値なら、
+その再照合と元scannerが同じ終端に達することを証明する。
+検査をseq/alt/not/starで組み合わせても各部品は元位置へ戻るため、
+この対応を全ての部分結果に持ち上げられる。starの空成功による未定義も保存する。
+これは任意の位置でparamをscannerへ置き換える法則ではない。
+
+`CapturedOriginNormalization`は、保持値依存の元queryをclosedな入口queryへ直す。
+実capture tupleに限った行対応を再帰表で同clockに閉じ、全root観測を保存する。
+`CapturedOriginCompiler`は独立実引数の元順序preflight、query書換え、Seq入口を接続し、
+元clock k→Seq2k／Seqk→元kと全入力の元文字列言語・失敗・全clock未定義を証明する。
+生成先は固定した12規則である。
+
+実例は`&(param0;'c') / &(param1;'b')`で、保持値を入れ替えると同じ入力上で検査結果が変わる。
+旧closed検査は元queryを拒否するが、新検査を通した生成queryはclosedである。
+両停止順序n=1,2,4、親子順序反転と親二値復元、再照合後の実再帰helperもkernel実行した。
+実捕捉済みqueryのnullable starはcanonical scanner引数を渡す元文法とSeqで全入力全clock未定義。
+独立実引数が未定義ならquery以前のpreflightを保ち、これを省くと誤受理する反例も検証した。
+
+後続Cが親保持値を再び読む場合は拒否する。最大scanner frontier・指定消費headと、
+元位置から一つの保持値を再照合してclosed後続を読む検査形はまだ必要である。
+一般の捕捉依存query／独立引数差分／Par/Seq言語クラスの一致・分離は未解決。
+
+## 捕捉前の実再帰検査を零引数の入口で保つ
+
+`GuardedPairSyntax/Simulation/Correspondence`は、元の二捕捉bodyを
+`&Q;maxScanner(A,B);tail`へ広げる。Qはclosedな元のparserで、nullary helperや
+同じ二捕捉userへの実再帰を含んでよい。常に成功・停止するとは仮定しない。
+Seqは零引数の入口規則で元位置のQを先読みしてから、二つのchunkを捕捉する。
+検査に元の捕捉環境を渡さずに済むことは、両render先のclosed構文検査から証明する。
+
+実テーブルで、元clock kの結果はSeq clock 2kへ、Seq clock kの結果は元clock kへ保存する。
+元引数の左順preflight準備も同clockで正確に表が一致することを追加証明したため、
+`GuardedFrontierPairCompiler.bounds`はこの時計対応を展開前の元文法から直接与える。
+全入力の残余・失敗・受理言語・全clock未定義を保存し、targetは固定した12規則である。
+
+balanced a/bまたはa/cの実helperで元位置を検査する両順序と親子順序反転を実行した。
+検査が同じ二捕捉userへ再帰し続ける場合の全入力全clock未定義も両側で証明した。
+元引数が未定義なのに、その前に失敗する検査を走らせると有限失敗に変わる反例を確認した。
+元1clock成功・Seq1clock未定義・Seq2clock成功となる小さい実例で、追加入口の費用も確認した。
+捕捉値を直接参照するQは、入口へ移せないため検査で拒否する。
+
+最大scanner frontierと指定消費headの条件は残る。一般の独立引数・任意の前半・
+捕捉依存の原点検査への無条件変換と、Par/Seqクラス全体の一致・分離は未解決。
+
+## 実scannerを前半に持つ二捕捉bodyをSeqへ
+
+`ScannedPairFusion`は、元の二引数bodyが保持値を先頭再照合する条件を外した。
+元bodyは`maxScanner(A,B);tail`で始まる。maxScannerは入力から停止順序を選び、
+長い方の文字集合scannerを実際に走査するclosed parserで、保持値paramを読まない。
+nullary helperと二捕捉userの実テーブル対応を、実引数から得た終端に限って同時帰納する。
+生成Seqは前回と同じ二つのchunkを捕捉し、元の両値を復元して同じtailへ入る。
+
+`ProducedFrontierPairCompiler`は、独立再帰引数の元の左順検査を残す準備から、
+この新しい元bodyへ全grammar/rootの有限AST一致検査で接続する。
+全入力の残余・失敗・元文字列言語・全clock未定義を保存し、元の先頭replayは要求しない。
+例では両停止順序、親子で長短が逆になる再帰、空捕捉の子、親二値復元を元/Seqで検証した。
+二つの文字集合の和を走査すると長い方の終端まで越える`abc!ab:a`の反例を確認し、
+そのheadを誤って通す構文検査ではないことも検証した。
+同じ元文法をそのままSeqで動かす例は2文字を残すが、生成文法は全消費する。
+これは文法変換の必要性を示す例であり、クラス分離の主張ではない。
+
+最大scanner終端という実引数条件と、そこまで読む指定closed headは残る。
+任意PEG前半・任意停止位置への一般変換とPar/Seqクラス全体の一致/分離は未解決。
+
+## 独立した二つの再帰捕捉の順序を入力から選ぶ
+
+`MaskedScannerAbsorption`は文字集合ごとに消費経路の安全なhelper候補を計算し、
+その集合の閉包を別途有限検査する。実際に消費経路で使うhelperだけに実テーブル不変量を立てるため、
+`{a,b}`と`{a,c}`を読む再帰規則を同じ元文法へ置ける。負の先読みは元の計算を保ち、
+候補生成の収束・helperの停止性・成功終端を入力仮定にはしない。
+
+`MixedScannerPairFusion`は既存の二scanner終端選択を、nullary再帰helperと二引数userが
+混在する固定文法へ拡張する。helper行と二捕捉行の対応を同じphysical clockで閉じた。
+`FrontierPairCaptureCompiler`は元引数の左順先読みを保持する準備から、このbackendへ
+全grammar/rootの有限AST一致検査で接続する。二つの文字集合に包含順序は要求しない。
+入力から選んだ終端順序で二つのchunkを捕捉し、両方の元の値を復元する。
+
+具体例は、`a^n b^n`または先頭a-runを読む引数と、`a^n c^n`または先頭a-runを読む引数。
+それぞれ別の実再帰helperを使い、8規則のSeqへ。n=1,2,4で両順序の実捕捉と元/Seqの実行を検証した。
+親と子で順序が逆になる再帰、子から戻った親の二値復元、空捕捉の子、
+先読み省略による不正個数の誤受理、nullable引数の全入力全clock未定義も検証した。
+全入力の観測・元文字列言語は保存するが、成功捕捉が最大scanner runの終端にある条件は残る。
+元の二捕捉bodyは入力から長い方を選んで先頭再照合する形である。
+任意のPar引数・任意のbodyを扱う一般変換とクラス一致/分離は未解決。
+
+## 独立した再帰引数を入口の実検査とscanner捕捉に分ける
+
+`FrontierArgumentNormalization`は、各実引数を独立した再帰parserとして書ける入口を追加した。
+引数は`P;!choice(A)`であり、Pと実nullary helperの消費経路が文字集合Aの中だけにあることを
+有限検査する。成功すればAの最大runと終端が一致することを、元文法の実テーブルから導く。
+`F(arg0,...,argN)`を、元の引数を同じ入口で順に先読みしてからscanner実引数を渡す呼出しへ
+変換する。元の順序で失敗・未定義を保存し、成功時は全捕捉tupleが同じになる。
+helperの意味や成功終端は仮定として渡さない。
+
+`FrontierArgumentCompiler`は全bodyと開始式を変換し、実再帰文法の観測を保存する。
+`FrontierCaptureCompiler`は、その先を選択producer正規化と既存`NestedScannerFusion`へ有限AST検査で
+接続し、固定した一階Seq文法で元文字列言語・失敗・全clock未定義を保存する。
+具体例では、別々のparserが`a^n b`と`a^n b c^n`を同じ入口から捕捉し、Seqは`a^n b`と`c^n`を
+順に捕捉して復元する。後者のhelperは`R ← a R c / b`という実再帰規則である。
+3規則arity `[0,0,2]`で、全nと全suffixの実捕捉・正例の受理を証明し、異なる親子値を実行した。
+先読みを省くと`a b c c`を誤受理するkernel反例もある。
+
+連続chunkによる復元自体は既存のnested scanner backendを再利用する。
+新しい接続は、累積構文やscannerそのものではない、部分的な再帰実引数の入口検査を保存するもの。
+捕捉終端が文字集合の最大runと一致する条件と、scanner集合の包含順序が必要である。
+任意の独立したPar引数から差分parserを生成する一般構成と、クラス全体の一致・分離は未解決。
+
+## 実producerと複数の累積捕捉をSeqへ
+
+`SelectedProducerNormalization`を、選択規則の任意の正のarityへ拡張した。
+実body `D;B` のDを最後の実引数と照合し、全引数の捕捉値を保持したまま
+`param(arity-1);B` へ正規化する。普通の規則も選択規則も元のarityを保つ。
+`ProducedPrefixFamilyCompiler`は、その出力が既存`PrefixFamilyFusion`の累積捕捉文法と
+一致することを有限構文検査し、固定Seq文法へ接続する。
+成功残余・有限失敗・定義性・全clock未定義と、元文字列上の受理言語を保存する。
+
+具体例では、同じ入口からParが`a^n`と`a^n b^m`を捕捉し、Seqが順に`a^n`と`b^m`を捕捉する。
+元のbodyは全体を読む実再帰producerで始まり、先頭で捕捉値を再照合する構文ではない。
+生成先は3規則、arity `[2,0,0]`。親子の別々の値の保持・復元も実行する。
+これは既存の累積引数/連続chunk backendと新しい複数引数producer正規化の接続であり、
+任意の独立したPar実引数から差分parserを生成する一般変換は未解決である。
+
+## 実再帰producerと、捕捉終端より手前のliteral前半を接続
+
+固定literalを保持値の前から後ろへ回す証明と、その値のprofileを選ぶSeq productは既存である。
+`ProducedScannerCompiler`は、そこへ実再帰producerを含む元文法を接続する。
+`SelectedProducerNormalization`は一般の一階文法で選んだ正のarityのproducerを正規化し、
+選ばないarity 0や複数引数の規則をそのまま保つ。実再帰テーブルの双方向対応を証明し、
+正規化先が既存profile backendの実sourceと一致することを有限AST検査で確認する。
+
+元文法では全nの実a^n捕捉があり、別のuserが`a;w;":";w`を実行する。生成Seqは65規則である。
+引数がn文字を捕捉する一方、前半literalは1文字で終わるため、n≥2ではその終端が実際に異なる。
+既存の回転により、Seq側は捕捉後に残余aを読み、そのあとも同じwを使える。
+親子の別長値の捕捉・復元、短いコピーの拒否、nullable producerの全入力全clock未定義を検証した。
+これは既存の位置回転法と再帰producerの接続であり、任意の異なる成功終端を扱う一般変換ではない。
+一般のPar/Seq一致・分離は未解決のままである。
+
+## 別の引数parserを共通の成功終端から正規化
+
+`CanonicalProducerCompiler`は、実引数Aと消費前半Dが同じ構文である制約を拡張する。
+元の実bodyが`D;B(w)`なら、`F(A)`を`&A;F(D)`へ変換する。
+AとDが両方成功した際の終端だけを共通のclosed core Cから有限認証し、
+失敗・停止性が同じとは仮定しない。元のAを先に評価し、Dは実引数として残すので、
+Dだけが失敗・発散する場合も保存する。全bodyと開始式を変換して実再帰文法へ接続した。
+
+`EndpointSupport`は実評価での成功からcoreの同終端成功を導く。文字/rangeからanyへの拡張、
+実零幅queryの前置・後置、同coreへ成功する選択、sequenceを有限検査する。
+coreは実再帰calleeを含んでよい。Aは親の保持値を検査するqueryを含んでよい。
+このcanonicalization自体は、実引数と前半を同じcoreへ接続できない場合や、成功終端そのものが異なる場合を扱わない。
+生成Seqの規則数はn(n+2)+bのままで、元文字列・全残余・有限失敗・全clock未定義を保存する。
+26規則の実例は親値を検査しながら別の子値を捕捉し、両方を復元する。
+
+## 実再帰producerと零幅実calleeを混合文法へ接続
+
+`RecursiveProducedCompiler`は、上記producerのcall-free制約を外す。
+実引数と前半で同じclosed parser Dを評価する条件の下で、Dは実再帰userや、
+前半を変換するclient自身を呼んでよい。実引数評価で得た成功から捕捉条件を導き、
+元と正規化先の実安定テーブルへの双方向の帰納で、全残余・有限失敗・全clock未定義を保存する。
+ここでは同clock一致を主張せず、入力依存の実有限安定化上界を使う。
+生成Seq文法は入力非依存で、n(n+2)+b規則のままである。
+
+`ParReturnEffects`と`CheckedOriginCompiler`は、実calleeの成功が零幅であることを有限検査から
+全入力・全clockへ証明する。普通の保持値rowが消費しても、実empty-bound cloneだけを認証できる。
+`RecursiveProducedOrigin`はこれを同じ元文法へ組み込み、実sequenceの零幅headerと、
+再帰producerによる消費前半の両方を固定Seqへ接続する。27規則の実例は親子で別の値を捕捉・復元する。
+無制限長a^n bの実引数捕捉、producer/client依存cycle、全入力で発散するproducerも検証した。
+実引数と異なる前半については、上記の共通成功終端を有限認証できるケースを接続した。
+一般の消費前半、異なる成功終端、Par/Seq一致・分離はなお未解決である。
+
 ## 実引数と同じproducerを消費するclosed前半を混合文法へ接続
 
 `ParserPrefixFusion`には既に、同じclosed parserを引数とPar本体の前半で評価する単独の
@@ -54,8 +762,9 @@ clock1では未定義、clock2で成功し、生成Seqはclock1で成功する�
 これは変換の検査条件の必要性を示し、言語クラスの分離ではない。
 
 この前半が消費する終端は、検査した引数Dの実捕捉終端と一致する。
-それと異なる位置へ返る一般のconsuming closed prefix、recursive producer、
-検査外の呼出し・複数独立捕捉、一般のPar/Seq一致・分離は未解決である。
+同じDを実再帰で計算する場合は、上記`RecursiveProducedCompiler`で接続した。
+それと異なる位置へ返る一般のconsuming closed prefix、検査外の呼出し・複数独立捕捉、
+一般のPar/Seq一致・分離は未解決である。
 
 ## 親の保持値を使う後続を成功復帰の位置に応じて接続
 
@@ -9749,3 +10458,1030 @@ machine, and existence of successful finite profile annotations remain
 restrictions. Arbitrary PEG prefixes, integration with other fragment
 compilers, independent multiple source captures, and unrestricted Par/Seq
 class equality or separation remain unresolved.
+
+## Actual zero-return callees before retained parent continuations
+
+`ParReturnEffects` adds a finite return-effect certificate for actual Par
+rules. `dead` excludes success but permits failure and divergence; `zero`
+permits only successes at the original call position; `any` is unrestricted.
+Sequence, ordered choice, predicates, repetition, actual rule lookup and
+arity checks have sound structural transfer rules. Simultaneous induction
+on the real recursive tables closes a checked set of zero/dead rows for
+all inputs, environments and physical clocks. In particular, a non-consuming
+recursive cycle is not replaced by finite failure.
+
+Candidate inference prunes finite sets of rule identifiers, checks the final
+candidate, and falls back to empty sets if validation fails. Soundness does
+not assume that pruning converges or finds every possible certificate. To
+certify an empty-bound call without asserting that the ordinary retained-word
+row is zero width, `emptyEffect` applies the analysis to the existing actual
+nullary-clone specialization. Its previously proved same-clock correspondence
+transfers the result back to the original expression and grammar. Captured
+words have no finite palette, length bound or global empty-value premise.
+
+`CheckedOriginCompiler` interprets source Plan guard sites as real sequences
+`Q;B`, rather than lookahead. It checks that the actual source query Q has a
+zero/dead return effect, then proves `Q = &Q` at the same physical clock on
+the actual source tables. Structural Plan correspondence and a delay-zero
+body rewrite connect the original mutually recursive grammar to the existing
+mixed forwarding/growth/origin compiler. The resulting fixed Seq grammar
+preserves the unchanged input language, all residuals, finite failure and
+all-clock undefinedness. The final language theorem requires only a finite
+check. With n users and b parts its size is n(n+1)+b; physical bounds remain
+source k <= Seq k <= source (n+2)k. The preparatory normalization adds no delay.
+
+The executable example is definitionally a raw Spec grammar whose factor-zero
+parent calls the actual R(empty) before a parent-dependent replaying tail.
+R's ordinary retained-word row consumes input, while its empty clone returns
+at the original position when the next character is a or b, and recurses
+without returning otherwise. Inference certifies clone 3, rejects ordinary
+row 1, and the old syntactic zero checker rejects the real call expression.
+A fixed root captures b;c-star; recursive children capture a;c-star and later
+restore both retained values. Kernel executions verify two different old/new
+capture lengths in a nine-rule Seq grammar and reject a short restoration.
+For every suffix and every clock, the header on X followed by that suffix is
+undefined in the original and compiled grammars. A consuming query fails the
+finite checker; omitting that check changes a concrete residual. This last
+example is a transformation boundary, not a language-class separation.
+
+This closes zero-return actual callees, including recursive empty-bound
+callees, before retained parent continuations within the mixed Plan schema.
+A separate gate still requires growth heads to point to growth users; parts
+must satisfy the existing Closed/replay restrictions. Consuming queries with
+uncertified endpoints, recursive producers, continuations outside these
+control forms, independent multiple captures, and unrestricted Par/Seq class
+equality or genuine language separation remain unresolved.
+
+## Recursive producers: reusing the actual argument evaluation
+
+`RecursiveProducedCompiler` removes the call-free `Pure D` restriction from
+the mixed producer compiler. A produced client still has the original Par
+body `D;B(w)` and every call to it must syntactically use D as its argument.
+D must be closed with respect to its caller environment, but may contain
+arbitrary first-order calls allowed by the checked source family. In
+particular, it may invoke recursive users, other produced clients, or the
+very client whose prefix is being normalized. A finite check validates
+closedness, source bodies, all nested call arguments, and the existing mixed
+backend. No separate producer grammar, termination premise, or successful
+recursive-row oracle is supplied.
+
+The proof uses actual finite stabilization rather than same-clock equality.
+`StablePar` derives fixed-row unfolding and information-order bounds from the
+existing first-order CBV decision procedure. Row unfolding is restricted to
+actual substring-valued environments, the exact domain of that proof.
+`RecursiveProducedSimulation` transports conditional rows through ordinary
+expressions, choice, negation and consuming repetition. At a produced call,
+the structural argument induction supplies an actual successful evaluation
+of D; the capture invariant is established there, rather than assumed for
+the whole grammar. Ordinary rows and conditional producer rows then close
+simultaneously over real recursive tables in both directions.
+
+For the forward direction, any successful original prefix and actual
+argument capture agree at the original stable table, by closedness and
+determinism. For the reverse direction, the already evaluated source
+argument supplies the prefix that was removed. These facts prove equality
+of the original and normalized stable results and connect to the existing
+fixed mixed Seq backend. They preserve the original string language, all
+residuals, finite failure and all-clock undefinedness. Explicit physical
+cofinality uses the existing input-dependent finite bounds: any source
+clock refines target clock iterBoundV(normalized,x), and any target clock
+refines source clock iterBoundV(source,x). These bounds are proof devices;
+no input-specific table or bound is installed in the generated grammar.
+The target size remains n(n+2)+b.
+
+A real recursive producer R(empty) recognizes every a^n b. Its arbitrary
+length argument captures are proved as actual DerivesArgsPar judgments for
+every n and every following suffix, in one fixed source grammar. A
+sixteen-rule Seq grammar also executes a retained-word growth client and
+recursive produced clients with old/new lengths (0,3), (3,0) and (1,2),
+restoring both values and rejecting a short parent copy. Another example
+has R call the transformed produced client itself, so this is not just
+closure over disjoint unchanged helpers. Direct source/target executions
+and the full original-language theorem are instantiated for that cycle.
+A non-consuming recursive producer stays undefined on every input at every
+clock after compilation. A successful small example differs at clock 1
+and agrees after the original prefix spends another call level; therefore
+same-clock equality would be false here. Wrong producer arguments and open
+producer expressions are rejected, and a concrete wrong-argument example
+shows why the argument check is necessary.
+
+This closes recursive closed producers with matching actual arguments in
+the mixed schema, including producer/client dependency cycles. It does not
+yet cover a consuming prefix different from the captured argument parser,
+a prefix depending on the old caller environment outside the existing
+replay forms, unrestricted continuation/control forms, or independent
+multiple captures. The existing growth-head and Closed/replay backend
+conditions remain. General Par/Seq class equality or genuine language
+separation remains unresolved.
+
+`RecursiveProducedOrigin` composes this normalization with certified actual
+zero-return queries in the same original grammar. Its origin guard sites
+start as real sequences, and effects are checked in that raw source grammar,
+including its produced clients. A delay-zero rewrite prepares those sites
+before recursive-producer normalization. A 27-rule Seq execution combines
+a real recursive consuming producer, a real recursive zero-return header,
+fresh parent/child captures, and restoration of the old parent value.
+Replacing the zero header by a consuming character is rejected by the finite
+check. Both frontends thus share one original-language theorem rather than
+requiring the grammar to choose one of the two behaviors globally.
+
+
+## Different argument parsers with certified common success endpoints
+
+`EndpointSupport` and `CanonicalProducerCompiler` lift the matching-parser
+restriction when a finite check certifies a common successful endpoint.
+For an original actual declaration F(w) := D;B(w), the local transformation
+is F(A) -> &A;F(D). Both parsers may have different successful inputs,
+failures or divergence. The check only implies that if A and D both
+succeed, they capture the same input prefix. Original A evaluation remains
+first, and D is retained as the actual canonical argument; its failure and
+divergence are therefore not erased.
+
+The finite support checker derives a successful run of a common closed core
+from each successful parser run on the actual source tables. It supports
+exact syntax, character/range widening to any, actual zero-return wrappers
+before or after a core, sequences of supported components and alternatives
+whose successes share a core. Zero-return facts use ParReturnEffects in the
+original source grammar. The core may itself call real recursive users.
+Actual first-order CBV stabilization and closedness then identify successful
+endpoints across different source clocks and retained environments. This
+is not a semantic equality premise, a word palette, or a totality oracle.
+
+`ProducerArgumentRewrite` proves a same-clock forward refinement and a
+one-round reverse refinement for each changed call. The extra round is
+necessary: moving a failing prefix into argument evaluation can expose a
+failure before the original callee row has been unfolded. A structural
+renderer keeps already canonical calls and inserts the ordered preflight
+at other calls. It leaves canonical producer declarations unexpanded, so
+recursive producers do not cause infinite syntax expansion. Original D
+must be closed and its own immediate call syntax must already satisfy the
+canonical argument condition; called rule bodies may themselves contain
+noncanonical calls and are transformed as part of the same grammar.
+
+Finite checks validate every original body, core annotation, emitted
+canonical source, and emitted body shape against the structural renderer.
+The latter is an AST check, not a hypothesis about evaluation tables.
+A computed sum of body costs supplies the uniform FiniteBodyRewrite delay.
+For body budget d and root cost c, original clock k refines prepared clock k,
+and prepared clock k refines original clock (d+1)k+c. This composes with
+RecursiveProducedCompiler's physical cofinality and fixed Seq backend.
+`checked_language` requires only the finite grammar and root checks and
+preserves the original input string. No rules are added by canonicalization;
+the final target still has n(n+2)+b rules.
+
+The main fixed grammar has a recursive argument C recognizing a^n b (and
+a^n z), and a distinct prefix D consisting of a real zero-return callee
+followed by C. The zero callee succeeds on a, fails on b, and loops on other
+characters. All a^n b argument captures, for every n and suffix, are proved
+as actual DerivesArgsPar judgments; their lengths are unbounded. The child
+argument additionally tests the parent's retained value before running C,
+so caller-dependent predicates are retained in the generated preflight.
+Par and the generated 26-rule Seq grammar execute old/new a-prefix lengths
+(1,4), (4,1), (2,3), restore both values, and reject equal child values and
+short parent copies. The original-language theorem is instantiated.
+
+When C succeeds on z but D loops, the original and generated calls stay
+undefined at every clock for every following suffix. Omitting the producer
+preflight would accept z!zgz. When C fails finitely on X and D loops, the
+ordered preflight preserves the original failure; reversing it stays
+undefined at every clock. A separate example uses distinct consuming
+parsers, a wildcard actual argument and a canonical character a: the same
+captured a is retained and replayed on aa, while bb fails. Omitting the
+gate accepts bb incorrectly. A clock-0 failure versus clock-1 original
+failure proves that the reverse local delay cannot be zero. An argument
+that consumes an extra ! after C is rejected by the endpoint checker.
+These are transformation boundaries, not language-class separation claims.
+
+This closes checked noncanonical producer arguments, including actual
+recursive parsers and caller-dependent query wrappers, in the mixed unary
+schema. It still requires a certified common successful endpoint and a
+closed canonical prefix; arbitrary different endpoints, other prefix or
+continuation forms, independent multiple captures, and general Par/Seq
+class equality or genuine language separation remain unresolved.
+
+
+## Selected recursive producers with retained-word position shifts
+
+The fixed-literal rotation and finite profile product already exist in
+`BlockCapture`, `ScannerReplayResidual` and the recursive scanner backend.
+This extension connects real recursive producers to that backend in one
+original grammar. It does not claim a new general solution for arbitrary
+position differences.
+
+`SelectedProducerNormalization` takes an ordinary first-order grammar and a
+finite list of selected positive-arity declarations D;B(W). Every syntactic call to
+a selected declaration must use the matching D as its last argument; D is
+closed in the caller environment. Finite checks verify the actual arity and
+body, closedness, first-order source bodies and nested call conformance.
+Selected bodies become param(arity-1);B(W), keeping the full argument tuple. Unselected declarations retain their
+original arities and bodies. The source need not belong to a mixed-entry
+DSL: ordinary nullary and multiple-argument rules are covered directly.
+
+The mutual structural evaluator/argument simulation preserves actual Par
+argument order for arbitrary ordinary arities. Conditional producer rows
+and ordinary rows close simultaneously over the original and normalized
+physical tables against their actual finite stabilization tables. The
+capture condition is derived from actual argument evaluation. Stable
+results, all residuals, finite failure, finite definedness and all-clock
+undefinedness are preserved, including under arbitrary retained environments
+at valid source positions. No helper row meaning or totality premise is
+supplied. A multiple-argument example retains distinct values, and an
+argument-order example distinguishes early failure from nullable divergence.
+Selecting an actual nullary declaration as a producer is rejected.
+
+`ProducedScannerCompiler` validates that this emitted ordinary grammar is
+syntactically identical, arities included, to the existing profile-checked
+scanner compiler's source. Existing scanner/grammar/input profile checks
+then connect it to the fixed Seq product. Both interfaces are finite syntax
+or finite profile checks, not semantic table or language-equality oracles.
+The original nullary scanner helper declarations remain present at their
+original arities throughout producer normalization.
+
+The concrete source has a real recursively defined a-star producer. Actual
+DerivesArgsPar capture judgments are proved for every length n before an !
+delimiter and every subsequent suffix, with unbounded captured lengths.
+Another user has the actual body a;param0;":";param0. Its argument consumes
+n characters from the original position; its literal head consumes exactly
+one. For every n≥2, the actual remaining-input positions are respectively
+2 and n+1 on a^(n+1)? and thus differ by n-1. The existing rotation moves
+the literal residual after the Seq argument endpoint, retaining the same
+whole value for the continuation. A parent keeps its own value through this
+call, recursively captures a new child value, and restores its old value
+after a separator. The finite certificates admit all observer profiles;
+an unreadable ab capture is checked and fails finitely, rather than being
+excluded by a word-shape or length premise.
+
+The generated grammar has 65 rules. Direct kernel executions verify a
+length-two capture with the shorter literal head, a parent/child capture
+of lengths one and three, and short parent/child rejection. Original
+executions cover (1,3), (3,1), (2,4); corresponding actual target executions
+also follow from the general finite-definedness theorem. The all-input
+original-language theorem is instantiated. A separate nullable producer
+stays undefined on every input at every clock in both original and generated
+grammars. None of these failures is used as a language-class separation.
+
+The scanner Seq backend retains its unary user/header/body syntax, one common
+finite scanner and checked profile conditions. Generic producer preparation
+preserves multiple-argument ordinary rules, but this does not translate
+arbitrary multiple-capture source grammars to Seq. Prefixes outside the
+existing replay/rotation/scanner conditions, unmatched producer arguments,
+other continuation forms, independent multiple captures, and unrestricted
+Par/Seq class equality or genuine language separation remain unresolved.
+
+
+## Multiple retained values with an actual recursive producer
+
+The selected producer simulation now handles every positive arity. Its
+conditional row invariant keeps the complete actual argument tuple W; only
+the final slot is required to be the captured successful result of the
+closed producer D. A mutual argument_capture theorem derives that capture
+from the actual Par argument evaluation and the checked last AST. Ordinary
+and selected rows close simultaneously over the real recursive tables.
+An indexed replay lemma replaces the former singleton-only replay proof.
+Argument order, finite failure and all-clock undefinedness remain preserved.
+
+ProducedPrefixFamilyCompiler checks that the normalized grammar is exactly
+the existing PrefixFamilyFusion cumulative-capture source, including every
+rule arity and body. It composes their observation correspondences to one
+fixed first-order Seq grammar with an unchanged original string language;
+finite definedness and all-clock undefinedness are also proved. The
+cumulative argument rendering and parameter-view reconstruction are reused
+from PrefixFamilyFusion, not claimed as new general difference synthesis.
+
+The concrete three-rule recursive grammar has arities [2,0,0]. Actual Par
+arguments capture a^n and a^n b^m from the same position, while actual Seq
+arguments capture the consecutive chunks a^n and b^m. Both operational
+argument judgments hold for every n,m and every suffix after a ! delimiter.
+Both chunks have unbounded lengths. The original selected body starts with
+a real closed recursive producer, not a longest-value parameter replay.
+The continuation observes both values, recursively obtains distinct child
+values, then restores both parent values. Direct kernel runs cover empty
+chunks, several nonempty lengths, nested distinct values, and rejection of
+short parent, wrong first, and short child copies. A nullable recursive
+helper remains undefined for all inputs and clocks in both grammars. A
+nonmatching last argument is rejected by the finite source check.
+
+This extends the actual producer frontend beyond unary retained users.
+It still requires cumulative source argument syntax for this Seq backend
+and a matching closed last-argument producer. Arbitrarily specified Par
+argument parsers, arbitrary successful endpoint orders, parameter-dependent
+producers, other body shapes, and the unrestricted language-class question
+remain unresolved.
+
+
+## Independently specified recursive arguments at scanner frontiers
+
+FrontierArgumentNormalization adds a source argument frontend rather than
+a new scanner-difference algorithm. Each descriptor names a finite alphabet
+A, an actual nullary helper prefix, and a parser P. Its real argument is
+P;!choice(A). A finite syntax check validates the actual helper arities and
+bodies and their consuming paths, together with P, using the existing
+ScannerAbsorption safety invariant. Negative queries retain their real
+semantics. Recursive parsers need not be total. A successful actual argument
+must end exactly at the maximal A-run: the safety invariant preserves the
+scanner remainder, and the actual negative frontier query stops the scanner.
+This is proved on original physical tables for arbitrary caller environments.
+
+For any fixed-arity call with checked argument descriptors, the original
+argument tuple is replaced by an ordered sequence of lookaheads followed by
+a call with the corresponding scanner arguments. The original arguments are
+all evaluated from the original position, in their original order. A finite
+failure or undefined argument prevents the scanner call from running. On
+full success, the canonical scanner argument tuple is exactly the original
+tuple. Neither a successful-evaluation premise nor an endpoint-equivalence
+oracle is part of the compiler input. The local call equality holds at the
+same physical clock.
+
+FrontierArgumentCompiler applies this rewrite to matching calls throughout
+actual source rule bodies, alternatives, negations and stars; calls whose
+argument ASTs do not match remain intact. It preserves every declaration
+arity, and closes a BoundedBodyRewrite over the real recursive tables.
+Observation and all-clock undefinedness correspondence include a transformed
+root. The global finite source check includes first-order bodies. The
+framework does not accept the final language correspondence as a certificate.
+
+FrontierCaptureCompiler then composes this ordinary-grammar normalization
+with selected closed-producer normalization and the existing nested-scanner
+compiler. Finite AST equality checks the entire emitted grammar, arities
+included, and the prepared root. A finite scan recognizer and alphabet
+inclusion check validate every backend template call. The final grammar and
+root are fixed before the input, with the original input alphabet and string
+unchanged. The final observations theorem preserves all residuals, finite
+failure and hence language recognition; all-clock undefinedness is proved
+explicitly.
+
+The actual source example has two independently written argument parsers:
+a recursive a-star followed by b, and the actual recursive rule R <- a R c / b.
+Frontier tests use alphabets {a,b} and {a,b,c}. For every n and every suffix
+after !, actual DerivesArgsPar judgments capture a^n b and a^n b c^n. Both
+source values have unbounded length. The generated Seq grammar has three
+rules of arities [0,0,2] and captures adjacent a^n b and c^n chunks; the body
+observes the original tuple through prefix views. The original body begins
+with a real alphabet scanner, which the selected producer frontend replaces
+with the replay of the last captured value before backend fusion. Source
+and target acceptance of the entire positive family, with every suffix, are
+proved through actual derivations and the general correspondence, not just
+finite tests. Direct executions cover n=0,1,2,4 and nested distinct parent/child
+values. Unbalanced counts are rejected on both sides. Omitting the original
+preflight accepts a b c c and its copy payload incorrectly. A nullable first
+argument remains undefined on all inputs and clocks in both grammars.
+Checks reject unsafe helper consumption, incorrect actual helper layout and
+a root missing its frontier queries. A finite failure before an unresolved
+helper call is distinguished from the reversed, undefined order.
+
+The new frontend removes the requirement to write these arguments themselves
+as cumulative parser expressions or as greedy scanners. It does not remove
+the canonical scanner endpoint restriction, nested alphabet order, checked
+closed-producer body shape or backend control syntax. In particular, it does
+not derive residual parsers for arbitrary differently stopping Par arguments.
+Unrestricted Par/Seq class equality or a genuine language separation remains
+open.
+
+
+## Independent frontier pairs with opposite runtime orders
+
+The consuming-path checker no longer requires every helper in the declared
+prefix to fit every argument alphabet. MaskedScannerAbsorption computes a
+finite candidate mask by pruning unsafe helper bodies, then independently
+checks its length and closure under consuming nullary calls. Physical row
+safety is proved only for enabled helpers. Inactive helpers keep their actual
+bodies and may still be evaluated under negative queries; queries always
+retain their original semantics. No semantic helper invariant, fixed-point
+convergence or termination premise is supplied to the compiler. Unsafe
+consumption propagates through recursive calls; a safe mutually recursive
+component is retained. The original full helper layout remains checked.
+
+MixedScannerPairFusion extends the existing ScannerFrontier pair algorithm
+to actual grammars mixing nullary recursive helpers and two-argument users.
+Each source entry emits two fixed target slots. Nullary helpers retain zero
+arity and call their translated helper rows; user variants reconstruct the
+two original captures from adjacent chunks, selected by the existing runtime
+first-stopping test. The source helper-row and shifted pair-row relations
+close together over the actual recursive tables at every physical clock.
+This is a whole-grammar theorem, not an assumed user-row contract. All
+residuals, failure and undefinedness are preserved, without alphabet inclusion.
+The existing intersection scan, endpoint-order guard and prefix-view equations
+are reused rather than claimed as new difference-parser algorithms.
+
+FrontierPairCaptureCompiler connects the original recursive-argument
+preflight normalization to this mixed backend by finite equality of the
+whole emitted grammar and rendered root. It produces a fixed first-order
+Seq grammar recognizing the same original strings. Original expressions
+must pass the finite first-order check. All-clock undefinedness is explicit.
+The source pair body retains the existing branch selecting and replaying
+the longer captured value before its tail; no arbitrary body normalization
+is claimed here.
+
+IndependentFrontierExamples installs a shared a-star helper, a recursive
+balanced a/b helper and a separate recursive balanced a/c helper. The two
+argument alphabets are {a,b} and {a,c}, neither included in the other. Their
+checked masks are [true,true,false] and [true,false,true]. Each original
+argument independently attempts its balanced parser with a frontier test,
+then the shared a-star fallback. Both original helpers remain present with
+their actual nullary declarations. At n=1,2,4 actual original argument tuples
+have the a/b capture longer on a^n b^n, and the a/c capture longer on a^n c^n.
+Source and eight-rule Seq executions are checked in both orders. The target
+arities are [0,0,0,0,0,0,2,2]. An additional recursive user obtains a child
+whose endpoint order is the reverse of its parent's, then restores both
+parent values; both directions and an empty-capture child execute directly.
+The all-input source/target observations theorem is instantiated for both
+ordinary and recursive users. A b-count mismatch fails on both sides,
+while removing preflight wrongly accepts a b b and its copy payload.
+A nullable first argument stays undefined on every input and clock in the
+original and generated grammars. Direct access to an unsafe helper, and a
+cycle reaching unsafe consumption, are rejected by finite checks.
+
+This removes uniform helper-alphabet and static endpoint-order conditions
+for this two-capture frontend. Maximal scanner-frontier success endpoints,
+two source captures and the replay-shaped body remain required. The
+unrestricted Par/Seq language-class question remains unresolved.
+
+
+## An actual consuming head instead of longest-value replay
+
+ScannedPairFusion uses the same mixed helper/user entry data and the same
+fixed Seq target as MixedScannerPairFusion, but changes the source pair body.
+It begins with maxScanner(A,B);tail. maxScanner branches on the existing
+closed stopping-order query, then actually runs scan B or scan A from the
+source position. It contains no retained parameter and reaches the longer
+actual scanner endpoint for every input, table and environment.
+
+The source-to-target row invariant is now restricted to actual scanner
+argument values and their actual endpoints. The earlier replay-shaped row
+relation, which allowed arbitrary hypothetically aligned values and suffixes,
+would not justify replacing a real parser by a parameter. The new invariant
+relates the real reconstructed source tuple at p to the two target chunks at
+the actual finalPos. Nullary helper rows and these pair rows close together
+at every physical clock. The structural evaluator proof and fixed-point
+observations theorem then preserve both captured values and all residuals.
+No actual row behavior or successful capture assumption is accepted from
+outside the proof.
+
+ProducedFrontierPairCompiler connects original independent recursive
+arguments to this source by the existing ordered preflight normalization
+and a finite equality check of the entire emitted grammar, including helper
+arities, plus a checked rendered root. The language theorem uses one fixed
+first-order Seq grammar on the unchanged original strings. Finite failure
+and all-clock undefinedness are preserved explicitly. This closes the
+leading-replay restriction for these specified actual consuming heads;
+it does not infer arbitrary prefix/body rewrites.
+
+ProducedFrontierPairExamples keeps the a-star, balanced a/b and balanced a/c
+actual recursive helpers. The original pair user consumes its head by the
+closed maxScanner before observing either retained parameter. Direct source
+and target executions cover n=1,2,4 in both stopping orders, parent/child
+order reversal in both directions, restoration of the parent's two values,
+and an empty-capture child. All-input observations are instantiated for the
+ordinary and recursively calling variants. A general all-input correspondence
+with the earlier replay-shaped original is also derived through their shared
+fixed Seq target. A nullable first argument stays undefined on every input
+and clock in both new original and target.
+
+The union of scanner alphabets is not a valid implementation of the maximum
+endpoint: on abc!ab:a the {a,b}/{a,c} source captures ab and a, so its real
+maximum head stops before c and the continuation fails. A union scanner
+incorrectly consumes abc and accepts the remaining payload. Both behaviors
+and rejection of the wrong source head by the finite grammar check are
+kernel verified. Running the unmodified new source under Seq on the n=2
+b sample leaves two characters, while the generated Seq target consumes all;
+this is an operational distinction used to validate the translation, not
+language-class separation.
+
+The actual consuming head must still be this closed maximum-scanner parser,
+and successful original arguments must end at their certified scanner
+frontiers. Arbitrary PEG prefixes, other body entry endpoints, general
+independent argument differences and the full Par/Seq class question remain
+unresolved.
+
+
+## Recursive origin queries before independent pair consumption
+
+The new guarded-pair backend supports source bodies
+&Q;maxScanner(A,B);tail. Q is a real closed source parser rendered in the
+same grammar; it may call nullary recursive helpers or the pair users,
+including the current user. No totality, successful-query or table-behavior
+premise is supplied. Finite closure checks validate both query renderings,
+so the source query's evaluation under captured values equals its evaluation
+under the empty caller environment. The query may consume internally;
+its enclosing lookahead restores the original source position.
+
+GuardedPairSyntax emits a nullary header plus two fixed capture/body variants
+for each entry. The header runs the translated query at the original input
+position before dispatch captures adjacent chunks. Helpers remain nullary.
+GuardedPairSimulation provides structural refinement in either direction;
+GuardedPairCorrespondence closes the actual source and target row relations
+by physical-clock induction, invoking the expression refinement on the
+actual query at the preceding stage. This handles recursive query/user
+cycles without assuming their outcome. Source clock k refines target clock
+2k, while target clock k refines source clock k. Existential finite results,
+all residual observations, finite failure, language and all-clock undefinedness
+follow from these bounds and actual stabilization, not equal same-clock runs.
+
+FrontierArgumentCompiler additionally proves exact equality of its actual
+ordinary-grammar table approximants and a same-clock expression translation.
+Its existing ordered preflight rewrite is therefore exact at every physical
+clock, rather than merely cofinal. GuardedFrontierPairCompiler uses that
+stronger result to expose the k-to-2k and k-to-k bounds for the original
+pre-normalization grammar and root. Whole prepared-grammar/root equality,
+first-order syntax and closed queries are checked finitely. The final grammar
+and root are fixed before the unchanged original input string is supplied.
+
+GuardedFrontierPairExamples installs the existing balanced a/b and a/c
+recursive helpers in an origin query, together with an initial a test, so
+running that query at the captured endpoint would fail. Both orders at
+n=1,2,4 and recursively reversed parent/child orders execute directly on
+the original and twelve-rule Seq grammars. The target arities consist of
+ten nullary entries and two two-argument cases. Source and target gate
+failure are checked separately from undefinedness. A query that calls the
+same pair user forever is proved undefined on every input at every clock
+in the actual source and target tables, even though the canonical scanner
+arguments themselves always succeed.
+
+An undefined first actual argument is still evaluated before a failing
+origin query. The full original and target stay undefined for every input
+and clock; prematurely invoking the target header instead yields finite
+failure on a concrete input. A tiny empty-capture example succeeds at source
+clock 1, remains undefined at target clock 1 and succeeds at target clock 2,
+confirming that the extra header layer is operationally real. A query with
+a free retained parameter is rejected by the finite closure check.
+
+This removes the total-head restriction for the closed recursive query
+part of this two-capture construction. It does not translate an arbitrary
+consuming prefix, an arbitrary capture endpoint or a query depending on the
+parent's captured environment. Maximal scanner-frontier successes and the
+specified maxScanner continuation entry remain required. General Par/Seq
+class equality or genuine language separation remains unresolved.
+
+
+## Retained-value origin queries with checked closed continuations
+
+CapturedOriginQuery adds a checked plan language for origin tests. A leaf
+is a closed test or &(param_k;C), with k selecting one of the two actual
+captures and C checked closed under both renderings. The original query may
+therefore depend directly on its retained values. Plans compose using seq,
+ordered choice, negation and star. Every successful component returns to
+its original input position; nullable success under star remains undefined.
+
+Actual scanner argument evaluation derives the two stored words, and sound
+source tables derive their successful prefix alignments. Replaying the
+selected parameter at the common origin reaches the same endpoint as its
+scanner. After that point, C's checked closedness removes dependence on the
+parent environment. Structural plan induction proves equality with a closed
+canonical test using the corresponding scanner instead of the parameter,
+including failure and undefinedness. The proof deliberately does not assert
+scanner/parameter equivalence at arbitrary later positions.
+
+CapturedOriginNormalization constructs raw and canonical query lists in the
+same mixed source grammar. Its table relation is restricted to the actual
+capture tuple at the actual source position. Helper and pair rows close
+simultaneously at the same physical clock, invoking the structural expression
+simulation on the canonical query and continuation. Actual source-table
+soundness and finite plan checks discharge the alignment conditions; no
+row semantics or successful-capture premise is accepted as compiler input.
+The result is exact same-clock expression translation for rendered roots,
+not equality of arbitrary artificially supplied capture environments.
+
+CapturedOriginCompiler composes ordered original-argument preflight,
+this query normalization, and the existing guarded Seq header backend by
+finite whole-grammar/root checks. Source clock k refines target clock 2k;
+target clock k refines source clock k, starting with the original grammar.
+All residual observations, failure, unchanged-string language and all-clock
+undefinedness follow. The target grammar and root are fixed before input.
+
+CapturedOriginExamples uses &(param0;'c') / &(param1;'b') so the short
+capture is observed at its following character in either runtime order.
+On the same ab input prefix, swapping retained ab/a to a/ab changes the
+query from success to failure. The earlier closed-query checker rejects
+this original query; the new canonical header query passes. Direct original
+and twelve-rule Seq runs cover n=1,2,4 in both orders, parent/child order
+reversal and parent value restoration. Another checked leaf calls the real
+recursive a-star helper after replay and a literal. A continuation that
+reads another parent parameter is rejected.
+
+For a star of a successful retained replay test, actual canonical scanner
+arguments always produce a nullable success. The raw parameter-query source
+and Seq target are proved undefined for every input and clock. Separately,
+an undefined original first argument remains undefined before the dependent
+query in both original and generated grammars; bypassing that preflight
+incorrectly accepts a concrete payload. The all-input original-language
+correspondence is instantiated for the independently specified argument
+frontend, beyond these finite direct runs.
+
+This extends the earlier closed-origin-query restriction to the checked
+retained-replay test plans. It does not support an arbitrary parent-dependent
+continuation after replay, arbitrary capture endpoints or arbitrary consuming
+body prefixes. Maximal scanner-frontier arguments and the designated actual
+maximum-scanner head remain required; the full language-class comparison
+is still unresolved.
+
+
+## Nested tests of other retained values after replay
+
+Plan.follow k q compiles the original query &(param_k;q), where q is
+another query plan rather than an arbitrary closed expression. It may
+therefore inspect either old retained value after the first replay, and
+may nest further replays. The existing test and after leaves keep their
+closed-expression checks. Every plan component still restores its starting
+position, including partial stars, so parent-dependent tests do not drift
+through arbitrary consuming continuations.
+
+ScannerFrontierValues proves the semantic condition behind the new compiler.
+After a nonempty maximal run of a stateless character-set scanner, every
+nonempty prefix captured from the same origin starts with a character that
+the current frontier cannot match. An empty word remains replayable. The
+other word need not itself be a scanner capture for this local prefix lemma.
+For the compiler's two actual scanner arguments, exact capture/word equations
+identify their empty bits with the source's first-character membership tests.
+No finite enumeration of possible captured strings is used.
+
+A canonical follow query branches at the original position on those two
+empty bits. If the selected capture is empty, replay consumes nothing and
+translation continues at the original position. If it is nonempty, the
+corresponding scanner advances to its actual frontier, where nonempty old
+parameter replays specialize to failure and empty ones to zero success.
+Closed query leaves retain their actual computations. Structural induction
+includes seq, ordered choice, negation, nested follow and nullable star;
+source and canonical results agree at the same clock. The existing actual
+recursive-table normalization and guarded Seq header compiler then preserve
+original observations/language and the k-to-2k / k-to-k bounds without changes
+to their public input assumptions. The target remains twelve fixed rules.
+
+NestedCapturedOriginExamples verifies both nonempty captures in either order
+at n=1,2,4, recursive parent/child order reversal, and current-parent value
+restoration. Scanner-argument variants check first-only, second-only and both
+empty captures, including a nested query that first replays an empty value
+and then a nonempty one. On the same input, changing actual ab/a captures to
+foreign a/b values changes the nested query result; the compiler's same-origin
+capture invariant is essential and is proved rather than assumed.
+
+For &(param0;&(param1;eps)), a symbolic evaluator theorem on every input and
+table gives failure exactly when both original captures are nonempty, and
+zero success otherwise. Its star therefore remains undefined at every clock
+on every input with at least one empty scanner capture, in the full original
+scanner-argument program and generated Seq grammar. A both-nonempty input
+instead exits the star through finite failure and is accepted. Replacing the
+innermost eps by eps-star checks that a nonempty second replay fails before
+entering the divergent continuation, while an empty second replay enters it
+and stays undefined.
+
+The current-frontier limitation is explicit: the state-changing scanner
+with transitions a from its initial state and then b-star consumes ab from
+abab and stops before another ab, which the retained value can replay.
+This kernel counterexample rules out applying the stateless empty-bit
+specialization to general stateful scanner frontiers. It also does not claim
+that nonempty values remain dead at all later input positions. Arbitrary
+consuming dependent continuations, arbitrary capture endpoints and the full
+Par/Seq language-class equality or separation remain unresolved.
+
+
+## Exact empty-result observations for independent recursive arguments
+
+EmptyResultObservation compiles an arbitrary nullary recursive PEG into two
+nullary rule channels per original rule. At every actual physical clock,
+the normal Seq channel agrees with the original Par result; the empty
+channel keeps empty success, finite failure and undefinedness, and maps
+only consuming success to finite failure. Source recursive structure may
+include left/mutual recursion, priority, negation and nullable repetition.
+No termination or semantic nullability oracle is required.
+
+A full original-expression lookahead gate precedes the zero-only candidate
+for sequence, choice and repetition. Without it, discarding a consuming
+prefix could skip a divergent continuation and incorrectly yield finite
+failure. Choice also retains the original earlier-branch failure condition,
+so a consuming success never falls through to a nullable alternative.
+Star tests first-body failure only after its complete original evaluation;
+nullable repetitions therefore remain undefined.
+
+EmptyCaptureDecision applies these observers to arbitrarily many independent
+nullary recursive argument expressions. Ordered preflight preserves actual
+Par failure/undefinedness order before a finite decision tree selects a leaf
+from the exact isEmpty view of the real captured-word tuple. The chosen leaf
+may consume input, and the emitted expression is first order when its leaves
+are. The physical theorem relates that actual Seq expression to evParArgs
+at the same original position and clock. It does not reconstruct captured
+contents or yet compile an arbitrary parameterized callee body. In particular,
+it does not by itself remove the scanner-frontier conditions of the earlier
+whole-grammar compiler. General language-class equality/separation remains open.
+
+Kernel examples cover independent balanced a/b and a-star producers plus an
+empty argument, distinct nonempty captures, a consuming selected leaf, all
+empty captures, failure before divergence and divergence before failure,
+out-of-range calls, and incomplete versus completed recursive clocks.
+All-clock proofs retain divergence after a consumed prefix and preserve
+nullable-star undefinedness on every input. Concrete omissions of sequence/
+star gates, choice priority and original argument preflight give different
+results and are explicitly rejected as alternative constructions.
+
+
+## Whole-grammar elimination of EOF-observed retained values
+
+EmptyObservedSyntax/Dispatch/Evaluation/Correspondence/Compiler extends the
+previous independent-nullary emptiness observers to mutually recursive user
+rules and argument expressions of arbitrary arity. The explicit restriction
+is that every direct retained-parameter replay has the source form
+(!any);param_k. Such a replay succeeds precisely for an empty retained value
+at EOF. Queries may reach EOF under lookahead and restore the caller's
+position, so both callee bodies and actual arguments can inspect the parent's
+empty/nonempty state before further consumption or user calls.
+
+The fixed target enumerates finite empty-bit patterns for each declared
+arity and generates normal/empty-result nullary rows. Ordered preflight
+retains original actual-argument failure/undefinedness order, then emitted
+observer expressions select a concrete row number from the real captured
+word tuple. Normal and empty-result channels close simultaneously against
+the actual Par and Seq tables at exactly the same physical clock. The row
+invariant quantifies over every retained environment of the declared arity,
+without a finite word palette, source-input encoding, helper termination
+oracle or supplied semantic row table. No scanner-frontier restriction,
+producer alphabet or bound on captured length is used by this backend.
+
+The source and target syntax are first order; all target rules are nullary.
+The complete declaration/root equality checks are finite AST comparisons.
+The final theorems preserve every original-string observation and residual,
+finite failure, all-clock undefinedness, and the fully consumed language.
+Structural mutual recursion makes the emitter and original lowering directly
+computable by the kernel, including the normal/zero pairs used in arguments.
+
+The concrete four-rule source has arities [0,2,2,1]; its generated Seq target
+has exactly 22 fixed nullary rules. Kernel executions cover balanced recursive
+a/b producer captures at n=1,2,4, reversed parent/child empty-state patterns,
+restoration of both parent values, parent-dependent actual-argument queries,
+parameterized user calls inside actual arguments, and nested lengths (1,3)
+and (3,1). A separate symbolic argument theorem captures any input word at
+every clock, so the real retained values have no finite length palette.
+Parameter-dependent recursive actuals and nullable parameter repetition
+retain all-clock undefinedness on empty input. Preflight order, skipped arguments on wrong
+arity/out-of-range calls, and wrong acceptance after bypassing preflight are
+checked. These executions support the translation, not class separation.
+
+The EOF guard is essential to this finite view: actual source captures a and
+ab from the same ab!a input are both nonempty, yet after consuming ab! only
+a replays successfully. The checker rejects an unguarded parameter rule.
+The unrestricted content-dependent replay problem and the full Par/Seq
+language-class equality or genuine separation remain unresolved.
+
+
+## Exact finite-content replay beyond EOF
+
+FiniteSuffixReplay/Body/CallCompiler supports actual consuming retained-word
+replay when the current remaining input belongs to a fixed finite dictionary
+R. The original source guard tests exact suffix membership and preserves the
+current position. The suffixes(alphabet,bound) constructor covers every word
+within a finite alphabet and length bound. Neither total original input
+length nor captured-word length is bounded by the compiler.
+
+The observation dictionary is generated from all prefixes of R. Captures in
+that dictionary retain their exact literal contents; every other actual
+capture receives an overflow/other view. An other capture is not rejected at
+call entry: it is known to fail only behind the original suffix guard.
+Negation, choice, partial star, arbitrary consuming body prefixes and
+independent recursive helper calls preserve that distinction. Specialization
+can therefore retain distinct nonempty a/ab values and consume only a from
+a later ab suffix, leaving b to a continuation.
+
+ExactWordCaptureMachine generates strict finite-word output automata,
+including the empty word. Reading one extra character after the candidate
+reaches a dead state, unlike periodic summaries. The existing machine-family
+sum and RegularCaptureProduct backend supply real independent recursive
+parser output tests. FiniteWordCaptureSelection probes equality with each
+candidate rather than enumerating every transition profile. Preflight retains
+actual argument failure and undefinedness, and guarded branch commitment
+prevents a failing continuation from retrying a different capture class.
+
+The whole-program frontend has independent nullary recursive helper nodes,
+one arbitrary-arity source callee, helper-call actuals and helper-only body
+calls. This is a complementary backend: it does not yet cover the mutually
+recursive parameterized users or parent-dependent actuals of the separate
+EOF-observed frontend. Source helpers stay as declared, while only the Seq
+target receives output-product rows. Finite declaration/root/range checks
+connect actual source syntax to stable physical table equality. All original
+string observations, residuals, finite failure, finite-run existence and
+all-clock undefinedness are preserved. No same-clock or constant clock-ratio
+claim is made for this backend.
+
+The primary nine-rule source yields a fixed 656-rule nullary Seq grammar.
+Direct source/Seq kernel executions distinguish a/b contents, preserve actual
+common-origin a/ab captures, and preserve failures on wrong copies. A separate
+ab-suffix instance directly verifies partial replay leaving a nonempty b
+remainder and consuming it afterward. Balanced recursive a/b arguments have
+actual captures checked at n=1,2,4 and a direct generated Seq run at n=2.
+A longer captured value remains usable through negative replay tests; its
+actual target finite run is obtained by the definedness correspondence.
+Nullable retained replay on nonempty remaining input is undefined at every
+clock. An undefined leading argument is undefined for every original input
+and clock, while reversing it with a failing argument fails finitely.
+Empty dictionaries, alphabet boundaries and omission of the source replay
+guard are checked, with unguarded raw source rules rejected by the frontend.
+
+Arbitrary unguarded replay can match an overflow word and cannot be replaced
+by this finite view. General replay locations, arbitrary parameterized user
+control and the unrestricted Par/Seq equality or separation remain open.
+
+
+## Mutually recursive users with exact finite-suffix views
+
+The FiniteSuffixRecursive modules extend the single-callee backend to any finite family of
+mutually recursive users with arbitrary, mixed arities. Each direct replay retains the explicit
+finite remaining-suffix guard. Actuals remain calls to independent nullary recursive helpers;
+parent-dependent actuals and parameterized calls inside actuals are not yet supported.
+Generated fixed nullary rows are indexed by user and exact candidate/other tuple. Ordered original
+argument preflight and strict equality probes select the new tuple without overwriting the
+parent view in its continuation. Invalid calls lower to failure before evaluating actuals.
+
+The helper prefix is frozen at actual physical stabilization; simultaneous induction over user
+stages proves rows for every retained environment of the declared arity. Physical finite-run
+cofinality then gives all original-string observations and accepted languages, residuals, finite
+failure and all-clock undefinedness, without a same-physical-clock claim or semantic helper oracle.
+Complete raw declarations and root expressions are checked by finite AST comparison.
+
+The eleven-rule source has arities [0,0,0,0,0,0,0,0,2,2,1] and its fixed target has 844 nullary rules.
+Direct kernel executions at nesting depths 0/1/2 distinguish nonempty a/ab parent and reversed
+ab/a child tuples at nonempty remaining suffix ab. On return the outer rule consumes its own
+retained ab. Leaking the child tuple or reversing actuals fails. Balanced captures at n=1/2/4,
+long other-view negative replay success versus short ab failure, all-input/all-clock undefined
+user cycles, nullable retained repetition on a nonempty suffix, ordered failure/divergence,
+preflight bypass and malformed-call behavior are verified. The unchanged source under Seq fails
+on an accepted example; this operational contrast is not a class separation.
+
+The general original-string Par/Seq equality or separation remains unresolved. The existing EOF
+backend permits parent-dependent recursive actuals but restricts direct replay to EOF; this backend
+relaxes that replay region to finite exact-content observations while retaining independent actuals.
+
+
+## Finite-view congruence with parent-dependent recursive actuals
+
+FiniteSuffixDependentView removes the independent-actual syntax restriction for a separate
+shared-table expression theorem. Actuals may inspect parent retained words using guarded replay
+and invoke users inside actuals. Specialization replaces the current parent's guarded references
+by finite-view literals/failure. It preserves the entire actual captured-word tuple for Par,
+and the tuple and final position for Seq, over any shared table with the ordinary position-range
+invariant. Calls then consult the same original table at identical real actual words.
+Equal parent views consequently give equal expression results at every actual tblV clock;
+rows_factor proves this for every user row of an arbitrary mutually recursive source in this syntax.
+Direct executions check a parent-dependent negative query, a user inside an actual, capture of a,
+subsequent replay, and a different result when an other-view parent becomes the candidate ab.
+Two distinct other-view parents have symbolically equal results at all clocks.
+
+This lemma alone shares the original parameterized callee table. The generated observer for fresh
+captures of arbitrary dependent actuals and elimination of that table are now supplied by
+FiniteSuffixObserved below. The earlier FiniteSuffixRecursive compiler itself continues to require
+independent helper actuals. The unrestricted class question remains open.
+
+
+## Whole-grammar finite-suffix translation with dependent recursive actuals
+
+The FiniteSuffixObserved modules connect the shared-table finite-view lemma to a complete fixed
+nullary Seq grammar. Source users may have arbitrary/mixed arities and mutually recursive bodies
+and actuals. Any actual may inspect parent retained values and call parameterized users inside
+actuals. Control includes sequence, prioritized choice, negation, partial star, literals, characters,
+ranges and any. Every direct retained replay still has the explicit finite remaining-suffix guard.
+No independent-helper, scanner-frontier, captured-length, input-alphabet or termination premise
+is needed; the original parameterized table is absent from the generated grammar.
+
+Rows are indexed by user, exact candidate/other tuple, and either normal mode or a state pair of
+one strict candidate-word DFA. Normal lookahead precedes exact output probes for each actual;
+committed branches preserve its real output even when later continuations fail or diverge.
+All calls are nullary, so the selected body starts at the original Par origin. Parent views remain
+lexical in the caller continuation. Simultaneous normal/filter induction gives equality at every
+same physical tblV clock. GeneralStarFilter handles arbitrary partial repetition, all intermediate
+DFA states include sinks, and character/range filters handle arbitrary outside-candidate characters
+without enumerating Unicode. Invalid calls skip their actuals as in the original semantics.
+Finite raw-declaration/root equality checks yield all original-string observations, accepted languages,
+residuals, finite failure, finite-run existence and all-clock undefinedness.
+
+The five-rule source has arities [2,2,1,1,0], and its fixed Seq grammar has 1,230 nullary rules.
+Direct source and generated executions at clock8 check nesting depths 0/1/2, actual parent-dependent
+child tuples, an argument containing a parameterized wrapper with a real recursive balanced producer,
+reversed a/ab and ab/a views, return to the parent, and actual consumption of the outer retained ab.
+Leaked child views reject. Balanced actual captures are checked at n=1/2/4. Other evidence includes
+any/star and range/star captures of X outside the candidate alphabet, an actual repeating the parent's
+empty retained word at nonempty suffix ab remaining undefined at all clocks, all-input/all-clock
+undefined cycles through user calls inside actuals, ordered failure/divergence, malformed-call
+argument skipping, and rejection of omitted guards. The same unchanged source under Seq fails
+on a source-accepted example; this remains an operational contrast, not language-class separation.
+
+The finite remaining-suffix replay guard is still essential to this construction. Unrestricted
+retained-word replay and the general Par/Seq class equality or separation remain unresolved.
+
+
+## Carrying an unbounded retained word alongside finite views
+
+SubstringCaptureView and the RetainedViewFusion modules retain the actual first captured word
+in a fixed unary Seq grammar while erasing the other values into finite metadata. Raw replay of
+the first word has no finite-suffix guard and may occur in arbitrary control or dependent actuals.
+Source declarations of positive arity must start with param_0 followed by the residual body;
+nullary declarations start with eps. Mixed arities, mutual recursion and users inside actuals are
+allowed. Every other direct retained reference still uses guard(R);param_i, where R is the suffix
+closure of fixed seed words. This source shape is not claimed to normalize all Par grammars.
+
+All seed substrings form the finite observation dictionary. A substring view determines every
+state transition of each strict candidate-word DFA, including transitions from intermediate
+states; words outside the dictionary reach a sink but remain real payloads for raw replay.
+Normal/filter generation observes all actuals in the original order, then retains the first
+actual parser as a real unary argument. The intermediate Par rules have the form param_0;tail.
+Composing ReplayFusion removes that leading replay in Seq, matching actual consumption at the
+call boundary. Root specialization is closed by literal substitution. All physical-clock results,
+original-string observations/languages, residuals, finite failure and all-clock undefinedness are
+preserved after finite raw-declaration/root checks, without semantic helper or termination inputs.
+
+The source arities are [2,0,1] and the fixed target has 182 unary rules. Direct kernel source/target
+runs at clock8 for (initial length, nesting depth)=(1,0),(2,1),(4,2) check a parent a^n, a newly
+captured child a^(n+1) through a parameterized call inside an actual, another overlapping actual
+through a nullary user, restoration and replay of the parent after return. Parent aa and child aaa
+have equal Other metadata but different real payloads. Leaking the child or replacing the payload
+by empty changes the result. Raw replay consumes lengths 2/4/7 outside the finite suffix region.
+Another accepted source/target example retains length1 while the other actual captures lengths2/4,
+so no longest-first or scanner-frontier condition is needed. Symbolic scanner evidence proves the
+actual tuple [a^(n+1),a] for every n and clock. Nullable raw-payload repetition stays undefined on
+every input at every clock, and missing leading replay is rejected by the complete checker.
+Prefix-only b/c metadata for candidate ab is shown insufficient at intermediate state1; the actual
+composed a;payload filter succeeds with the correct substring view and fails with the wrong Other.
+
+The remaining restrictions are the leading first-word replay in positive-arity source rules and
+finite-suffix references to other captured words. Arbitrary replay of multiple independent
+unbounded retained words, and general original-string Par/Seq equality or separation, remain open.
+
+
+## Independent original-origin projections of two unbounded captures
+
+The DelimitedCopy modules translate a source two-argument rule with body
+param_1;d;param_0;d;param_1;d, consuming a v d u d v d block for real actual captures u/v.
+Neither value is replaced by finite metadata and neither replay has a finite suffix guard.
+Actuals may be arbitrary closed expressions over an independent nullary mutually recursive PEG
+library. Finite capture-mask and closure checks establish that consumed data uses an alphabet
+excluding the delimiter; they require no maximal scanner endpoint, parser factorization, capture
+length bound, finite word palette or termination assumption. The library cannot call the copy rule.
+
+Two unary Seq users retain u and v separately. The u pass starts after capturing u, skips the
+rest of the first word to d, checks u, and skips the third word to d. It runs in lookahead.
+The v pass starts from the original position, captures v, skips the middle word and checks v.
+Original left-to-right actual preflight runs before either projection. Unique delimiter splitting
+proves that both passes select the same boundaries and return the actual source suffix after the
+final d. Block suffix transformers, actual physical tables at every same clock, finite failure,
+finite-run existence and all-clock undefinedness agree. Raw declaration/root AST checks compose
+these blocks under ordinary helper, seq/choice/not/star and character control. The source input is
+unchanged, including all text after a block; there is no input encoding or full-input alphabet bound.
+
+The example has A=a* b and B←a B c / b. Source arities [0,0,0,0,2] become fixed target arities
+[0,0,0,0,1,1]. Actual DerivesArgsPar captures [a^n b,a^n b c^n] are proved for every n and arbitrary
+continuation, with both values exceeding every fixed length bound. Both grammars accept v#u#v#
+for every n. Direct kernel runs at clock12 cover n=0/1/2/4, copy/balance rejection, residual !X,
+star over blocks with different n, and choice/negation/literal continuation contexts. A's successful
+endpoint is strictly before the alphabet scanner frontier. Later-actual cycles stay undefined for
+all inputs/clocks; early failure still precedes them. Counterexamples establish why ordered preflight
+and delimiter safety are checked, and malformed actual declarations are rejected. Pure actuals
+retain the precise unresolved/resolved distinction at physical clocks0/1.
+
+The earlier no_finite_summary theorem concerns only the bare suffix c^m and prefix-selected finite
+control plus opaque a^n b. This construction instead reruns complete parsers from the original
+position and checks later copies; it is not a contradiction of that interface theorem or a language
+class separator. Arbitrary two-retained-value bodies, parent-dependent actuals and callbacks from
+the independent library are not covered here. The general original-string class question remains open.
+
+
+### Arbitrary-arity delimited word patterns
+
+The DelimitedWordPattern and DelimitedPatternPasses lemmas replace the fixed two-word layout with any nonempty finite list of in-scope retained-parameter indices. The source body is a sequence of those parameters, each followed by the separator. Repeated and unused indices and empty captured words are allowed. Each unary Seq projection checks all occurrences of its own actual captured word, skips the other segments, and adjusts its first segment for the already-consumed Seq argument. Delimiter-free captures and common source origin synchronize every projection boundary and the actual returned suffix. The finite ordered conjunction equals the source partial suffix transformer, not only its whole-input acceptance test.
+
+DelimitedPatternEvaluation connects actual argument evaluation, source rows, generated unary rows, ordered preflight, and physical clock zero. DelimitedPatternCompiler checks the complete raw source grammar/root, helper independence, capture effects, nonempty arity/pattern and reference scope; its physical, observations, language, definedness and undefinedness theorems have no semantic oracle as compiler input. The four-argument example produces six Seq rules from three source rules. Symbolic source derivations capture a^n b c^n, a^n b, a^n and the empty word for every n and every following suffix, and both fixed grammars accept every corresponding seven-segment block. All three nonempty capture lengths are simultaneously unbounded. Direct kernel examples include n=0/1/2/4, reordered indices, copy failure, suffix preservation, real later-argument divergence and the necessity of preflight.
+
+This frontend uses independent nullary helper libraries, closed actuals, delimiter-free captured outputs and one source copy call at the root. RecursivePattern above combines these arbitrary-arity patterns with transformed client callbacks and general expression contexts. Arbitrary parameter-dependent actuals and arbitrary multi-value bodies, and hence the unrestricted Par/Seq class question, remain open.
+
+
+### Recursive arbitrary-arity word patterns
+
+DelimitedPatternCallTransfer relates calls whose source and target actual-expression lists differ. RecursivePattern then transforms every actual and nullary client body, allowing copy calls nested inside actual queries and client/copy/actual mutual recursion for arbitrary positive copy arity and arbitrary nonempty occurrence lists. Mutual expression/argument induction and simultaneous actual-table clock induction discharge the local correspondence premises. The compiler checks complete raw declarations/root, recursive client scope, copy arities and source capture effects, and preserves original-string observations, residuals, language, finite definedness and all-clock undefinedness at the same physical clock. It does not use independent helper semantics, frozen rows, termination advice or a bounded captured-word palette.
+
+The eight-rule source compiles to eleven fixed Seq rules. Each of its four actuals queries the following block before returning the real tuple [a^n b c^n, a^n b, a^n, empty]. Symbolic derivations cover every n and every following block-length list; both grammars accept arbitrary finite streams of these blocks. Direct kernel runs check different block lengths, actual tuples, residuals, invalid later blocks, direct nested copy queries, transformed client syntax and rejection by the older independence check. Genuine same-position copy/actual cycles stay undefined on every input and clock; omitting preflight exposes finite failure before a divergent later actual. Invalid arities, references, delimiter captures and raw source declarations are rejected.
+
+Clients remain nullary, actuals closed and captured outputs delimiter-free. Copy occurrences share one chosen arity, separator and finite parameter-occurrence list; the body consists of retained-word segments followed by separators. Positive inner-copy outputs containing that separator cannot themselves be captured by an outer copy; nested lookahead is supported. General parameter-dependent actuals, arbitrary multi-value callee bodies and the unrestricted language-class equality/separation remain unresolved.
+
+
+### Parent-dependent actuals with a real retained payload
+
+ParentPatternTransfer generalizes capture safety and arbitrary-arity copy-call transfer to an arbitrary caller environment. RetainedPattern combines that transfer with unary leading-replay clients: the source rule is param_0;tail and the Seq rule contains the transformed tail. Parent-dependent actual queries may call unary clients with the parent's real word and choose different consumed producer results. Client bodies and unary actuals can consume the retained word directly, capture a new concatenated word for a recursive child, and use the original parent after return. Actual evaluation retains the caller environment; each generated copy pass receives its own fresh captured word. Simultaneous actual-table clock induction relates the source replay origin to the Seq argument endpoint without abstracting the retained parent into a finite view.
+
+The full raw-grammar/root checker validates the independent nullary helper prefix, client and parent scope, copy arity/occurrence indices and capture effects. Observations, original-string language, all residuals, finite failure/definedness and all-clock undefinedness correspond at the same physical clock. Five source rules with arities [0,0,1,1,4] become eight fixed Seq rules. On the same current input, actual capture tuples differ under parents a and aaa. A parent containing the separator a# is allowed; only fresh copy-captured outputs exclude the separator. Direct runs cover real recursive child doubling, parent restoration, empty parents, child-prefix failure and leaked-child-value rejection.
+
+Symbolic source derivations establish the actual tuple [a^n b c^n,a^n b,a^n,empty] after substituting the retained parent a^n for every n and every following suffix. Both grammars accept every initial parent length and every recursive nesting depth, with children capturing ww from the actual argument w;w and parent continuations replaying their own original w. True parent/copy-actual cycles and nullable retained-parent stars stay undefined on every input and clock; preflight omission gives finite failure before a divergent actual. Invalid root parent scope, client addresses and source declarations are rejected.
+
+Unary clients still require leading replay. The copy header still has one selected separator and parameter-occurrence list; positive fresh-capture paths must be checked delimiter-free. Parent replay or unary clients inside such positive paths are currently rejected, while zero-width queries and query-driven producer choices are supported. Independent nullary helpers remain available for consuming producers. Arbitrary multi-parent clients, arbitrary multi-value callee bodies and the full language-class equality/separation question remain unresolved.
+
+
+### Positive parent consumption and recursive returned-word effects
+
+RetainedCaptureEffects proves checked source consumption effects for real unary clients. Under an alphabet-safe actual captured word, an enabled client replays that word and its tail consumes only alphabet characters. Candidate return flags are computed from source tails and independently checked for recursive closure; actual source rows satisfy the certificate by physical-clock induction. Successful output can be empty or unbounded, and clients can diverge. ConsumingPatternChecks validates selective parent-alphabet requirements on every client call, including initial root captures. Copy actuals may positively replay the parent or call certified unary producers with safe actuals. Unmarked clients still accept arbitrary parent words, including the separator, in ordinary calls.
+
+The existing fixed source/target grammar builders are reused. Parent-word preconditions are propagated through actual captured values in the source/target row correspondence. Complete raw declaration/root, scope, argument, capture and return-effect checks preserve all original-string observations/languages, residuals, finite failure/definedness and all-clock undefinedness at the same physical clock. No runtime word/endpoint advice, termination assumption, finite word palette, maximal scanner frontier or input encoding is supplied.
+
+The five-rule source compiles to eight Seq rules. For a retained parent a^n, its actual tuple [a^(2n)b c^(2n),a^n,a^(2n),a^(2n)b] contains direct parent consumption and the actual returned word of a parameterized recursive producer. Symbolic derivations cover every n and following suffix; both grammars accept every parent length and nesting depth with child doubling and parent restoration. All four capture lengths are simultaneously unbounded. With an empty argument the same producer recursively captures a^m for every m. A return-certified divergent client is allowed as a positive actual and stays undefined on every input and clock; omitting preflight produces finite failure. Kernel checks reject missing parent requirements, an unsafe marked seed and a separator-consuming producer actual, while allowing a separator-containing parent for an unmarked ordinary producer call. Earlier query-only validation rejects this grammar.
+
+Independent nullary helpers, leading replay in unary clients and shared delimited parameter-list copy bodies remain restrictions. Marked parent values must satisfy the finitely checked alphabet condition. General multiple-parent clients, arbitrary multi-value bodies and unrestricted Par/Seq class equality/separation remain unresolved.
+
+## Controlled retained-word body translation (latest extension)
+
+CopyBodyControl/Evaluation/Projections/Emission and ControlledCopySyntax/Correspondence/Compiler extend flat delimited parameter lists to finite bodies of param_i;d atoms, epsilon, failure, sequence, committed ordered choice, negation and structurally zero-width repetition. Finite syntax histories are tested from the original copy origin; captured words remain unbounded. Separate CPS continuations preserve committed choice. Original-order actual preflight and a nullary initialization gate preserve failure/divergence and clock-zero behavior, even for empty bodies.
+
+ControlledCaptureEffects connects the actual grammar's recursive return-effect certificates, positive parent consumption, parameterized recursive producers and parent restoration to the same-physical-clock proof. Complete source/root and finite scope/effect checks yield original-string language and residual preservation, finite failure/definedness and all-clock undefinedness. The five-rule example generates 97 fixed Seq rules. Symbolic proofs cover every parent length and recursion depth with actual unbounded captures and child doubling. Kernel cases cover alternative post-consumption choice paths, incorrect continuation distribution, missing initialization/preflight, early argument failure, value-dependent nullable repetition and malformed scope/body rejection.
+
+Validation: full lake build including Audit passes (1,310 jobs). All 3,075 related public dependency reports use only standard axioms (3,014) or no axioms (61); the 97 new reports are guarded in Audit. The PR has 1,443 new guarded dependency checks across 134 new Lean modules. Consuming body repetition, general header recursion, arbitrary body atoms, multiple-parent clients and the unrestricted Par/Seq class comparison remain unresolved.
