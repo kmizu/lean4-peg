@@ -1,3 +1,6 @@
+import MacroPeg.CBV.FutureCaptureViews
+import MacroPeg.CBV.FutureCapturePruning
+import MacroPeg.CBV.FutureCaptureExamples
 import MacroPeg.CBV.DelimitedValueSafety
 import MacroPeg.CBV.RecursiveFieldSyntax
 import MacroPeg.CBV.RecursiveFieldCorrespondence
@@ -37015,3 +37018,124 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.RecursiveFieldProofs.source_and_target_all_trees
+
+/-! Future-local retained-value views and exact forgetting criterion. -/
+/-- info: 'Shallot.MacroPeg.CBV.FutureCaptureViews.success_le' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureCaptureViews.success_le
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureCaptureViews.evV_rebind' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureCaptureViews.evV_rebind
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureCaptureViews.evParArgs_rebind' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureCaptureViews.evParArgs_rebind
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureCaptureViews.evSeqArgs_rebind' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureCaptureViews.evSeqArgs_rebind
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureCapturePruning.mask_length' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureCapturePruning.mask_length
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureCapturePruning.payload_bounded' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureCapturePruning.payload_bounded
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureCapturePruning.selectFrom_lookup' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureCapturePruning.selectFrom_lookup
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureCapturePruning.too_long_fails' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureCapturePruning.too_long_fails
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureCapturePruning.parameter_view' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureCapturePruning.parameter_view
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureCapturePruning.expression' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureCapturePruning.expression
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureCapturePruning.physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureCapturePruning.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureCapturePruning.forget_all' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureCapturePruning.forget_all
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureCapturePruning.deadCheck_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureCapturePruning.deadCheck_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureCapturePruning.forget_dead' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureCapturePruning.forget_dead
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureCapturePruning.forget_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureCapturePruning.forget_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureCapturePruning.after_prefix' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureCapturePruning.after_prefix
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureCaptureExamples.masked_shape' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureCaptureExamples.masked_shape
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureCaptureExamples.view_shape' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureCaptureExamples.view_shape
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureCaptureExamples.every_body_every_clock' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureCaptureExamples.every_body_every_clock
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureCaptureExamples.recursive_actuals_preserved' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureCaptureExamples.recursive_actuals_preserved
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureCaptureExamples.bare_mask_changes_failure_to_success' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureCaptureExamples.bare_mask_changes_failure_to_success
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureCaptureExamples.pruning_cannot_be_used_before_the_cut' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureCaptureExamples.pruning_cannot_be_used_before_the_cut
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureCaptureExamples.empty_value_must_remain_observable' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureCaptureExamples.empty_value_must_remain_observable
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureCaptureExamples.exact_dead_check_sees_contents' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureCaptureExamples.exact_dead_check_sees_contents
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureCaptureExamples.all_long_values_forgotten' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureCaptureExamples.all_long_values_forgotten
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureCaptureExamples.outer_backtracking_needs_original_values' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureCaptureExamples.outer_backtracking_needs_original_values

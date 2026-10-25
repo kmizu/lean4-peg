@@ -16,6 +16,49 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 現在位置以降だけに必要な保持値を残す
+
+`FutureCaptureViews` は既存の global な `CaptureViews.evV_rebind` と異なり、
+現在の残余長 bound 以下の位置で parameter view が一致すればよいとする。
+任意の一階式・入れ子の Par/Seq actual・任意の sound な再帰表で成立し、
+実 physical table では文法の一階性から soundness を自動的に得る。
+成功した評価は残余長を増やせないため、継続は切断点より前の入力へ戻らない。
+元/変換後はこの補題では同じ文法・同じ戦略を使う。
+
+`FutureCapturePruning.mask` は bound より長い保持語の payload を空にし、
+対応する parameter view を必ず `failAlways` にする。他の index と空の元捕捉は
+保存する。単に空語へ置き換えるだけでは失敗が空成功になるため不正である。
+全 payload 長が bound 以下になり、変換した任意の本体・新 actual 評価は、
+元の保持値を使った評価と全 physical clock で一致する。
+`after_prefix` は任意の一階 prefix が実際に進めた位置へこの操作を接続する。
+prefix や本体に covering anchor の構文条件はない。
+
+`forget_iff` はさらに、**任意の一階継続と全 future 位置について一括して**
+全環境を忘れてよい必要十分条件を与える。それは、どの保持語も、その残余の
+どの suffix とも一致できないこと (`DeadAfter`) である。`deadCheck` は現入力と
+保持値からこの条件を有限判定し、長さだけでは見落とす内容依存の死活も扱う。
+特定の一つの本体で値を忘れられる必要条件、と主張しているわけではない。
+元の空語は常に照合できるので、nullable star の未定義を保つためにも残す。
+
+忘却はこの継続の内部に限る。外側の選択フレームが切断点より前へ backtrack
+する可能性があれば、親側の元 binding は依然必要である。実入力 `aaaa!aaa` で、
+枝内で死んだ `aaaa` を親まで消すと、外側 fallback の成功が失敗になることも証明した。
+
+例では同じ原点の任意長 `a^(n+4)`、短い `a`、空語の tuple を扱い、長い prefix
+の後の `aaa` 上では最初の payload だけを消す固定 view が、任意の一階本体・
+再帰・全 clock で正しいことを証明した。再帰 actual、空語による反復未定義、
+view を付けない空置換の誤り、切断点より前へ pruning を適用する誤りも kernel
+検証した。
+
+これは現在の保持値と bound に依存する**評価上の表現・忘却定理**であり、入力に
+依存しない固定 Seq 文法を生成する新 compiler ではない。既存の anchor 条件を
+compiler から除けたとは主張しない。値を忘れられる条件を明確にし、残す必要のある
+live な値を anchor なしで扱う問題と分けた。一般の Par/Seq 一致・分離は未解決。
+
+全体 `lake build`/Audit は 1,353 jobs を通過。関連 3,457 public 依存報告は標準公理
+3,381 または無公理 76。この追加は三新モジュール・26 guard、PR69 全体は 43 新
+Lean モジュール・382 guard。
+
 ## 個別の保持値を渡す、多引数の自己再帰まで
 
 `RecursiveFieldSyntax/Correspondence/Compiler` は、個別 field 再捕捉を

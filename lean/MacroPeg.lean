@@ -1,3 +1,6 @@
+import MacroPeg.CBV.FutureCaptureViews
+import MacroPeg.CBV.FutureCapturePruning
+import MacroPeg.CBV.FutureCaptureExamples
 import MacroPeg.CBV.DelimitedValueSafety
 import MacroPeg.CBV.RecursiveFieldSyntax
 import MacroPeg.CBV.RecursiveFieldCorrespondence
