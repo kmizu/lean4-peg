@@ -16,6 +16,41 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 任意個の保持語を任意順・任意回数で使う区切り付き本体
+
+`DelimitedWordPattern/DelimitedPatternPasses/Evaluation/Compiler` は、固定の二語本体
+`v#u#v#` を、任意の正 arity と任意の非空 parameter 添字列へ一般化する。
+元の本体は添字列 `[j₀,…,jₘ]` から生成する
+`param_j₀;d;…;param_jₘ;d`。同じ保持語の出現回数・順序、使わない引数、空の実捕捉も扱う。
+arity・出現回数・捕捉長に固定上限はない。Seq 側は保持語ごとに unary 規則を一つ生成し、
+最後の検査以外を元の原点からの先読みとする。先に全実引数を元の順で preflight する。
+
+各実捕捉が区切りを含まないため、成功時はどの捕捉終点も最初の区切りより手前にある。
+自分の語を先頭で再照合する検査は、実引数が既に消費したその語の直後から区切りを照合する。
+それ以外は終点から最初の区切りまで進み、後の区間で自分の語だけを再照合する。
+`source_iff_views` と `source_iff_after` は任意個のこの検査の同時成立を証明する。
+`matches_endpoint_unique` は別々の検査が異なる区切り境界・異なる最終残余を選べないことを示す。
+`DelimitedPatternPasses.run_eq` は成功だけでなく有限失敗も含む元の suffix 変換との等式である。
+
+`DelimitedPatternEvaluation.physical` は実際の source Par 呼出しと生成 Seq 呼出しを同 physical clock で対応させる。
+引数が先に失敗・未定義になる場合と、引数成功後の header 行が clock 0 で未確定な場合も含む。
+`DelimitedPatternCompiler` は元の全宣言・開始式、非空 arity/本体、参照範囲、closed lexical actual と
+実捕捉 alphabet の区切り除外を有限検査する。入力の符号化、停止性の仮定、語長上限、最大 scanner frontier は使わない。
+全元文字列の受理言語、任意残余の成功、有限失敗、実行存在、全 clock 未定義を保存する。
+
+`DelimitedPatternExamples` の source arity `[0,0,4]` は固定 Seq `[0,0,1,1,1,1]` へ。
+実捕捉列は `[a^n b c^n, a^n b, a^n, ε]`、本体の添字列は `[0,2,1,0,3,2,1]` である。
+`DelimitedPatternCaptureProofs.actual_captures` は任意 n・任意後続についてこの実 Par 捕捉列を導出する。
+`all_lengths` は任意 n の双方受理、`three_unbounded` は任意の固定上限を三つの捕捉長が同時に超えることを証明する。
+n=0/1/2/4 の直接 kernel 実行、コピー違いの拒否、残余 `!X` の保存、別のコピー順序、
+後の実引数の循環が全入力・全 clock で未定義であることと、preflight を省くと有限失敗になる反例も検証した。
+空 arity/本体、範囲外添字、区切りを捕捉する actual、不正な元宣言を拒否する。
+
+この任意 arity frontend の actual library は**独立した nullary 規則群**であり、元 root はコピー規則への一呼出しである。
+下記 RecursiveCopy の相互再帰・式文脈を、この一般 arity 版へまだ統合していない。
+区切り付き parameter 列以外の任意本体、親の保持 parameter に依存する actual、区切りを含む捕捉の一般処理と、
+Par/Seq 言語クラス全体の一致・分離は未解決である。
+
 ## コピー検査へ戻る相互再帰と、実引数内部のコピー呼出し
 
 `DelimitedCopyCallTransfer` と `RecursiveCopySyntax/Correspondence/Compiler` は、下記の区切り付き
@@ -11246,3 +11281,12 @@ control plus opaque a^n b. This construction instead reruns complete parsers fro
 position and checks later copies; it is not a contradiction of that interface theorem or a language
 class separator. Arbitrary two-retained-value bodies, parent-dependent actuals and callbacks from
 the independent library are not covered here. The general original-string class question remains open.
+
+
+### Arbitrary-arity delimited word patterns
+
+The DelimitedWordPattern and DelimitedPatternPasses lemmas replace the fixed two-word layout with any nonempty finite list of in-scope retained-parameter indices. The source body is a sequence of those parameters, each followed by the separator. Repeated and unused indices and empty captured words are allowed. Each unary Seq projection checks all occurrences of its own actual captured word, skips the other segments, and adjusts its first segment for the already-consumed Seq argument. Delimiter-free captures and common source origin synchronize every projection boundary and the actual returned suffix. The finite ordered conjunction equals the source partial suffix transformer, not only its whole-input acceptance test.
+
+DelimitedPatternEvaluation connects actual argument evaluation, source rows, generated unary rows, ordered preflight, and physical clock zero. DelimitedPatternCompiler checks the complete raw source grammar/root, helper independence, capture effects, nonempty arity/pattern and reference scope; its physical, observations, language, definedness and undefinedness theorems have no semantic oracle as compiler input. The four-argument example produces six Seq rules from three source rules. Symbolic source derivations capture a^n b c^n, a^n b, a^n and the empty word for every n and every following suffix, and both fixed grammars accept every corresponding seven-segment block. All three nonempty capture lengths are simultaneously unbounded. Direct kernel examples include n=0/1/2/4, reordered indices, copy failure, suffix preservation, real later-argument divergence and the necessity of preflight.
+
+This frontend uses independent nullary helper libraries, closed actuals, delimiter-free captured outputs and one source copy call at the root. Its arbitrary-arity patterns are not yet combined with RecursiveCopy's transformed client callbacks and general expression contexts. Arbitrary parameter-dependent actuals and arbitrary multi-value bodies, and hence the unrestricted Par/Seq class question, remain open.

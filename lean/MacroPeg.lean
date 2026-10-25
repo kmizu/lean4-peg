@@ -891,3 +891,10 @@ import MacroPeg.CBV.RecursiveCopyCorrespondence
 import MacroPeg.CBV.RecursiveCopyCompiler
 import MacroPeg.CBV.RecursiveCopyExamples
 import MacroPeg.CBV.RecursiveCopyStreamProofs
+
+import MacroPeg.CBV.DelimitedWordPattern
+import MacroPeg.CBV.DelimitedPatternPasses
+import MacroPeg.CBV.DelimitedPatternEvaluation
+import MacroPeg.CBV.DelimitedPatternCompiler
+import MacroPeg.CBV.DelimitedPatternExamples
+import MacroPeg.CBV.DelimitedPatternCaptureProofs
