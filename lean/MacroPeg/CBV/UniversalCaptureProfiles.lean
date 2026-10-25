@@ -94,7 +94,7 @@ def entryCheck {n : Nat} (M : Machine n) : Entry n → Bool
   | .replay | .safeReplay => true
   | .shift q R | .iterate q R => ScannerReplayResidual.entryCheck M R q && ScannerReplayResidual.completeCheck M R
   | .alt a b | .guard _ a b => entryCheck M a && entryCheck M b
-  | .aligned c => GuardedReplayControl.check M c
+  | .aligned c => GuardedReplayControl.check M c && GuardedReplayControl.universalCheck c
   | .scan _ => false
 
 theorem entry_sound {n : Nat} (M : Machine n) : ∀ e, entryCheck M e=true →
@@ -103,7 +103,10 @@ theorem entry_sound {n : Nat} (M : Machine n) : ∀ e, entryCheck M e=true →
   | .shift q R,h => by
     obtain ⟨hs,hc⟩ := Bool.and_eq_true_iff.mp h
     exact ⟨hs,fun P => by simp [RecursiveScannerProductHeader.entryCheck,hc]⟩
-  | .iterate q R,h | .aligned _,h => ⟨h,fun _ => rfl⟩
+  | .iterate q R,h => ⟨h,fun _ => rfl⟩
+  | .aligned c,h => by
+    obtain ⟨hc,hu⟩ := Bool.and_eq_true_iff.mp h
+    exact ⟨hc,fun P => GuardedReplayControl.capture_universal P c hu⟩
   | .alt a b,h | .guard _ a b,h => by
     obtain ⟨ha,hb⟩ := Bool.and_eq_true_iff.mp h
     obtain ⟨ha,ha'⟩ := entry_sound M a ha

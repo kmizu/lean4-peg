@@ -1,4 +1,5 @@
-import MacroPeg.CBV.GuardedReplayControl
+import MacroPeg.CBV.GuardedReplayAlignment
+import MacroPeg.CBV.DynamicScannerBinding
 
 namespace Shallot.MacroPeg.CBV.LiteralPrefixObservation
 open StatefulScanner (Machine next advance)

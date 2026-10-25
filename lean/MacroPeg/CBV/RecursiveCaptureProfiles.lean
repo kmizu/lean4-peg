@@ -98,6 +98,7 @@ def Scoped (bodies : List Arg) : Arg → Prop
 
 theorem rawControlArg_scoped {n : Nat} : ∀ c : GuardedReplayControl.Expr n, Scoped [] (rawControlArg c)
   | .shift _ _ => ⟨True.intro,True.intro⟩
+  | .replayQuery | .literalQuery _ _ _ _ => True.intro
   | .seq a b | .alt a b => ⟨rawControlArg_scoped a,rawControlArg_scoped b⟩
   | .star a | .notP a => rawControlArg_scoped a
 

@@ -1,3 +1,5 @@
+import MacroPeg.CBV.GuardedLiteralQueryExamples
+import MacroPeg.CBV.GuardedReplayAlignment
 import MacroPeg.CBV.AlphabetCaptureProfileExamples
 import MacroPeg.CBV.AlphabetCaptureProfiles
 import MacroPeg.CBV.LiteralPrefixObservation

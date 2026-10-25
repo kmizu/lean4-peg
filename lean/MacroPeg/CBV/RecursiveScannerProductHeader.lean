@@ -15,7 +15,8 @@ def entryCheck {n : Nat} (M : Machine n) (entry : Entry n) (P : List Nat) : Bool
   match entry with
   | .scan q => ScannerFrontierCertificate.check P q
   | .shift q R => ScannerReplayResidual.completeCheck M R || ScannerFrontierCertificate.check P q
-  | .replay | .safeReplay | .iterate _ _ | .aligned _ => true
+  | .replay | .safeReplay | .iterate _ _ => true
+  | .aligned c => GuardedReplayControl.captureCheck P c
   | .alt a b | .guard _ a b => entryCheck M a P && entryCheck M b P
 
 theorem entryCheck_of_safe {n : Nat} (M : Machine n) (entry : Entry n) (w : List Char)
@@ -24,7 +25,8 @@ theorem entryCheck_of_safe {n : Nat} (M : Machine n) (entry : Entry n) (w : List
   induction entry with
   | scan q => exact (ScannerFrontierCertificate.check_actual M w q).mpr (h rfl q)
   | shift q R => exact Bool.or_eq_true_iff.mpr (Or.inr ((ScannerFrontierCertificate.check_actual M w q).mpr (h rfl q)))
-  | replay | safeReplay | iterate _ _ | aligned _ => rfl
+  | replay | safeReplay | iterate _ _ => rfl
+  | aligned c => exact GuardedReplayControl.capture_safe M w c h
   | alt a b ha hb | guard _ a b ha hb =>
     exact Bool.and_eq_true_iff.mpr ⟨ha (fun hx => h (Bool.or_eq_true_iff.mpr (Or.inl hx))),
       hb (fun hx => h (Bool.or_eq_true_iff.mpr (Or.inr hx)))⟩
@@ -224,13 +226,14 @@ theorem iteration_filter {n : Nat} (M : Machine n) (bodies : List Arg)
 
 theorem aligned_header {n : Nat} (M : Machine n) (P : List Nat) (c : GuardedReplayControl.Expr n)
     (hc : headerCheck M (.aligned c)=true) (w : List Char) (hP : P=profile (observer M) w)
+    (hCap : GuardedReplayControl.captureCheck P c=true)
     (g h : MGrammar) (x : List Char) (s t : Strategy) (T U : ClockFreezing.Table)
     (p j : Nat) (hp : p≤x.length) (hj : j≤x.length) (hcap : sfx x p=w++sfx x j) :
     evV g x s T [w] (sourceHeader (.aligned c)) p=
       evV h x t U [w] (sourceExpr M (controlArg P c)) j := by
   subst P
   rw [controlArg_source]
-  exact GuardedReplayControl.header_eq M c hc g h x w s t T U p j ⟨hp,hj,hcap⟩
+  exact GuardedReplayControl.header_eq M c hc g h x w s t T U p j ⟨hp,hj,hcap⟩ hCap
 
 theorem aligned_filter {n : Nat} (M : Machine n) (bodies : List Arg) (P : List Nat)
     (c : GuardedReplayControl.Expr n) (g h : MGrammar) (x : List Char) (T U : ClockFreezing.Table)
@@ -267,7 +270,7 @@ theorem target_header {n : Nat} (M : Machine n) (entries : Entries n) (bodies : 
       rw [target_scan M entries bodies r x l j [w] hj,source_scan M entries bodies q x k p [w] hp,
         hcap,StatefulScanner.run_after_prefix M w (sfx x j) q r hs]
   | aligned c =>
-    exact (aligned_header M _ c hEntry w rfl _ _ x _ _ _ _ p j hp hj hcap).symm
+    exact (aligned_header M _ c hEntry w rfl hw _ _ x _ _ _ _ p j hp hj hcap).symm
   | iterate q R =>
     exact (iteration_header M _ q R hEntry w rfl _ _ x _ _ _ _ p j hp hj hcap).symm
   | shift q R =>
@@ -327,7 +330,7 @@ theorem entry_plain_body {n : Nat} (M : Machine n) (entries : Entries n) (bodies
           (ClockFreezing.frozen_sound (target_firstOrder M entries bodies) x .callByValueSeq (by decide) _ _ l)
           [w] _ (sourceExpr_firstOrder M _) j z hj hv).1
   | aligned c =>
-    have he := aligned_header M _ c hEntry w rfl
+    have he := aligned_header M _ c hEntry w rfl hw
       (source M entries bodies) (target M entries bodies) x .callByValuePar .callByValueSeq
       (sourceTable M entries bodies x k) (targetTable M entries bodies x l) p j hp hj hcap
     have hplain := (controlArg_plain M bodies (profile (observer M) w) c).trans
@@ -449,7 +452,7 @@ theorem entry_product_body {n : Nat} (M : Machine n) (entries : Entries n) (bodi
     let U := targetTable M entries bodies x l
     have hT : SoundTV g x .callByValuePar T :=
       ClockFreezing.frozen_sound (source_firstOrder M entries bodies) x .callByValuePar (by decide) _ _ k
-    have he := aligned_header M _ c hEntry w rfl g g x .callByValuePar .callByValuePar T T p j hp hj hcap
+    have he := aligned_header M _ c hEntry w rfl hw g g x .callByValuePar .callByValuePar T T p j hp hj hcap
     have hseq : evV g x .callByValuePar T [w] (.seq (sourceHeader (.aligned c)) (sourceExpr M b)) p=
         evV g x .callByValuePar T [w] (.seq (sourceExpr M e) (sourceExpr M b)) j := by
       change (match evV g x .callByValuePar T [w] (sourceHeader (.aligned c)) p with

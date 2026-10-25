@@ -30,7 +30,8 @@ inductive Entry (n : Nat) where
 abbrev Entries (n : Nat) := Nat → Entry n
 
 def Entry.inputSafe {n : Nat} : Entry n → Bool
-  | .replay | .iterate _ _ | .aligned _ => false
+  | .replay | .iterate _ _ => false
+  | .aligned c => GuardedReplayControl.inputSafe c
   | .safeReplay | .scan _ | .shift _ _ => true
   | .alt a b | .guard _ a b => a.inputSafe || b.inputSafe
 
@@ -93,7 +94,9 @@ def sourceExpr {n : Nat} (M : Machine n) : Arg → MExp
 
 /-- Source control as ordinary Arg syntax; lookahead preserves the old value. -/
 def rawControlArg {n : Nat} : GuardedReplayControl.Expr n → Arg
+  | .replayQuery => .notP (.notP (.param 0))
   | .shift q R => .seq (.lit ((R q).getD [])) (.notP (.notP (.param 0)))
+  | .literalQuery _ _ q L => .notP (.notP (.lit ((L q).getD [])))
   | .seq a b => .seq (rawControlArg a) (rawControlArg b)
   | .alt a b => .alt (rawControlArg a) (rawControlArg b)
   | .star a => .star (rawControlArg a)
@@ -101,7 +104,7 @@ def rawControlArg {n : Nat} : GuardedReplayControl.Expr n → Arg
 
 theorem rawControlArg_source {n : Nat} (M : Machine n) : ∀ c : GuardedReplayControl.Expr n,
     sourceExpr M (rawControlArg c)=GuardedReplayControl.render c
-  | .shift _ _ => rfl
+  | .replayQuery | .shift _ _ | .literalQuery _ _ _ _ => rfl
   | .seq a b | .alt a b => by simp [rawControlArg,sourceExpr,GuardedReplayControl.render,rawControlArg_source M a,rawControlArg_source M b]
   | .star a | .notP a => by simp [rawControlArg,sourceExpr,GuardedReplayControl.render,rawControlArg_source M a]
 
@@ -180,8 +183,11 @@ def iteratedBody {n : Nat} (M : Machine n) (q : Fin n) (R : ScannerReplayResidua
 
 /-- Finite residual PEG control may choose a different word on every step. -/
 def controlArg {n : Nat} (P : List Nat) : GuardedReplayControl.Expr n → Arg
+  | .replayQuery => .lit []
   | .shift q R => match DynamicScannerBinding.resume P q with
     | none => .notP (.lit []) | some r => .lit ((R r).getD [])
+  | .literalQuery _ _ q L => match DynamicScannerBinding.resume P q with
+    | none => .notP (.lit []) | some r => .notP (.notP (.lit ((L r).getD [])))
   | .seq a b => .seq (controlArg P a) (controlArg P b)
   | .alt a b => .alt (controlArg P a) (controlArg P b)
   | .star a => .star (controlArg P a)
@@ -197,20 +203,23 @@ def controlledBody {n : Nat} (M : Machine n) (c : GuardedReplayControl.Expr n)
 
 theorem controlArg_source {n : Nat} (M : Machine n) (P : List Nat) : ∀ c : GuardedReplayControl.Expr n,
     sourceExpr M (controlArg P c)=DependentCaptureFilter.render (GuardedReplayControl.residual P c)
-  | .shift q R => by cases hs : DynamicScannerBinding.resume P q <;> simp only [controlArg,GuardedReplayControl.residual,hs] <;> rfl
+  | .replayQuery => rfl
+  | .shift q R | .literalQuery _ _ q R => by cases hs : DynamicScannerBinding.resume P q <;> simp only [controlArg,GuardedReplayControl.residual,hs] <;> rfl
   | .seq a b | .alt a b => by simp [controlArg,sourceExpr,GuardedReplayControl.residual,DependentCaptureFilter.render,controlArg_source M P a,controlArg_source M P b]
   | .star a | .notP a => by simp [controlArg,sourceExpr,GuardedReplayControl.residual,DependentCaptureFilter.render,controlArg_source M P a]
 
 theorem controlArg_plain {n : Nat} (M : Machine n) (bodies : List Arg) (P : List Nat) : ∀ c : GuardedReplayControl.Expr n,
     plain M bodies [P] (controlArg P c)=DependentCaptureFilter.render (GuardedReplayControl.residual P c)
-  | .shift q R => by cases hs : DynamicScannerBinding.resume P q <;> simp only [controlArg,GuardedReplayControl.residual,hs] <;> rfl
+  | .replayQuery => rfl
+  | .shift q R | .literalQuery _ _ q R => by cases hs : DynamicScannerBinding.resume P q <;> simp only [controlArg,GuardedReplayControl.residual,hs] <;> rfl
   | .seq a b | .alt a b => by simp [controlArg,plain,GuardedReplayControl.residual,DependentCaptureFilter.render,controlArg_plain M bodies P a,controlArg_plain M bodies P b]
   | .star a | .notP a => by simp [controlArg,plain,GuardedReplayControl.residual,DependentCaptureFilter.render,controlArg_plain M bodies P a]
 
 theorem controlArg_filter {n : Nat} (M : Machine n) (bodies : List Arg) (P : List Nat) : ∀ (c : GuardedReplayControl.Expr n) (a z : Nat),
     filter M bodies [P] (controlArg P c) a z=
       DependentCaptureFilter.filter [] (observer M) [P] (GuardedReplayControl.residual P c) a z
-  | .shift q R,a,z => by cases hs : DynamicScannerBinding.resume P q <;> simp only [controlArg,GuardedReplayControl.residual,hs] <;> rfl
+  | .replayQuery,_,_ => rfl
+  | .shift q R,a,z | .literalQuery _ _ q R,a,z => by cases hs : DynamicScannerBinding.resume P q <;> simp only [controlArg,GuardedReplayControl.residual,hs] <;> rfl
   | .seq a b,q,z | .alt a b,q,z => by
     simp only [controlArg,filter,GuardedReplayControl.residual,DependentCaptureFilter.filter,
       controlArg_plain M bodies P a,controlArg_filter M bodies P a,controlArg_filter M bodies P b]
