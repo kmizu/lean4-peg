@@ -306,6 +306,45 @@ nullable 実引数の全入力全 clock 未定義、異なる tail／欠けた�
 非有界 user 呼出しはまだ扱わず、tail への入口には全保持値の再照合を要求する。
 任意の PEG prefix と独立複数 source capture、および一般 Par/Seq 一致／分離は未解決である。
 
+`CaptureOriginRewrite` は、本体書換えの正しさを「実際の Par 呼出しが作れる環境」に
+制限しても、文法全体の各 physical 段数の評価一致へ持ち上げる。実引数の成功から、
+各捕捉値が同じ呼出し元入力の prefix であることを導き、その行だけを対応させる。
+任意の架空の環境の行一致や全 table の一致は要求しない。元 first-order 文法の実 table の
+soundness から捕捉条件を導くため、到達可能な行の oracle を新たに仮定しない。
+
+この不変条件を使い、`GuardedReplayIteration` は非有界の query 付き prefix へ進む。
+任意の語方程式 `u ++ w = w ++ v` の下で、実保持値 w が元位置に照合できれば
+`(u; &param0)*; param0` を、捕捉終点での `v*` へ移せると全 partial 結果で証明した。
+空の反復は両側で未定義のままである。u が一文字 c の場合、実捕捉 prefix と最初の
+`c;param0` の成功だけから w が c の反復語であることを導き、v=c を得る。
+最初の照合が失敗すれば prefix の反復は0回で止まり、元位置から全 w を再照合する。
+
+`GuardedReplayCompiler` の raw source 本体は `(c;&param0)*;param0;tail` であり、
+prefix 自体の反復回数に構文由来の上限はない。正規化は最初の `c;param0` を先に検査し、
+成功枝は実 fixed-shift leaf の後で c を貪欲反復して tail へ、失敗枝は直接再照合 leaf の
+後で tail へ進む。この分岐も tail の失敗で選び直さない。有限の実 leaf／tail 構文検査から
+capture-origin 本体書換えを導き、既存の元位置制御・自動 profile compiler へ接続した。
+旧有限 prefix／早期 query／実再帰継続の body family と同じ文法で混在でき、固定一階 Seq の
+全入力観測・元文字列言語・定義／全 clock 未定義まで証明する。
+
+`GuardedReplayExamples` では prefix 反復回数1/2/4と再帰深さ0/1/2を独立に変える。
+同じ user の子は全保持値を二倍に再捕捉し、終了後に親の元の値を再利用する。
+生成 Seq の生実行も直接 kernel 検証した。`a;b*;a` の非 unary 捕捉では最初の query が
+失敗し、0反復＋全値再照合を保つ。固定開始式2つの全入力言語変換、nullable 実引数の
+全入力全 clock 未定義、成功した反復／再照合後の nullable tail の全 clock 未定義、
+不正 tail link の拒否も証明した。generic な残余補題は ab/aba の非可換例で v=ba を使い、
+元の ab をそのまま再開すると誤ることと、空 step の全入力での未定義を確認する。
+この multi-byte 例は補題の検証であり、完成した新 compiler の反復 step は一文字 c である。
+
+架空の保持値 b を aba の元位置に与えると、元反復本体は ab だけ消費する一方、
+無条件に正規化すると最後の a も消費する。これは同じ元位置から b を捕捉できない行であり、
+捕捉不変条件を外した body 書換えが実際に誤る反例として kernel 検証した。
+この証明を任意 table の全環境一致と取り違えない。
+
+非有界の prefix 消費はこの一文字・正の保持値 query 付き反復 family で接続した。
+任意 PEG prefix、保持値に依存する一般の反復／消費 user 呼出し、全保持値の再照合を伴わない
+一般の依存継続、独立複数 source capture、および一般 Par/Seq 一致／分離は未解決である。
+
 断片経路は固定 literal に限らず、入力依存で非有界の区切り scanner prefix を扱う。
 この経路の実引数は G/H で選択する codeword＋a-fragment family とその有限優先選択閉包に限定し、prefix も A に限定する。
 自動 profile 経路は実引数の形を制限せず、対応する入口 family を完全固定 shift／replay 制御木に限定する。

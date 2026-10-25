@@ -1,3 +1,7 @@
+import MacroPeg.CBV.GuardedReplayExamples
+import MacroPeg.CBV.GuardedReplayCompiler
+import MacroPeg.CBV.GuardedReplayIteration
+import MacroPeg.CBV.CaptureOriginRewrite
 import MacroPeg.CBV.RecursiveFinitePrefixExamples
 import MacroPeg.CBV.RecursiveFinitePrefix
 import MacroPeg.CBV.FinitePrefixControlExamples
