@@ -1,3 +1,5 @@
+import MacroPeg.CBV.GuardedReplayControlExamples
+import MacroPeg.CBV.GuardedReplayControl
 import MacroPeg.CBV.RotatedGuardedReplayExamples
 import MacroPeg.CBV.GuardedReplayRotation
 import MacroPeg.CBV.GuardedReplayExamples

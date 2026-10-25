@@ -373,15 +373,47 @@ plain 行に加え、反復残余を読む実 inline filter と継続の product
 全入力全 clock 未定義、反復成功後の nullable 継続の全 clock 未定義、必要 arc 不足と
 空 step の有限拒否も検証する。
 
-これは、完全な有限回転ラベル機械を持つ固定語の正 query 付き反復 family である。
-任意 PEG prefix、各反復で異なる一般の依存 step／消費 user 呼出し、全保持値の再照合を
+固定語一つの反復から、`GuardedReplayControl` は捕捉を保つ step の PEG 制御全体へ広げる。
+原子は `lit u; &param0` であり、seq／優先 alt／notP／star を任意有限の深さに入れ子にできる。
+原子ごとに同じ共通 machine 内の開始状態と完全回転ラベルを有限検査する。各反復で違う語を
+選べる。`Entry.aligned c` の生 source header は、この制御 c の後に全 param0 を再照合する。
+
+核心の `Aligned x w p q` は、実入力に対して `sfx x p = w ++ sfx x q` であることと
+両位置の有効性を記録する。`atom_results` は原子の成功後にも同じ保持値 w が新しい元位置で
+照合できると導く。非可読な原子は有限失敗へ移し、可読な原子は実捕捉 profile が選んだ残余
+literal へ移す。`Results` は成功位置の対応だけでなく None と有限失敗を区別する。
+この関係は連結・優先選択・否定で保存され、`star_results` は元の残り入力長による強い帰納で
+greedy star へ持ち上げる。`p = w.length + q` により、元と残余側の進捗／空成功が一致し、
+nullable step の未定義も保存する。反復回数の有限上限や成功する trace を仮定しない。
+
+`control_results` は構文全体についてこの関係を導き、`header_eq` は最後の全保持値照合を
+外して、捕捉終点からの残余 PEG 制御と全 partial 結果を一致させる。任意の文法・table・
+strategy 間で成立する。新しい controlArg と独立 inline filter の構文一致を証明し、
+plain/product 行、実再帰継続、自動 profile、元位置正規化、固定一階 Seq の全入力観測・
+元文字列言語・physical 定義／全 clock 未定義へ接続した。成功行や捕捉形の oracle は追加しない。
+
+`GuardedReplayControlExamples` の同 user 再帰では、長い abab step と否定 guard 付きの
+短い ab step を各回で選ぶ。捕捉 aba の残余は baba／ba、子の abab では abab／ab となり、
+親の全値へ戻る。ab 単位1/2/3/5と深さ0/1/2、生成 Seq clock8の直接実行、再帰 user 全体を
+別 user の実引数にした product 行の直接実行を kernel 検証した。長い literal が成功しても
+直後の保持値 query が失敗したら短い原子を試す必要があり、`(abab/ab);&param0` とまとめる
+素朴な変換は ababa 上で残り2文字を生じる。正しい guarded alt は全消費する。
+入れ子 `((long*) ; short)*` では内側の貪欲反復の後の失敗を短い反復へ戻さないこと、
+非周期の非有界実捕捉、nullable 実引数の全入力全 clock 未定義、否定原子の空成功を反復する
+制御自身の全 clock 未定義、成功 header 後の nullable 継続、入れ子の不正原子の有限拒否も検証する。
+四状態の別文法は ab／ac という異なる周期を同じ実反復内で混在させ、その source 実行・
+生成 Seq 成功の存在・固定開始式の全入力言語変換を証明する。この大きい生成表の直接実行は
+行わず、直接 Seq 実行の検査は二状態の実再帰／product 文法で行っている。
+
+これは各消費原子の後にも全旧値が照合できる guarded step の PEG 制御である。
+任意 PEG prefix、捕捉の照合を保たない一般の依存 step／消費 user 呼出し、全保持値の再照合を
 伴わない一般の依存継続、独立複数 source capture、および一般 Par/Seq 一致／分離は
 引き続き未解決である。
 
 断片経路は固定 literal に限らず、入力依存で非有界の区切り scanner prefix を扱う。
 この経路の実引数は G/H で選択する codeword＋a-fragment family とその有限優先選択閉包に限定し、prefix も A に限定する。
 自動 profile 経路は実引数の形を制限せず、対応する入口 family を完全固定 shift／replay／
-正 query 付き固定語反復とその有限入口制御木に限定する。
+捕捉の照合を保つ guarded step の PEG 制御とその有限入口制御木に限定する。
 有限状態 scanner compiler との任意混在、任意 PEG prefix／実引数、独立複数捕捉、および
 一般 Par/Seq 一致・分離は依然未解決である。
 
