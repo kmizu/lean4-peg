@@ -8580,3 +8580,40 @@ capture checks for calls requiring safe inputs. Arbitrary PEG prefixes, mixed-fr
 integration, independently captured multiple source arguments, and
 unrestricted first-order Par/Seq class equality or separation remain
 unresolved.
+
+
+## Exact entry-state scanner frontier certificates
+
+`ScannerFrontierCertificate.readable_iff_endpoint` identifies the exact
+resumption condition for an arbitrary captured word w and arbitrary suffix:
+w is readable from the actual scanner entry q iff the original scan reaches
+at least the end of w. `check` tests this condition using the whole-capture
+profile already selected by the generated filters. `check_position` expresses
+it at actual input positions. `RecursiveScannerProductHeader.argument_frontier`
+connects it to every actual source argument success, with arbitrary retained
+values and without a capture safety check.
+
+Both `plain_body` and `product_body` now require readability only from the
+configured entry, rather than Total M w. The generic entry lemmas use
+`entryCheck` on that finite profile; replay entries require no scanner
+frontier. The existing complete compiler derives this weaker certificate
+from its current stronger checks through `entryCheck_of_safe`.
+
+`covers` separately checks a finite simulation between one scanner start
+state and one required target state. Its soundness transports every defined
+source word, and `covers_consumed` transports the exact whole word of an
+actual scan. It requires neither all-state coverage nor convergence of
+relation refinement. `RecursiveScannerProductCapture.scanner_frontier_physical`
+derives this certificate for actual installed scanner rows at every physical
+clock and arbitrary retained environment, by lifting successes monotonically
+to the exact run. No primitive-row safety oracle is an input. A machine that reads b only from state 1 certifies its
+state-1 scanner language for entry 1 while rejecting entry 0 and failing
+the old all-state scanner-language certificate.
+
+This removes an unnecessary hypothesis from the resumption proof and gives
+an exact executable entry certificate. The full recursive compiler's
+argument checks still enforce the stronger Total condition for scanner
+calls. Replacing those checks with entry-indexed recursive capture safety,
+while tracking retained values through every consuming call, remains open.
+No broader all-input compiler theorem or class equality/separation is claimed
+from the local frontier results.

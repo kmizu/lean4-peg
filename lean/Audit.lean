@@ -1,3 +1,4 @@
+import MacroPeg.CBV.ScannerFrontierCertificate
 import MacroPeg.CBV.CaptureInputSafety
 import MacroPeg.CBV.RecursiveScannerProductCapture
 import MacroPeg.CBV.ScannerLanguageSafety
@@ -20408,6 +20409,38 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 #print axioms Shallot.MacroPeg.CBV.SequentialRecursiveScannerExamples.nullable_before_scan
 
 
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontierCertificate.readable_iff_endpoint' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontierCertificate.readable_iff_endpoint
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontierCertificate.check_actual' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontierCertificate.check_actual
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontierCertificate.check_endpoint' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontierCertificate.check_endpoint
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontierCertificate.check_position' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontierCertificate.check_position
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontierCertificate.covers_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontierCertificate.covers_sound
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontierCertificate.covers_consumed' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontierCertificate.covers_consumed
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontierCertificate.state_specific' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontierCertificate.state_specific
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontierCertificate.coverage_specific' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontierCertificate.coverage_specific
+
 /-- info: 'Shallot.MacroPeg.CBV.CaptureInputSafety.without_shape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.CaptureInputSafety.without_shape
@@ -20630,6 +20663,10 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductCapture.frozen_rows
 
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductHeader.entryCheck_of_safe' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductHeader.entryCheck_of_safe
+
 /-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductHeader.argument_capture' depends on axioms: [propext,
  Classical.choice,
  Quot.sound] -/
@@ -20653,6 +20690,10 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductHeader.source_scan_prefix
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductHeader.argument_frontier' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductHeader.argument_frontier
 
 /-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductHeader.plain_body' depends on axioms: [propext,
  Classical.choice,
@@ -21068,3 +21109,9 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ParameterizedCaptureSafety.component_frozen_capture
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductCapture.scanner_frontier_physical' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductCapture.scanner_frontier_physical

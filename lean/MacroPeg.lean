@@ -1,3 +1,4 @@
+import MacroPeg.CBV.ScannerFrontierCertificate
 import MacroPeg.CBV.CaptureInputSafety
 import MacroPeg.CBV.RecursiveScannerProductCapture
 import MacroPeg.CBV.ScannerLanguageSafety

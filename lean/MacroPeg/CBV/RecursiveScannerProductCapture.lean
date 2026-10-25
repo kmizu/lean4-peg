@@ -1,9 +1,39 @@
+import MacroPeg.CBV.ScannerFrontierCertificate
 import MacroPeg.CBV.RecursiveScannerProductHelpers
 
 namespace Shallot.MacroPeg.CBV.RecursiveScannerProductCapture
 open RecursiveScannerProductCompiler
 open RecursiveScannerProductHelpers (grammar)
 open StatefulScanner (Machine)
+
+/-- Entry-specific safety for an actual installed scanner row, at every
+physical clock and arbitrary retained environment. A small-clock success
+is lifted to the exact run; no semantic row premise is supplied. -/
+theorem scanner_frontier_physical {n : Nat} (M : Machine n) (extra : List MRule)
+    (start target : Fin n) (hc : ScannerFrontierCertificate.covers M start target=true)
+    (x : List Char) (s : Strategy) (clock : Nat) (E : List (List Char))
+    (p j : Nat) (hp : p≤x.length)
+    (h : valAt (tblV (grammar M extra) x s clock start.val E) p=some (some j)) :
+    ScannerFrontierCertificate.check
+      (CaptureTransitionProfile.profile (DynamicScannerCapture.observer M) (pre x p j)) target=true := by
+  have hH : start.val<(helperBodies M).length := by
+    rw [RecursiveScannerProductHelpers.helperBodies_length]
+    exact Nat.lt_of_lt_of_le start.isLt (by omega)
+  have henv := RecursiveParserStability.helper_rows_eq (RecursiveScannerProductHelpers.lexical M)
+    (RecursiveScannerProductHelpers.installed M extra) (RecursiveScannerProductHelpers.installed M extra)
+    x s s clock start.val hH E []
+  rw [henv] at h
+  have hlift := ((tblV_le (grammar M extra) x s (show clock≤clock+p+1 by omega)) start.val [] p).eq_of_some h
+  have hrun := StatefulScanner.query_eval M (fun _ => true) (grammar M extra) 0
+    (fun r => by simpa only [Nat.zero_add,StatefulScanner.terminal,if_true] using RecursiveScannerProductHelpers.scanner_rule M extra r)
+    x s p hp (clock+p+1) (by omega) start
+  have hj : (StatefulScanner.run M start (sfx x p)).2.length=j := by
+    have hh := (by simpa only [Nat.zero_add,if_true] using hrun :
+      valAt (tblV (grammar M extra) x s (clock+p+1) start.val []) p=
+        some (some (StatefulScanner.run M start (sfx x p)).2.length)).symm.trans hlift
+    simpa only [Option.some.injEq] using hh
+  rw [←hj,ObservedScanner.consumed_pre M start x p hp]
+  exact ScannerFrontierCertificate.covers_consumed M start target hc (sfx x p)
 
 /-- A primitive's successful physical row is the real scanner run, even
 at small clocks: monotonicity lifts that success to a sufficient clock. -/

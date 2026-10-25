@@ -300,13 +300,15 @@ theorem tables_rows {n : Nat} (M : Machine n) (entries : Entries n) (bodies : Li
     · rw [source_step M entries bodies x k i b hi [w] p hp,
         target_step M entries bodies x k i b hi _ (CaptureTransitionProfile.profile_mem (observer M) (valid M) w)
           none (mode_plain_mem M) [w] j hj]
-      exact (RecursiveScannerProductHeader.entry_plain_body M entries bodies (entries i) b w x p j k k hp hj hcap hw
+      exact (RecursiveScannerProductHeader.entry_plain_body M entries bodies (entries i) b w x p j k k hp hj hcap
+        (RecursiveScannerProductHeader.entryCheck_of_safe M (entries i) w hw)
         (fun z hz => (hBody z hz).1)).symm
     · intro q t hq ht
       rw [target_step M entries bodies x k i b hi _ (CaptureTransitionProfile.profile_mem (observer M) (valid M) w)
           (some (q,t)) (mode_filter_mem M q t hq ht) [w] j hj,
         source_step M entries bodies x k i b hi [w] p hp]
-      exact RecursiveScannerProductHeader.entry_product_body M entries bodies (entries i) b w x p j k k hp hj hcap hw ⟨q,hq⟩ t ht
+      exact RecursiveScannerProductHeader.entry_product_body M entries bodies (entries i) b w x p j k k hp hj hcap
+        (RecursiveScannerProductHeader.entryCheck_of_safe M (entries i) w hw) ⟨q,hq⟩ t ht
         (fun z hz u hu => (hBody z hz).2 u t hu ht)
 
 theorem evaluator_eq {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
