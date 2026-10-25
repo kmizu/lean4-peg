@@ -1,3 +1,5 @@
+import MacroPeg.CBV.ScannerOriginControl
+import MacroPeg.CBV.ScannerOriginControlExamples
 import MacroPeg.CBV.EntryControlScannerExamples
 import MacroPeg.CBV.ScannerReplayResidual
 import MacroPeg.CBV.ScannerReplayResidualExamples
@@ -21478,3 +21480,172 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.EntryControlScannerExamples.nullable_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControl.scope_sound' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControl.scope_sound
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControl.plan_sound' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControl.plan_sound
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControl.ready_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControl.ready_sound
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControl.expand_source' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControl.expand_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControl.original_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControl.original_firstOrder
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControl.original_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControl.original_rule
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControl.core_lookup' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControl.core_lookup
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControl.header_extension' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControl.header_extension
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControl.leaf_call' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControl.leaf_call
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControl.evaluator_of_rows' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControl.evaluator_of_rows
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControl.tables_rows' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControl.tables_rows
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControl.evaluator_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControl.evaluator_eq
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControl.normalized_observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControl.normalized_observations_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControl.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControl.observations_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControl.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControl.language_translation
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControl.defined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControl.defined_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControl.undefined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControl.undefined_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControlExamples.checked' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControlExamples.checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControlExamples.positive_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControlExamples.positive_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControlExamples.positive_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControlExamples.positive_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControlExamples.rollback_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControlExamples.rollback_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControlExamples.rollback_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControlExamples.rollback_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControlExamples.preflight_required' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControlExamples.preflight_required
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControlExamples.failed_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControlExamples.failed_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControlExamples.language' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControlExamples.language
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControlExamples.captured_argument' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControlExamples.captured_argument
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControlExamples.target_returns_origin' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControlExamples.target_returns_origin
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControlExamples.nullable_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControlExamples.nullable_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControlExamples.nullable_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControlExamples.nullable_target

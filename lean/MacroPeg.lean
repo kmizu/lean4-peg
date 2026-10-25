@@ -1,3 +1,5 @@
+import MacroPeg.CBV.ScannerOriginControl
+import MacroPeg.CBV.ScannerOriginControlExamples
 import MacroPeg.CBV.EntryControlScannerExamples
 import MacroPeg.CBV.ScannerReplayResidual
 import MacroPeg.CBV.ScannerReplayResidualExamples

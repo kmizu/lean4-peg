@@ -51,9 +51,35 @@ header 出力 profile は選択で和、guard で tail の集合となり、quer
 誤受理する差も kernel で確認する。
 
 全ての成功する header の消費終点が実 capture 終点以後になる構成であり、
-負 query 単独のように元位置へ空成功で戻る header はここには含まない。
+負 query 単独のように元位置へ空成功で戻る本体は、この入口変換だけでは扱えない。
+その場合は以下の呼出し側正規化を使う。
 任意 PEG prefix、別 compiler との統合、独立複数 capture、および一般一致／分離は
 引き続き未解決である。
+
+`ScannerOriginControl` は、各 unary user の実元本体を、
+`sourceHeader entry; sourceExpr body` という有限 leaf の選択・否定・正先読み guard
+の任意有限制御木 `Plan` として与える。leaf 本体内と実引数内には同じ user 群の
+再帰・相互再帰・任意の Arg の連結／選択／否定／star を許す。
+`normalize` は caller の元位置でまず `&normalizedArg` を評価し、制御木の各 leaf を
+同じ実引数を渡す unary call へ展開する。元 user の引数評価を飛ばさないため、
+引数の失敗が否定 leaf の空成功へ変わることはない。
+
+生成した leaf 規則と元 Plan 規則の実行表を、同じ通常 physical 段数で対応させた。
+共通補助 scanner の全実行行が両実文法拡張で一致することと、元引数の実再捕捉を
+使い、構文帰納と user 段数帰納で対応を導く。`readyCheck` は有限の参照範囲検査のみで、
+成功／行／捕捉形 oracle を要求しない。正規化後の実 core 文法の有限 profile 検査と
+合成して、元実 Plan 文法から固定一階 Seq 文法への全入力 SObs・同じ元文字列言語・
+physical 定義／全 clock 未定義を証明した。
+
+`ScannerOriginControlExamples` では、従来の非有界 `(ab;&aba)*;a` を実 unary call で
+捕捉し、親 `aba`→scanner 側 `b`→子 `ababa` と両親への復帰を確認する。
+別入力 `ababaX` では実引数 `aba` を成功捕捉しても、元本体の負 leaf が
+元の位置へ空成功で戻り、後続が同じ全入力を読める。生成 Seq の実通常表にも
+その元位置への復帰を導いた。preflight を省くと失敗引数が空成功になる差、
+nullable 引数の全入力・全 clock 未定義も kernel で検査した。
+全体本体には capture 終点以後という制約を課さないが、各消費 leaf の入口形式は
+指定した replay／scanner／認証済み shift とその制御である。
+任意 PEG prefix、独立複数 source 捕捉、一般 Par/Seq 一致／分離は未解決のままである。
 
 `ParSimulation.translate source start` は元の文法と開始式だけから一つの固定文法を作る。
 `translate_recognizes` は、全ての元の文字列 `x : List Char` について、
