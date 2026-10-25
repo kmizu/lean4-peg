@@ -266,6 +266,7 @@ def headerEffects {n : Nat} (M : Machine n) (H : ScannerSummary n) (entry : Entr
   match entry with
   | .iterate q R => product (effects M (fun _ _ => []) [P] (rawControlArg (.star (.shift q R)))) [P]
   | .aligned c => product (effects M (fun _ _ => []) [P] (rawControlArg c)) [P]
+  | .scannerIterate q => product (closure (observer M) (H q)) [P]
   | .scan q => H q
   | .shift q R => product [profile (observer M) ((R q).getD [])] [P]
   | .replay | .safeReplay => [P]
@@ -304,6 +305,63 @@ theorem grammar_checked {n : Nat} (M : Machine n) (entries : Entries n) (bodies 
   intro P hP Q hQ
   exact List.contains_iff_mem.mp ((List.all_eq_true.mp ((List.all_eq_true.mp hh.2) P hP)) Q hQ)
 
+
+theorem scanner_iteration_shape {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
+    (H : ScannerSummary n) (hc : scannerCheck M H=true) (start : Fin n)
+    (x v : List Char) (k p q : Nat) (hp : p≤x.length)
+    (h : evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [v]
+      (sourceHeader (.scannerIterate start)) p=some (some q)) :
+    q≤p ∧ ∃ w, profile (observer M) w∈headerEffects M H (.scannerIterate start) (profile (observer M) v) ∧
+      sfx x p=w++sfx x q := by
+  let g := source M entries bodies
+  let T := sourceTable M entries bodies x k
+  have hStep : ∀ p j, p≤x.length → evV g x .callByValuePar T [v] (GuardedScannerIteration.step start) p=some (some j) →
+      j≤p ∧ ∃ u, profile (observer M) u∈H start ∧ sfx x p=u++sfx x j := by
+    intro p j hp hv
+    have he := GuardedScannerIteration.step_position M start g x v .callByValuePar T
+      (fun r z hz => RecursiveScannerProductHeader.source_scan M entries bodies r x k z [v] hz) p j hp hv
+    subst j
+    have hs := RecursiveScannerProductHeader.source_scan_prefix M entries bodies start x k p [v] hp
+    have hl := StatefulScanner.run_length M start (sfx x p)
+    rw [length_sfx x hp] at hl
+    refine ⟨hl,pre x p _,?_,hs.2⟩
+    rw [ObservedScanner.consumed_pre M start x p hp]
+    exact scanner_profiles M H hc start (sfx x p)
+  have hStar : ∀ p q, p≤x.length →
+      evV g x .callByValuePar T [v] (.star (GuardedScannerIteration.step start)) p=some (some q) →
+      q≤p ∧ ∃ u, profile (observer M) u∈closure (observer M) (H start) ∧ sfx x p=u++sfx x q := by
+    intro p
+    induction p using Nat.strongRecOn with
+    | ind p ih =>
+      intro q hp h
+      rw [evV_star] at h
+      cases ha : evV g x .callByValuePar T [v] (GuardedScannerIteration.step start) p with
+      | none => rw [evStar_none ha] at h; cases h
+      | some result => cases result with
+        | none =>
+          rw [evStar_fail ha] at h
+          have he : p=q := by simpa using h
+          subst q
+          exact ⟨Nat.le_refl _,[],closure_nil _ (valid M) _,rfl⟩
+        | some j =>
+          by_cases hj : j<p
+          · rw [evStar_ok ha hj] at h
+            obtain ⟨hjp,u,hu,hs⟩ := hStep p j hp ha
+            obtain ⟨hqj,w,hw,ht⟩ := ih j hj q (Nat.le_trans hjp hp) h
+            exact ⟨Nat.le_trans hqj hjp,u++w,closure_append _ (valid M) _ u w hu hw,by rw [hs,ht,List.append_assoc]⟩
+          · rw [evStar_stuck ha hj] at h; cases h
+  cases hs : evV g x .callByValuePar T [v] (.star (GuardedScannerIteration.step start)) p with
+  | none => rw [sourceHeader,GuardedScannerIteration.header,evV_seq_none hs] at h; cases h
+  | some result => cases result with
+    | none => rw [sourceHeader,GuardedScannerIteration.header,evV_seq_fail hs] at h; cases h
+    | some j =>
+      rw [sourceHeader,GuardedScannerIteration.header,evV_seq_ok hs] at h
+      obtain ⟨hjp,u,hu,ht⟩ := hStar p j hp hs
+      have hv : evV g x .callByValuePar T [v] (.lit v) j=some (some q) := by
+        simpa only [evV,List.getElem?_cons_zero] using h
+      obtain ⟨hqj,hv⟩ := literal_shape g x .callByValuePar T [v] v j q (Nat.le_trans hjp hp) hv
+      exact ⟨Nat.le_trans hqj hjp,u++v,product_mem _ (valid M) _ _ u v hu (by simp),by rw [ht,hv,List.append_assoc]⟩
+
 theorem header_shape {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
     (H : ScannerSummary n) (hc : scannerCheck M H=true) (entry : Entry n)
     (x v : List Char) (k p q : Nat) (hp : p≤x.length)
@@ -317,6 +375,7 @@ theorem header_shape {n : Nat} (M : Machine n) (entries : Entries n) (bodies : L
         (.lit v) p=some (some q) := by simpa only [sourceHeader,evV,List.getElem?_cons_zero] using h
     obtain ⟨hq,hs⟩ := literal_shape _ x .callByValuePar _ [v] v p q hp hl
     exact ⟨hq,v,by simp [headerEffects],hs⟩
+  | scannerIterate start => exact scanner_iteration_shape M entries bodies H hc start x v k p q hp h
   | iterate start R =>
     have hs := output_shape_noUser M entries bodies (fun _ _ => []) x _
       [profile (observer M) v] [v] (DependentCaptureFilter.environment_accurate _ _)

@@ -172,7 +172,7 @@ def machineCheck {n : Nat} (M : StatefulScanner.Machine n) (alphabet : List Char
   (List.finRange n).all (fun q => (M.arcs q).all (fun cr => alphabet.contains cr.1))
 
 def headerLiteralCheck {n : Nat} (alphabet : List Char) : Entry n → Bool
-  | .replay | .safeReplay | .scan _ => true
+  | .replay | .safeReplay | .scan _ | .scannerIterate _ => true
   | .shift q R => ((R q).getD []).all (fun c => alphabet.contains c)
   | .iterate q R => literalCheck alphabet (rawControlArg (.star (.shift q R)))
   | .aligned c => literalCheck alphabet (rawControlArg c)
@@ -213,6 +213,17 @@ theorem header_domain {n : Nat} (M : StatefulScanner.Machine n) (alphabet : List
     headerLiteralCheck alphabet e=true → headerEffects M (scannerSummary M alphabet) e P⊆domain (observer M) alphabet
   | .replay,_ | .safeReplay,_ => by intro Q hQ; obtain rfl := List.mem_singleton.mp hQ; exact hP
   | .scan _,_ => fun _ h => h
+  | .scannerIterate q,_ => by
+    intro Q hQ
+    obtain ⟨A,hA,hQ⟩ := List.mem_flatMap.mp hQ
+    obtain ⟨B,hB,rfl⟩ := List.mem_map.mp hQ
+    have hBP : B=P := List.mem_singleton.mp hB
+    subst B
+    apply multiply _ (DynamicScannerCapture.observer_valid M) alphabet A P _ hP
+    exact FiniteProfileClosure.closure_subset _ (DynamicScannerCapture.observer_valid M)
+      _ _ (valid _ (DynamicScannerCapture.observer_valid M) alphabet)
+      (nil_mem _ (DynamicScannerCapture.observer_valid M) alphabet) (fun _ h => h)
+      (fun P hP Q hQ => multiply _ (DynamicScannerCapture.observer_valid M) alphabet P Q hP hQ) hA
   | .shift q R,h => by
     intro Q hQ
     obtain ⟨A,hA,hQ⟩ := List.mem_flatMap.mp hQ
@@ -245,6 +256,10 @@ theorem header_valid {n : Nat} (M : StatefulScanner.Machine n) (alphabet : List 
     UniversalCaptureProfiles.AllIn (observer M) (headerEffects M (scannerSummary M alphabet) e P)
   | .replay | .safeReplay => by intro Q hQ; obtain rfl := List.mem_singleton.mp hQ; exact hP
   | .scan _ => valid _ (DynamicScannerCapture.observer_valid M) alphabet
+  | .scannerIterate q => UniversalCaptureProfiles.product_all _ _ _
+      (UniversalCaptureProfiles.closure_all _ (DynamicScannerCapture.observer_valid M) _
+        (valid _ (DynamicScannerCapture.observer_valid M) alphabet))
+      (by intro Q hQ; obtain rfl := List.mem_singleton.mp hQ; exact hP)
   | .shift q R => UniversalCaptureProfiles.product_all _ _ _
       (by intro Q hQ; obtain rfl := List.mem_singleton.mp hQ; exact CaptureTransitionProfile.profile_mem _ (DynamicScannerCapture.observer_valid M) _)
       (by intro Q hQ; obtain rfl := List.mem_singleton.mp hQ; exact hP)

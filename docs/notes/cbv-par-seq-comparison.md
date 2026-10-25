@@ -16,6 +16,120 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## prefix入口で新しい語を作る実user呼出し
+
+`ChangedWordPrefix` は保持値転送を `R(w ++ V(w))` へ広げる。
+Vはliteral／parameter／sequenceで作る語式であり、実際のcalleeは新しい語全体を
+捕捉する。親は元のwを保持する。calleeが新しい捕捉全体の再照合から始まる場合、
+その本体を `w; V(w); B[w ++ V(w)]` に展開し、既存の停止検査付き反復回転と
+固定Seq compilerへ接続する。valueの有限paletteや捕捉語の形の注釈は渡さない。
+
+`WordCallUnfolding` は既存 `WordArguments.word_eval` を再利用する。任意Word引数Aと
+任意一階callee本体Bについて、実Par `R(A)` の通常clock k+1は、clock kでの
+`&A; B[param0 := A]` と全partial結果が等しい。代入は実引数の内部まで行い、
+calleeの範囲外parameterは親のparameterへ漏らさず失敗へ写す。引数の新しい語が
+実入力と一致するというpreflightは一般には必要である。
+
+低層の展開は任意のWord引数を扱うが、今回の最終Seq接続はAが親のwから始まる場合に
+限る。`WordPrefixInlining` は新語全体の代入・先頭wのfactor・停止条件を証明し、
+`ChangedWordPrefix.check` が実calleeのarity/bodyと展開後caller本体の一致、VのWord
+構文を有限検査する。既存の構文条件と合わせ、全入力の固定一階Seq元文字列言語、
+有限観測・有限失敗・全clock未定義を保存する。通常clockは元k≤先k、先k≤元2kで対応する。
+
+実例のprefix自体が `R(ww)` または `R(wb)` で新しい保持値を作り、RからFへその
+新語の2倍を再捕捉して相互再帰する。前者は親2文字→R4文字→子F8文字→R16文字→
+子F32文字、後者は親ab→Rのabb→子Fのabbabbとなる。深さ0/1/2の元実行と、
+深さ1の生成Seqを両引数形式について通常clock12で直接実行し、短い新語／親復帰の失敗もkernel検証した。
+空捕捉の倍長prefixは全入力・全通常clockで元／Seqとも未定義である。
+
+Word条件の外では単純代入は誤る。Aが `a / b`、Bが `param0; param0`、入力がabなら、
+元は最初に捕捉したaの2回目が失敗するが、代入先はaのあとbを選び直して成功する。
+この反例とcheckerの拒否も検証した。これは代入手法の限界であり、言語クラスの分離ではない。
+
+検証は全1100 jobs（Auditを含む）、関連995定理の標準Lean公理／公理なしの依存検査、
+新規42guard。入力依存の選択・star・user呼出しを含む任意PEG引数、親のwを先頭に
+持たない新語の最終Seq接続、先頭再照合のないcallee、独立複数捕捉、および一般の
+Par/Seq一致・分離は引き続き未解決である。
+
+## 保持値を転送する消費user prefixを展開して接続
+
+`R(param0)` は実際の一階Par呼出しであり、現在の保持値を元位置から再捕捉して
+calleeへ渡す。`ForwardedCallUnfolding` は、calleeの自由parameter参照が0だけという
+有限構文条件から、通常clock k+1のその呼出しと、clock kの `&param0; body(R)` の
+全partial結果が等しいことを証明する。任意のcaller環境を先頭保持値だけのcallee
+環境へ射影できることを、実引数評価も含めて構文帰納で示す。bodyが独立でも、
+引数preflightは一般には省けない。
+
+`BoundedBodyRewrite` は、このように呼出し段数を消す規則変換を扱う。
+元の通常clock kの実表は先のclock k以下、先のclock kの実表は元のclock 2k以下となる。
+同clockの表一致を仮定せず、全有限観測・有限失敗・全clock未定義を保存する。
+`ExpressionContext` はsequence／優先選択／否定／starの下へ情報順序の対応を持ち上げ、
+途中の位置の妥当性を実物の表のrange不変量から導く。
+
+`ReplayCallInlining` と `FoldedUserPrefix` は、calleeが全保持値の再照合から始まる
+場合を、実規則のarity・body一致・parameter範囲を調べる有限検査で扱う。
+`R(w) := w; B(w)` を呼ぶ元本体 `(R(w))*; w; tail` は、
+`(w; B(w))*; w; tail` へ展開できる。既存の `LeadingReplayStar` の
+`(w B)* w = w (B w)* !B` という停止検査付き回転と、再帰continuation compilerへ
+接続する。Bは単なるscannerではなく、fresh引数を捕捉する実user再帰・相互再帰と
+親の保持値再利用を含められる。calleeがcallerへ戻る呼出しも許し、非再帰性や
+意味論的な成功・行oracleを仮定しない。最終Seq文法は固定され、入力文字列を変更しない。
+
+実例ではFの反復中にRへ保持値abを転送し、RからFへ新しいababを渡す。
+さらに深さ0/1/2/3で保持値長2/4/8/16を使い、各親へ全保持値を再照合して復帰する。
+生成Seqの相互再帰を通常clock12で直接kernel実行し、短い子・親の再照合失敗も確認した。
+展開前がclock1で未定義、展開後が同clockで成功する例を持つため、同clock表一致では
+このpassを正当化できない。nullableな実user prefixは全入力・全clockで元／Seqとも
+未定義であり、非replay callee、不正parameter範囲・同一caller/calleeのfoldを拒否する。
+
+検証: 全1095 jobs（Auditを含む）と、関連953定理の標準公理／公理なしの依存検査。
+新規48定理をguardで追加検査した。元・先の通常clockは同一とは限らない。
+保持値転送だけという条件は上のWord引数変換で一部解消した。任意PEG引数や
+再照合より前に消費する任意callee、および一般Par/Seq一致・分離は未解決である。
+
+## 長さ可変 scanner を保持値の照合付きで反復する入口
+
+`Entry.scannerIterate q` は、実補助 scanner を呼ぶ生の入口
+`(scan(q); &param0)*; param0` を扱う。固定 literal prefix の列挙ではなく、
+各反復が scanner の読める長さ全体を消費する。捕捉値 `w` を q から読んで
+実際に到達する状態を r とすると、捕捉終点での Seq 入口は
+`(scan(r); param0)*` になる。scanner が終わる絶対位置は元・先で同じであり、
+元の零幅 query と先の全保持値消費が位置対応を次の反復へ保つ。
+空捕捉と零消費 step も含む partial-result 対応から、nullable 未定義を保存する。
+
+`GuardedScannerIteration` の位置対応を、実コンパイル済み補助規則に対する
+`GuardedScannerFilter`、再帰 plain/product 行の同時帰納、元 header の出力 profile
+検査へ接続した。元の反復の消費 profile は H(q) の有限閉包と最終全保持値との積で
+覆う。最終的な定理に補助行や再帰行の意味論的 oracle はない。
+
+`ReadableScannerProfiles` は scanner の遷移文字から alphabet を集め、その生成
+profile domain を q からの正確な可読性で絞り、H(q) を作る。元の優先遷移で
+各 listed arc が実際に有効であることを有限検査し、scanner の再帰出力検査を証明する。
+異なる到達先を持つ同文字重複 arc はこの frontend では拒否する。
+`ScannerLoopCompiler` は反復する user と、新しい scanner 捕捉を返す getter user
+からなる元テンプレートの H/C/A を構成する。入力は実機械・開始状態・tail 構文だけで、
+捕捉語の palette や手書き出力集合を渡さない。tail の有限参照／profile 検査から、
+全入力の固定一階 Seq 元文字列言語、通常 physical 定義／全 clock 未定義が得られる。
+alphabet は scanner の文字だけでよく、tail の文字や入力全体の所属は要求しない。
+
+`ScannerLoopExamples` は q0 が a、q1 が b を読む部分機械を使う。全 k の `a b^k`
+が可読であり、親 ab・長さ可変の中間 abbb・子 a・親 ab の復帰を実行する。
+単純な反復と親子再帰の生成 Seq 文法を通常 clock12 で直接 kernel 検証する。
+捕捉後の tail 失敗を保持し、非可読 capture、不正参照、無効な優先 arc を拒否する。
+`ScannerLoopCaptureExamples` は全 k の `a b^k` を実元 user が通常 physical clock で
+捕捉することと、捕捉長が非有界なことを証明する。`ScannerLoopUndefined` は alphabet
+外の X 上で空捕捉となる実 root が、元・先とも全通常 clock で未定義と証明する。
+
+この入口は無界長の独立 scanner prefix を反復へ追加するものである。
+一般の消費する parameterized user prefix、全再照合を伴わない任意依存継続、
+独立複数捕捉、および一般 Par/Seq 一致／分離は未解決である。
+
+検証: 全 `lake build` 1088 jobs（Auditを含む）成功。関連905定理の依存公理は
+標準Lean公理または公理なしで、新規55定理には `#guard_msgs` による依存検査を追加した。
+非可読 capture の検査を外すと、実元のnullable未定義が実先の有限失敗へ変わる反例も検証した。
+
+## 既存の有限prefixと呼出し元制御
+
 固定文字列を消費してから保持値を再照合する入口も、走査・直接再照合と
 同じ `RecursiveScannerProductCompiler` へ統合した。`Entry.shift q R` の元入口は
 `lit (R q); param0` で、生成先は実捕捉の終点から `lit (R r)` を消費する。
