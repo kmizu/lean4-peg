@@ -1,3 +1,11 @@
+import MacroPeg.CBV.MixedForwardingCompiler
+import MacroPeg.CBV.MixedForwardingEvaluation
+import MacroPeg.CBV.MixedForwardingCalls
+import MacroPeg.CBV.MixedForwardingHead
+import MacroPeg.CBV.MixedForwardingCorrespondence
+import MacroPeg.CBV.MixedForwardingChecks
+import MacroPeg.CBV.MixedForwardingReset
+import MacroPeg.CBV.MixedForwardingExamples
 import MacroPeg.CBV.MixedGrowthCompiler
 import MacroPeg.CBV.MixedGrowthEvaluation
 import MacroPeg.CBV.MixedGrowthCalls
@@ -27473,3 +27481,309 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ZeroResetCorrespondence.body_bounds_of_zero
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingCompiler.selected_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingCompiler.selected_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingCompiler.original_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingCompiler.original_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingCompiler.selected_valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingCompiler.selected_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingCompiler.source_rule' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingCompiler.source_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingCompiler.original_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingCompiler.original_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingCompiler.source_firstOrder' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingCompiler.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingCompiler.metadata_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingCompiler.metadata_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingCompiler.blocks_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingCompiler.blocks_length
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingCompiler.blocks_rule' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingCompiler.blocks_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingCompiler.target_rule' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingCompiler.target_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingCompiler.helper_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingCompiler.helper_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingCompiler.origin_mode' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingCompiler.origin_mode
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingCompiler.mode_positive' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingCompiler.mode_positive
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingCompiler.code_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingCompiler.code_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingCompiler.target_firstOrder' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingCompiler.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingCompiler.rule_count' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingCompiler.rule_count
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingEvaluation.leaf_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingEvaluation.leaf_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingEvaluation.evaluator' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingEvaluation.evaluator
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingEvaluation.view_evaluator' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingEvaluation.view_evaluator
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingCalls.prefix_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingCalls.prefix_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingHead.frame_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingHead.frame_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingHead.evaluator' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingHead.evaluator
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingCorrespondence.tables_rows' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingCorrespondence.tables_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingCorrespondence.evaluator_eq' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingCorrespondence.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingCorrespondence.undefined_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingCorrespondence.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingCorrespondence.decide_eq' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingCorrespondence.decide_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingCorrespondence.normalized_observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingCorrespondence.normalized_observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingCorrespondence.physical_bounds' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingCorrespondence.physical_bounds
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingCorrespondence.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingCorrespondence.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingCorrespondence.original_undefined_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingCorrespondence.original_undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingCorrespondence.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingCorrespondence.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingChecks.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingChecks.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingChecks.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingChecks.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingReset.pair_lookup' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingReset.pair_lookup
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingReset.normalized_rule' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingReset.normalized_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingReset.valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingReset.valid
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingReset.related' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingReset.related
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingReset.physical_bounds' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingReset.physical_bounds
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingReset.rule_count' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingReset.rule_count
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingReset.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingReset.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingReset.undefined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingReset.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingReset.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingReset.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingExamples.checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingExamples.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingExamples.firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingExamples.firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingExamples.mixed_source' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingExamples.mixed_source
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingExamples.mixed_target' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingExamples.mixed_target
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingExamples.nested_source' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingExamples.nested_source
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingExamples.nested_target' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingExamples.nested_target
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingExamples.early_reset' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingExamples.early_reset
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingExamples.clock_difference' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingExamples.clock_difference
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingExamples.short_parent_rejected' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingExamples.short_parent_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingExamples.scope_restored' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingExamples.scope_restored
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingExamples.reset_fallback' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingExamples.reset_fallback
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingExamples.reset_preflight' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingExamples.reset_preflight
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingExamples.cycle_preflight' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingExamples.cycle_preflight
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingExamples.private_helper' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingExamples.private_helper
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingExamples.all_observations' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingExamples.all_observations
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingExamples.cycle_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingExamples.cycle_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingExamples.cycle_source' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingExamples.cycle_source
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingExamples.cycle_target' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingExamples.cycle_target
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingExamples.origin_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingExamples.origin_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingExamples.origin_source' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingExamples.origin_source
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingExamples.origin_target' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingExamples.origin_target
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingExamples.short_origin' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingExamples.short_origin
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingExamples.origin_observations' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingExamples.origin_observations
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingExamples.committed_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingExamples.committed_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingExamples.committed_choice' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingExamples.committed_choice
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingExamples.dependent_reset_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingExamples.dependent_reset_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedForwardingExamples.unit_head_to_origin_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedForwardingExamples.unit_head_to_origin_rejected

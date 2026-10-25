@@ -16,6 +16,44 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## factor-1の経路と循環も混合Seq compilerへ接続
+
+`MixedForwardingCompiler`から`MixedForwardingCorrespondence`は、下記の混合compilerを
+factor-1まで拡張する。`Entry.growth`は倍率1以上を許し、`Entry.origin`は従来どおり
+任意のclosed/replay Planを持つ。正倍率headの既知calleeは正倍率entryであることを
+要求する。tail/fallback、origin part、開始式、新しいPEG引数は任意の一階式でよく、
+両種類のentryの相互callbackを許す。
+
+実original文法から正倍率entryだけを選択し、`SelectedForwardingNormalization`で有限head
+展開する。factor-1 edgeは選択した実正倍率規則に閉じることを静的に確認する。
+非選択origin規則は本体を保つ。calleeごとのparameter scopeと選択の括弧を保持し、
+閉じたfactor-1循環はpreflight後の非消費未定義へ写す。targetの有限head codeは同じ
+経路と循環を使い、倍率2以上に達したところで既存の複数等値引数へ移る。
+metadata上のcodeの一階性は構文補題だけに使い、行の意味は実混合文法のtblVで証明する。
+
+`tables_rows`は展開後sourceの全正倍率view行とorigin Plan行を同時に閉じ、
+全一階式がtarget Seqと同じ通常clockで一致する。`observations_iff`と
+`original_undefined_iff`は展開前original文法に戻り、全残余・有限失敗・全clock未定義を
+保存する。targetはn(n+1)+parts.length個の固定規則であり、
+original clock k ≤ Seq clock k ≤ original clock (n+2)kを満たす。
+
+`MixedForwardingReset`は、元の`MultiplyingPrefixCompiler.source rs`に対して
+倍率1以上を正倍率entryへ、倍率0を一段展開したorigin Planへ自動変換する。
+既知reset calleeの後続は親parameterから独立であることを検査する。
+source一階性と有限`check`から、n(n+3)規則の固定Seq文法、元文字列の言語・観測・
+未定義保存、source clock k ≤ Seq clock k ≤ source clock 2((n+2)k)を得る。
+入力長、実捕捉値、再帰深度は規則集合や有限展開深度を増やさない。
+
+`MixedForwardingExamples`は同じraw文法にfactor-1経路、`ab → (ab)^3 → (ab)^9`の
+実成長、倍率0のcalleeと`c*`の新捕捉、別の`x`を渡した再帰、2規則factor-1循環を置く。
+生成Seqを通常clock16で実行し、捕捉終端より前のreset復帰、成長した親値とforwarding親値の
+復元、長さ0/1/4の新捕捉、短い親値の拒否を確認する。明示的origin Planとforwardingの
+相互callbackも検証する。factor-1循環の空引数呼出しは全入力全clockでsource/targetとも
+未定義である。preflight失敗、同clockのsource/target差、committed choice、helper privacyも確認する。
+
+正倍率headからorigin entryへの直接呼出し、親保持値に依存するreset後続、独立複数捕捉、
+一般のPar/Seq一致・分離は未解決である。
+
 ## 成長headと原点分岐を同じ再帰文法からSeqへ変換
 
 `MixedGrowthCompiler`から`MixedGrowthCorrespondence`は、それまで別文法だった
@@ -49,7 +87,7 @@ source clock k ≤ Seq clock k ≤ source clock 2k、全観測と全clock未定�
 長さ0/1/4の新捕捉、親値を短く取り違えた入力の拒否、preflightの失敗・nullable未定義、
 reset fallback、helper privacy、全入力全clockの空引数自己再帰未定義をkernel検証する。
 
-factor-1 forwardingを含む混合sourceの統合、成長headから原点calleeへの直接呼出し、
+factor-1 forwardingを含む混合sourceは上記の拡張で対応した。成長headから原点calleeへの直接呼出し、
 親保持値に依存するreset後続、独立複数捕捉、一般のPar/Seq一致・分離は未解決である。
 
 ## 原点へ戻る空引数calleeをSeqへ接続
@@ -93,8 +131,8 @@ arityを保ち、そのmetadataは本体を記述する必要がない。補題�
 tblVであり、metadataから作った別文法の行対応を仮定しない。
 原点独立分岐と正倍率headの相互呼出しを含む例、選択したcycleと非選択0引数規則の
 共存、元のarity・観測・全clock未定義の保存を検証する。
-これは混合文法のPar→Par正規化である。上記の混合Seq compilerとの接続に必要な
-factor-1 headの統合はまだ構成していない。
+これは混合文法のPar→Par正規化であり、上記のfactor-1対応混合Seq compilerの前段として
+実際に接続されている。
 
 ## 空捕捉の実呼出しを任意の一階文法で0引数化
 
