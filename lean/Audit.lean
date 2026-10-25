@@ -1,3 +1,5 @@
+import MacroPeg.CBV.FinitePrefixControlExamples
+import MacroPeg.CBV.FinitePrefixControl
 import MacroPeg.CBV.AutomaticOriginControlExamples
 import MacroPeg.CBV.AutomaticOriginControl
 import MacroPeg.CBV.UniversalCaptureProfileExamples
@@ -22657,3 +22659,159 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.AutomaticOriginControlExamples.invalid_source_checks' depends on axioms: [propext] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.AutomaticOriginControlExamples.invalid_source_checks
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControl.choose_eval' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControl.choose_eval
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControl.read_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControl.read_sound
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControl.copy_sound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControl.copy_sound
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControl.literal_append' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControl.literal_append
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControl.success_word' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControl.success_word
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControl.output_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControl.output_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControl.compile_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControl.compile_eval
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControl.body_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControl.body_eval
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControl.raw_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControl.raw_firstOrder
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControl.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControl.source_firstOrder
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControl.source_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControl.source_rule
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControl.related' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControl.related
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControl.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControl.observations_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControl.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControl.language_translation
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControl.defined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControl.defined_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControl.undefined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControl.undefined_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControlExamples.checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControlExamples.checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControlExamples.raw_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControlExamples.raw_rule
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControlExamples.committed_query' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControlExamples.committed_query
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControlExamples.value_dependent_prefix' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControlExamples.value_dependent_prefix
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControlExamples.capture_selects_length' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControlExamples.capture_selects_length
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControlExamples.same_user_probe' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControlExamples.same_user_probe
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControlExamples.variable_capture_samples' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControlExamples.variable_capture_samples
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControlExamples.language' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControlExamples.language
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControlExamples.negative_language' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControlExamples.negative_language
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControlExamples.nullable_source' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControlExamples.nullable_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControlExamples.nullable_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControlExamples.nullable_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControlExamples.missing_prefix_link' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FinitePrefixControlExamples.missing_prefix_link

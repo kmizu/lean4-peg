@@ -250,6 +250,34 @@ capture より短く消費して終わる本体も含め、任意の実 Arg と�
 これは元位置に戻る本体と任意実 Arg の接続であり、prefix 自体は認証済み固定 literal に
 限られる。一般の PEG 本体 prefix や独立複数 source capture の変換はまだ未解決である。
 
+`FinitePrefixControl` は、prefix を一つの固定 literal から、有限消費の制御式へ広げる。
+消費葉は literal、保持値への正負 query と seq／優先 alt／notP は任意有限の深さに入れ子に
+できる。prefix の途中の旧値 query が枝を変えるため、成功する消費語や長さは旧値に依存してよい。
+CPS 変換は、既に消費した語を静的な word offset として持ち、各 query をその語に対応する
+shift/replay leaf で元位置から検査する。選択の test は継続前の prefix だけを評価し、
+一度成功した枝を後の query／継続の失敗や未定義で選び直さない。
+
+成功した prefix の消費語が有限の構文由来候補に入り、連結ではその語を正確に連結することを
+証明した。この制約は prefix の消費に掛かり、実引数の捕捉長／語彙には掛からない。
+有限 `checkAt` は、使用する各 word offset の独立 read leaf と shift/replay copy leaf を
+実構文で検査する。続いて既存の元位置変換と自動 profile 検査へ合成する。
+任意 table・環境・strategy で CPS の全 partial 対応を証明し、実元規則を書き換えて
+全入力 SObs・固定一階 Seq 元文字列言語・定義／全 clock 未定義へ接続した。
+source の unary 呼出しの実 Arg は引き続き任意の連結・反復・query・user 再帰を許す。
+
+`FinitePrefixControlExamples` の実元規則は `(aa / a); &param0` そのものである。
+aaa から aa を捕捉すると、aa の選択後に全コピー query が失敗する。正しい生成先も拒否し、
+query を枝へ素朴に分配した本体だけが a へ戻って誤成功する。別の prefix
+`a; !param0; a / a` は、同じ aaa 入力でも旧値 aa なら1文字、旧値 aaa なら2文字を
+成功消費する。旧値依存の prefix 長を実 source／target で kernel 検証した。
+消費 prefix を含む notP、実引数内から同じ user への空捕捉 query、外側の全 aa 捕捉への
+復帰、入力依存の `a;b*;a` 捕捉、元位置の空成功、nullable 引数の全入力全 clock 未定義、
+欠けた offset link の拒否も確認し、固定開始式2つに全入力言語変換を適用した。
+
+この経路は固定 literal 一個への制限を外したが、prefix の消費は構文から有限に列挙できる
+必要がある。prefix の consuming star／非有界の user 呼出し、一般の PEG prefix、
+独立複数 source capture、および一般 Par/Seq 一致／分離はまだ未解決である。
+
 断片経路は固定 literal に限らず、入力依存で非有界の区切り scanner prefix を扱う。
 この経路の実引数は G/H で選択する codeword＋a-fragment family とその有限優先選択閉包に限定し、prefix も A に限定する。
 自動 profile 経路は実引数の形を制限せず、対応する入口 family を完全固定 shift／replay 制御木に限定する。

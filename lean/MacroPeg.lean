@@ -1,3 +1,5 @@
+import MacroPeg.CBV.FinitePrefixControlExamples
+import MacroPeg.CBV.FinitePrefixControl
 import MacroPeg.CBV.AutomaticOriginControlExamples
 import MacroPeg.CBV.AutomaticOriginControl
 import MacroPeg.CBV.UniversalCaptureProfileExamples
