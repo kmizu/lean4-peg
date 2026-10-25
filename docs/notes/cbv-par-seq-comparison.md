@@ -16,6 +16,49 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 親を正に消費する actual と、実再帰 producer の消費効果
+
+`RetainedCaptureEffects` と `ConsumingPatternChecks/Correspondence/Compiler` は、コピー actual の
+正の消費経路へ `parent` と parameterized client 呼出しを許す。
+client ごとの「親語が alphabet 内である必要がある」有限 Bool 列を検査し、その client への全呼出しで
+実引数の捕捉語が条件を満たすことを構文から確認する。
+root は親を持たず、その client に入る初回捕捉も検査する。親を必要としない client は任意の親語を保持できる。
+この Bool 列は実行時の文字列・終点・停止性を教える oracle ではなく、元の全呼出しと照合される有限条件である。
+
+戻り値効果は、**新しい引数語が alphabet 内なら、先頭再照合と tail が消費する語も alphabet 内**という条件付きの性質である。
+client tail から候補 Bool 列を計算し、有効な候補すべての閉包を有限検査する。
+`RetainedCaptureEffects.evaluator_safe` と `physical_rows` は、実際の source 行を clock で帰納し、この性質を導出する。
+`captured_alpha` が実捕捉語の alphabet 条件を与えるため、実引数内の client 呼出しも正の producer として使える。
+コピー規則の本体は区切りを消費するので、この戻り値効果を持つとは判定せず、正の actual に入れると拒否する。
+成功時の消費だけを述べ、停止・成功・非空出力を要求しない。
+
+`ConsumingPatternCorrespondence.Rows` は client の親条件を伴う実表対応で、条件が必要な呼出しの実捕捉からその条件を証明する。
+新しい検査から全元入力の同 clock 観測・言語・残余・有限失敗・有限実行存在・全 clock 未定義を保存する。
+既存の元/生成 grammar 構成を再利用し、親の実語や新捕捉を有限 view へ縮めない。
+独立 nullary helper 群、unary client の先頭再照合、任意 arity の共有 param+d コピー本体は引き続き使う。
+入力自体を alphabet 内へ制限したり、最大 scanner frontier や語長上限を要求したりはしない。
+
+主例は親 `w=a^n` に対して、正の actual 列
+`[balanced, parent, producer(parent), short]` が実際に
+`[a^(2n)b c^(2n), a^n, a^(2n), a^(2n)b]` を捕捉する。
+producer の source 本体は `z; ((z; !"a") / ("a"; producer(z)))` という実再帰で、生成側は先頭 z を除いた本体。
+n の例では2番目の z が残る親語を消費して `ww` を返し、空引数なら任意長の a-run を再帰で返す。
+計算した戻り値効果は `[false,true]`、親条件は `[true,false]`。
+source arity `[0,0,1,1,4]` から固定 Seq `[0,0,1,1,1,1,1,1]` を生成する。
+
+`ConsumingPatternProofs.actual_captures` は任意 n・任意後続についてこの実 actual 捕捉列を導出する。
+`source_and_target_all_trees` は任意親長・任意再帰深さで子の実捕捉 `w→ww` と帰還後の親復帰を含む双方受理を証明する。
+`four_unbounded` は任意の固定上限を4つの捕捉長が同時に超えることを示す。
+`recursive_producer_source/capture/target` は空引数から返る任意長 a^m の実再帰消費・実捕捉を証明する。
+直接 kernel 実行では親の正消費・producer の返却語・深さ0/1/2・空親・短子/子値漏出の拒否を確認した。
+旧 query-only 検査はこの実宣言を拒否する。親条件の削除、不正な初回 `a#` 捕捉、区切りを消費する client の positive actual 化を拒否し、
+条件を要求しない producer を通常呼出しする場合には `a#` 親を許すことも確認した。
+
+戻り値効果 true の停止不能 client を正の actual に置いても検査は受理し、元・生成側は全入力・全 clock で未定義のまま対応する。
+全実引数の元順 preflight を省くと、先のコピー不一致で有限失敗へ変わる反例も検証した。
+複数の親保持語、先頭再照合なしの任意 client、区切り付き parameter 列以外の任意複数値本体、
+および Par/Seq 言語クラス全体の一致・分離は引き続き未解決である。
+
 ## 一つの実保持語に依存する実引数と、子の捕捉後の親復帰
 
 `ParentPatternTransfer` と `RetainedPatternSyntax/Correspondence/Compiler` は、一つの親保持語を
@@ -50,8 +93,8 @@ copy の捕捉語にだけ、区切りを含まない条件を課す。
 
 残る条件は、独立した nullary helper 群、先頭で自分の新捕捉を再照合する unary clients、
 一つの選択した arity/区切り/添字列を共有する param+d 列のコピー本体である。
-コピー actual の正の消費経路で親語や unary client を使うことは現在の capture effect 検査では許さず、
-先読み・その結果による producer 選択を扱う。client の通常の本体・呼出し引数では親語を直接消費できる。
+旧 RetainedPattern のコピー actual の正の消費経路では親語や unary client を許さず、
+先読み・その結果による producer 選択を扱う。上記 ConsumingPattern は有限検査で親の条件と戻り値効果を接続してこの制限を緩める。client の通常の本体・呼出し引数では親語を直接消費できる。
 複数の親保持語を任意本体へ同時に渡す一般変換、先頭再照合なしの任意 client、任意の複数保持値本体と、
 Par/Seq 言語クラス全体の一致・分離は引き続き未解決である。
 
@@ -11386,3 +11429,14 @@ The full raw-grammar/root checker validates the independent nullary helper prefi
 Symbolic source derivations establish the actual tuple [a^n b c^n,a^n b,a^n,empty] after substituting the retained parent a^n for every n and every following suffix. Both grammars accept every initial parent length and every recursive nesting depth, with children capturing ww from the actual argument w;w and parent continuations replaying their own original w. True parent/copy-actual cycles and nullable retained-parent stars stay undefined on every input and clock; preflight omission gives finite failure before a divergent actual. Invalid root parent scope, client addresses and source declarations are rejected.
 
 Unary clients still require leading replay. The copy header still has one selected separator and parameter-occurrence list; positive fresh-capture paths must be checked delimiter-free. Parent replay or unary clients inside such positive paths are currently rejected, while zero-width queries and query-driven producer choices are supported. Independent nullary helpers remain available for consuming producers. Arbitrary multi-parent clients, arbitrary multi-value callee bodies and the full language-class equality/separation question remain unresolved.
+
+
+### Positive parent consumption and recursive returned-word effects
+
+RetainedCaptureEffects proves checked source consumption effects for real unary clients. Under an alphabet-safe actual captured word, an enabled client replays that word and its tail consumes only alphabet characters. Candidate return flags are computed from source tails and independently checked for recursive closure; actual source rows satisfy the certificate by physical-clock induction. Successful output can be empty or unbounded, and clients can diverge. ConsumingPatternChecks validates selective parent-alphabet requirements on every client call, including initial root captures. Copy actuals may positively replay the parent or call certified unary producers with safe actuals. Unmarked clients still accept arbitrary parent words, including the separator, in ordinary calls.
+
+The existing fixed source/target grammar builders are reused. Parent-word preconditions are propagated through actual captured values in the source/target row correspondence. Complete raw declaration/root, scope, argument, capture and return-effect checks preserve all original-string observations/languages, residuals, finite failure/definedness and all-clock undefinedness at the same physical clock. No runtime word/endpoint advice, termination assumption, finite word palette, maximal scanner frontier or input encoding is supplied.
+
+The five-rule source compiles to eight Seq rules. For a retained parent a^n, its actual tuple [a^(2n)b c^(2n),a^n,a^(2n),a^(2n)b] contains direct parent consumption and the actual returned word of a parameterized recursive producer. Symbolic derivations cover every n and following suffix; both grammars accept every parent length and nesting depth with child doubling and parent restoration. All four capture lengths are simultaneously unbounded. With an empty argument the same producer recursively captures a^m for every m. A return-certified divergent client is allowed as a positive actual and stays undefined on every input and clock; omitting preflight produces finite failure. Kernel checks reject missing parent requirements, an unsafe marked seed and a separator-consuming producer actual, while allowing a separator-containing parent for an unmarked ordinary producer call. Earlier query-only validation rejects this grammar.
+
+Independent nullary helpers, leading replay in unary clients and shared delimited parameter-list copy bodies remain restrictions. Marked parent values must satisfy the finitely checked alphabet condition. General multiple-parent clients, arbitrary multi-value bodies and unrestricted Par/Seq class equality/separation remain unresolved.

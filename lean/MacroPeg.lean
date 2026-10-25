@@ -912,3 +912,10 @@ import MacroPeg.CBV.RetainedPatternCorrespondence
 import MacroPeg.CBV.RetainedPatternCompiler
 import MacroPeg.CBV.RetainedPatternExamples
 import MacroPeg.CBV.RetainedPatternProofs
+
+import MacroPeg.CBV.RetainedCaptureEffects
+import MacroPeg.CBV.ConsumingPatternChecks
+import MacroPeg.CBV.ConsumingPatternCorrespondence
+import MacroPeg.CBV.ConsumingPatternCompiler
+import MacroPeg.CBV.ConsumingPatternExamples
+import MacroPeg.CBV.ConsumingPatternProofs
