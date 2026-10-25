@@ -1,3 +1,4 @@
+import MacroPeg.CBV.ScannerReplayResidual
 import MacroPeg.CBV.CaptureInputSafety
 import MacroPeg.CBV.ScannerLanguageSafety
 import MacroPeg.CBV.SelectedCaptureSafety
@@ -11,22 +12,39 @@ open CaptureTransitionProfile (profile profiles)
 open SequentialRecursiveScanner (state)
 open StatefulScannerProduct (right)
 abbrev Arg := SequentialRecursiveObserver.Expr
-/-- Replay entries can retain arbitrary words. Scanner entries and the
-explicit safe-replay entry require a certified total argument. -/
+/-- Entry forms for the common recursive compiler. The legacy safety path
+checks total arguments for non-replay entries; the profile path checks only
+the configured scanner state. Shift entries carry finite residual labels. -/
 inductive Entry (n : Nat) where
   | replay
   | safeReplay
   | scan (q : Fin n)
+  | shift (q : Fin n) (residuals : ScannerReplayResidual.Labels n)
 
 abbrev Entries (n : Nat) := Nat → Entry n
 
 def Entry.inputSafe {n : Nat} : Entry n → Bool
   | .replay => false
-  | .safeReplay | .scan _ => true
+  | .safeReplay | .scan _ | .shift _ _ => true
 
 def sourceHeader {n : Nat} : Entry n → MExp
   | .replay | .safeReplay => .param 0
   | .scan q => .call q.val []
+  | .shift q R => .seq (.lit ((R q).getD [])) (.param 0)
+
+/-- Finite layout validation for each actual user entry. -/
+def headerCheck {n : Nat} (M : Machine n) : Entry n → Bool
+  | .shift q R => ScannerReplayResidual.entryCheck M R q
+  | _ => true
+
+def entriesCheck {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg) : Bool :=
+  bodies.zipIdx.all (fun (_,i) => headerCheck M (entries i))
+
+theorem entry_checked {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
+    (h : entriesCheck M entries bodies=true) (i : Nat) (b : Arg) (hi : bodies[i]?=some b) :
+    headerCheck M (entries i)=true := by
+  exact (List.all_eq_true.mp h) (b,i) (List.mem_of_getElem?
+    (show bodies.zipIdx[i]?=some (b,i) from by simp [List.getElem?_zipIdx,hi]))
 
 abbrev Mode := Option (Nat × Nat)
 abbrev valid {n : Nat} (M : Machine n) := DynamicScannerCapture.observer_valid M
@@ -105,12 +123,24 @@ def scannerBody {n : Nat} (M : Machine n) (q : Fin n) (bodies : List Arg)
           (fun t => filter M bodies [P] b (right (valid M).1 t).val z)
       else MExp.failAlways
 
-/-- A replay row removes exactly the captured prefix; a scanner row
-resumes from the state determined by that same complete capture. -/
+def shiftedBody {n : Nat} (M : Machine n) (q : Fin n) (R : ScannerReplayResidual.Labels n)
+    (bodies : List Arg) (P : List Nat) (mode : Mode) (b : Arg) : MExp :=
+  match DynamicScannerBinding.resume P q with
+  | none => MExp.failAlways
+  | some r => match mode with
+    | none => .seq (.lit ((R r).getD [])) (plain M bodies [P] b)
+    | some (a,z) => if ha : a<(observer M).width then
+        .seq (.lit ((R r).getD [])) (filter M bodies [P] b
+          (RegularCaptureProduct.run (observer M) (state M P ⟨a,ha⟩).val ((R r).getD [])) z)
+      else MExp.failAlways
+
+/-- The complete capture selects the residual scanner or rotated literal.
+Replay removes its prefix, and every entry retains the full captured value. -/
 def targetBody {n : Nat} (M : Machine n) (entry : Entry n) (bodies : List Arg)
     (P : List Nat) (mode : Mode) (b : Arg) : MExp :=
   match entry with
   | .scan q => scannerBody M q bodies P mode b
+  | .shift q R => shiftedBody M q R bodies P mode b
   | .replay | .safeReplay => match mode with
     | none => plain M bodies [P] b
     | some (a,z) => if ha : a<(observer M).width then
@@ -153,7 +183,8 @@ def check {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
 
 def sourceSafe {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg) (safeUsers : Nat) : Bool :=
   decide (safeUsers≤bodies.length) &&
-    SelectedCaptureSafety.certifiedCheck M (source M entries bodies) (selected M safeUsers) (primitive M)
+    (SelectedCaptureSafety.certifiedCheck M (source M entries bodies) (selected M safeUsers) (primitive M) &&
+      entriesCheck M entries bodies)
 
 def Valid {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
     (safeUsers : Nat) (trusted : Bool) : Arg → Prop
@@ -249,6 +280,20 @@ theorem targetBody_firstOrder {n : Nat} (M : Machine n) (entry : Entry n) (bodie
     (P : List Nat) (mode : Mode) (b : Arg) : (targetBody M entry bodies P mode b).FirstOrder := by
   cases entry with
   | scan q => exact scannerBody_firstOrder M q bodies P mode b
+  | shift q R =>
+    cases hr : DynamicScannerBinding.resume P q with
+    | none => simp only [targetBody,shiftedBody,hr]; trivial
+    | some r =>
+      cases mode with
+      | none =>
+        simp only [targetBody,shiftedBody,hr]
+        exact ⟨True.intro,plain_firstOrder M bodies [P] b⟩
+      | some pair =>
+        obtain ⟨a,z⟩ := pair
+        simp only [targetBody,shiftedBody,hr]
+        split
+        · exact ⟨True.intro,filter_firstOrder M bodies [P] b _ _⟩
+        · trivial
   | replay | safeReplay =>
     cases mode with
     | none => exact plain_firstOrder M bodies [P] b

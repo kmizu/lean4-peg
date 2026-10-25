@@ -91,7 +91,7 @@ theorem frozen_rows {n : Nat} (M : Machine n) (entries : Entries n) (bodies : Li
     (x : List Char) (k : Nat) :
     SelectedCaptureSafety.Rows M (selected M safeUsers) x (sourceTable M entries bodies x k) :=
   SelectedCaptureSafety.certified_frozen_rows M (source M entries bodies)
-    (selected M safeUsers) (primitive M) (Bool.and_eq_true_iff.mp hSafe).2 x .callByValuePar
+    (selected M safeUsers) (primitive M) (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp hSafe).2).1 x .callByValuePar
     (RecursiveParserStability.pick (helperBodies M)) (RecursiveParserStability.floor (helperBodies M) x)
     (primitive_physical_rows M (sourceRules M entries bodies) x .callByValuePar)
     (primitive_frozen M) k

@@ -1,3 +1,5 @@
+import MacroPeg.CBV.ScannerReplayResidual
+import MacroPeg.CBV.ScannerReplayResidualExamples
 import MacroPeg.CBV.RecursiveCaptureProfiles
 import MacroPeg.CBV.ProfileCheckedScannerCorrespondence
 import MacroPeg.CBV.ProfileCheckedScannerExamples

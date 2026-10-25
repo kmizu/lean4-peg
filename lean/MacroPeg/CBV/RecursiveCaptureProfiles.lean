@@ -223,8 +223,11 @@ theorem scanner_profiles {n : Nat} (M : Machine n) (H : ScannerSummary n)
       have hh := List.contains_iff_mem.mp ((List.all_eq_true.mp hstep) _ (ih r))
       simpa only [compose_correct _ (valid M),List.singleton_append,ObservedScanner.consumed,hs] using hh
 
-def headerEffects {n : Nat} (H : ScannerSummary n) (entry : Entry n) (P : List Nat) : List (List Nat) :=
-  match entry with | .scan q => H q | .replay | .safeReplay => [P]
+def headerEffects {n : Nat} (M : Machine n) (H : ScannerSummary n) (entry : Entry n) (P : List Nat) : List (List Nat) :=
+  match entry with
+  | .scan q => H q
+  | .shift q R => product [profile (observer M) ((R q).getD [])] [P]
+  | .replay | .safeReplay => [P]
 
 def scopeCheck (bodies : List Arg) : Arg → Bool
   | .user i a => decide (i<bodies.length) && scopeCheck bodies a
@@ -244,13 +247,13 @@ def grammarCheck {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List 
     (H : ScannerSummary n) (C : Summary) : Bool :=
   bodies.zipIdx.all (fun (b,i) => scopeCheck bodies b &&
     (profiles (observer M)).all (fun P =>
-      (product (headerEffects H (entries i) P) (effects M C [P] b)).all (fun Q => (C i P).contains Q)))
+      (product (headerEffects M H (entries i) P) (effects M C [P] b)).all (fun Q => (C i P).contains Q)))
 
 theorem grammar_checked {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
     (H : ScannerSummary n) (C : Summary) (hc : grammarCheck M entries bodies H C=true)
     (i : Nat) (b : Arg) (hi : bodies[i]?=some b) :
     Scoped bodies b ∧ ∀ P∈profiles (observer M),
-      ∀ Q∈product (headerEffects H (entries i) P) (effects M C [P] b), Q∈C i P := by
+      ∀ Q∈product (headerEffects M H (entries i) P) (effects M C [P] b), Q∈C i P := by
   have hm : (b,i)∈bodies.zipIdx := List.mem_of_getElem? (show bodies.zipIdx[i]?=some (b,i) from by
     simp [List.getElem?_zipIdx,hi])
   have hh := Bool.and_eq_true_iff.mp ((List.all_eq_true.mp hc) (b,i) hm)
@@ -263,7 +266,7 @@ theorem header_shape {n : Nat} (M : Machine n) (entries : Entries n) (bodies : L
     (x v : List Char) (k p q : Nat) (hp : p≤x.length)
     (h : evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [v]
       (sourceHeader entry) p=some (some q)) :
-    q≤p ∧ ∃ w, profile (observer M) w∈headerEffects H entry (profile (observer M) v) ∧
+    q≤p ∧ ∃ w, profile (observer M) w∈headerEffects M H entry (profile (observer M) v) ∧
       sfx x p=w++sfx x q := by
   cases entry with
   | replay | safeReplay =>
@@ -271,6 +274,16 @@ theorem header_shape {n : Nat} (M : Machine n) (entries : Entries n) (bodies : L
         (.lit v) p=some (some q) := by simpa only [sourceHeader,evV,List.getElem?_cons_zero] using h
     obtain ⟨hq,hs⟩ := literal_shape _ x .callByValuePar _ [v] v p q hp hl
     exact ⟨hq,v,by simp [headerEffects],hs⟩
+  | shift start R =>
+    let u := (R start).getD []
+    have he := WordArguments.word_eval (source M entries bodies) x .callByValuePar
+      (sourceTable M entries bodies x k) [v] (.seq (.lit u) (.param 0)) ⟨True.intro,True.intro⟩ p
+    have hl : evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) []
+        (.lit (u++v)) p=some (some q) := by
+      simpa only [WordArguments.value,WordArguments.literal,List.getElem?_cons_zero,Option.bind_some,Option.map_some] using he.symm.trans h
+    obtain ⟨hq,hs⟩ := literal_shape _ x .callByValuePar _ [] (u++v) p q hp hl
+    exact ⟨hq,u++v,product_mem (observer M) (valid M) [profile (observer M) u]
+      [profile (observer M) v] u v (by simp) (by simp),hs⟩
   | scan start =>
     rw [sourceHeader,RecursiveScannerProductHeader.source_scan M entries bodies start x k p [v] hp] at h
     have hq : (StatefulScanner.run M start (sfx x p)).2.length=q := by simpa only [Option.some.injEq] using h

@@ -16,6 +16,25 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+固定文字列を消費してから保持値を再照合する入口も、走査・直接再照合と
+同じ `RecursiveScannerProductCompiler` へ統合した。`Entry.shift q R` の元入口は
+`lit (R q); param0` で、生成先は実捕捉の終点から `lit (R r)` を消費する。
+`r` は捕捉全体の有限 profile から決まる実 scanner 到達状態である。
+`ScannerReplayResidual.check` は、ラベル付き状態の実遷移がラベル先頭を読み、
+その文字を末尾へ回すことを有限検査する。未ラベル状態には別の走査を置ける。
+この検査と開始状態での捕捉の可読性から `u ++ w = w ++ v` を導き、
+成功・有限失敗を含む入口の全 partial 結果を保存する。`u` と `w` の可換性は要求しない。
+
+残余ラベルの検査を既存の有限 body 検査に含め、plain/product 行の同時帰納、
+実元規則の出力 profile 証明、全入力の有限観測・固定 Seq 元文字列言語・
+physical 定義／全 clock 未定義の対応まで接続した。成功や row の oracle、
+全状態 Total は新しい profile 経路の最終入力にない。`ScannerReplayResidualExamples`
+では `ab; param0` と別状態の a/b 走査と直接再照合を同じ文法へ置き、
+`(ab; &aba)*; a` の入力依存・語数非有界の捕捉を実 unary 再照合呼出しで取得し、
+親 `aba` →走査側 `b` →子 `ababa`、その後の両親の全値再利用を検査する。
+`ab ++ aba ≠ aba ++ ab` でも残余 `ba` が正しい。有限注釈と指定入口形式という
+制約は残り、任意 PEG prefix や独立複数捕捉、一般の一致／分離は未解決である。
+
 `ParSimulation.translate source start` は元の文法と開始式だけから一つの固定文法を作る。
 `translate_recognizes` は、全ての元の文字列 `x : List Char` について、
 生成先 Par の全消費成功とソース Seq の全消費成功が同値であることを証明する。
