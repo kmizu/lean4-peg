@@ -16,6 +16,28 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 捕捉前の実再帰検査を零引数の入口で保つ
+
+`GuardedPairSyntax/Simulation/Correspondence`は、元の二捕捉bodyを
+`&Q;maxScanner(A,B);tail`へ広げる。Qはclosedな元のparserで、nullary helperや
+同じ二捕捉userへの実再帰を含んでよい。常に成功・停止するとは仮定しない。
+Seqは零引数の入口規則で元位置のQを先読みしてから、二つのchunkを捕捉する。
+検査に元の捕捉環境を渡さずに済むことは、両render先のclosed構文検査から証明する。
+
+実テーブルで、元clock kの結果はSeq clock 2kへ、Seq clock kの結果は元clock kへ保存する。
+元引数の左順preflight準備も同clockで正確に表が一致することを追加証明したため、
+`GuardedFrontierPairCompiler.bounds`はこの時計対応を展開前の元文法から直接与える。
+全入力の残余・失敗・受理言語・全clock未定義を保存し、targetは固定した12規則である。
+
+balanced a/bまたはa/cの実helperで元位置を検査する両順序と親子順序反転を実行した。
+検査が同じ二捕捉userへ再帰し続ける場合の全入力全clock未定義も両側で証明した。
+元引数が未定義なのに、その前に失敗する検査を走らせると有限失敗に変わる反例を確認した。
+元1clock成功・Seq1clock未定義・Seq2clock成功となる小さい実例で、追加入口の費用も確認した。
+捕捉値を直接参照するQは、入口へ移せないため検査で拒否する。
+
+最大scanner frontierと指定消費headの条件は残る。一般の独立引数・任意の前半・
+捕捉依存の原点検査への無条件変換と、Par/Seqクラス全体の一致・分離は未解決。
+
 ## 実scannerを前半に持つ二捕捉bodyをSeqへ
 
 `ScannedPairFusion`は、元の二引数bodyが保持値を先頭再照合する条件を外した。
@@ -10369,3 +10391,62 @@ and successful original arguments must end at their certified scanner
 frontiers. Arbitrary PEG prefixes, other body entry endpoints, general
 independent argument differences and the full Par/Seq class question remain
 unresolved.
+
+
+## Recursive origin queries before independent pair consumption
+
+The new guarded-pair backend supports source bodies
+&Q;maxScanner(A,B);tail. Q is a real closed source parser rendered in the
+same grammar; it may call nullary recursive helpers or the pair users,
+including the current user. No totality, successful-query or table-behavior
+premise is supplied. Finite closure checks validate both query renderings,
+so the source query's evaluation under captured values equals its evaluation
+under the empty caller environment. The query may consume internally;
+its enclosing lookahead restores the original source position.
+
+GuardedPairSyntax emits a nullary header plus two fixed capture/body variants
+for each entry. The header runs the translated query at the original input
+position before dispatch captures adjacent chunks. Helpers remain nullary.
+GuardedPairSimulation provides structural refinement in either direction;
+GuardedPairCorrespondence closes the actual source and target row relations
+by physical-clock induction, invoking the expression refinement on the
+actual query at the preceding stage. This handles recursive query/user
+cycles without assuming their outcome. Source clock k refines target clock
+2k, while target clock k refines source clock k. Existential finite results,
+all residual observations, finite failure, language and all-clock undefinedness
+follow from these bounds and actual stabilization, not equal same-clock runs.
+
+FrontierArgumentCompiler additionally proves exact equality of its actual
+ordinary-grammar table approximants and a same-clock expression translation.
+Its existing ordered preflight rewrite is therefore exact at every physical
+clock, rather than merely cofinal. GuardedFrontierPairCompiler uses that
+stronger result to expose the k-to-2k and k-to-k bounds for the original
+pre-normalization grammar and root. Whole prepared-grammar/root equality,
+first-order syntax and closed queries are checked finitely. The final grammar
+and root are fixed before the unchanged original input string is supplied.
+
+GuardedFrontierPairExamples installs the existing balanced a/b and a/c
+recursive helpers in an origin query, together with an initial a test, so
+running that query at the captured endpoint would fail. Both orders at
+n=1,2,4 and recursively reversed parent/child orders execute directly on
+the original and twelve-rule Seq grammars. The target arities consist of
+ten nullary entries and two two-argument cases. Source and target gate
+failure are checked separately from undefinedness. A query that calls the
+same pair user forever is proved undefined on every input at every clock
+in the actual source and target tables, even though the canonical scanner
+arguments themselves always succeed.
+
+An undefined first actual argument is still evaluated before a failing
+origin query. The full original and target stay undefined for every input
+and clock; prematurely invoking the target header instead yields finite
+failure on a concrete input. A tiny empty-capture example succeeds at source
+clock 1, remains undefined at target clock 1 and succeeds at target clock 2,
+confirming that the extra header layer is operationally real. A query with
+a free retained parameter is rejected by the finite closure check.
+
+This removes the total-head restriction for the closed recursive query
+part of this two-capture construction. It does not translate an arbitrary
+consuming prefix, an arbitrary capture endpoint or a query depending on the
+parent's captured environment. Maximal scanner-frontier successes and the
+specified maxScanner continuation entry remain required. General Par/Seq
+class equality or genuine language separation remains unresolved.

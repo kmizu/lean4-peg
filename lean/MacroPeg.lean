@@ -1,3 +1,8 @@
+import MacroPeg.CBV.GuardedPairSyntax
+import MacroPeg.CBV.GuardedPairSimulation
+import MacroPeg.CBV.GuardedPairCorrespondence
+import MacroPeg.CBV.GuardedFrontierPairCompiler
+import MacroPeg.CBV.GuardedFrontierPairExamples
 import MacroPeg.CBV.ScannedPairFusion
 import MacroPeg.CBV.ProducedFrontierPairCompiler
 import MacroPeg.CBV.ProducedFrontierPairExamples

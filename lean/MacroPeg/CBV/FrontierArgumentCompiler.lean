@@ -145,6 +145,41 @@ theorem related (g : MGrammar) (ps : Selection) (hc : check g ps=true) :
     · rw [he]; exact RLe.refl _
     · rw [←he]; exact evV_mono (tblV_step g x .callByValuePar k) r.body p
 
+/-- The local canonical argument rewrite is exact at a physical clock.
+Consequently the two ordinary-grammar table approximants agree exactly. -/
+theorem tables_equal (g : MGrammar) (ps : Selection) (hc : check g ps=true) (x : List Char) (k : Nat) :
+    tblV g x .callByValuePar k=tblV (target g ps) x .callByValuePar k := by
+  have ha := BoundedBodyRewrite.arities (related g ps hc)
+  induction k with
+  | zero => rfl
+  | succ k ih =>
+    funext i E
+    have ht := target_rule g ps i
+    cases hr : ruleAtM g.rules i with
+    | none =>
+      have ht : ruleAtM (target g ps).rules i=none := by rw [ht,hr]; rfl
+      simp only [tblV,hr,ht]
+    | some r =>
+      have ht : ruleAtM (target g ps).rules i=some ⟨r.arity,render ps r.body⟩ := by rw [ht,hr]; rfl
+      simp only [tblV,hr,ht,ih]
+      apply List.map_congr_left
+      intro p hp
+      have hp : p≤x.length := by have hh := List.mem_range.mp hp; omega
+      have he := evaluator g ps hc x k E r.body p hp
+      rw [ih] at he
+      exact he.trans (SemanticBodyRewrite.evaluator g (target g ps) ha x .callByValuePar
+        (tblV (target g ps) x .callByValuePar k) E (render ps r.body) p)
+
+theorem physical (g : MGrammar) (ps : Selection) (hc : check g ps=true)
+    (x : List Char) (k : Nat) (E : List (List Char)) (e : MExp) (p : Nat) (hp : p≤x.length) :
+    evV g x .callByValuePar (tblV g x .callByValuePar k) E e p=
+      evV (target g ps) x .callByValuePar (tblV (target g ps) x .callByValuePar k) E (render ps e) p := by
+  have he := evaluator g ps hc x k E e p hp
+  rw [tables_equal g ps hc x k] at he
+  rw [tables_equal g ps hc x k]
+  exact he.trans (SemanticBodyRewrite.evaluator g (target g ps) (BoundedBodyRewrite.arities (related g ps hc))
+    x .callByValuePar (tblV (target g ps) x .callByValuePar k) E (render ps e) p)
+
 theorem observations_iff (g : MGrammar) (ps : Selection) (hc : check g ps=true)
     (e : MExp) (he : e.FirstOrder) (x : List Char) (rest : Option (List Char)) :
     SObs g .callByValuePar e x rest ↔ SObs (target g ps) .callByValuePar (render ps e) x rest := by
