@@ -1,3 +1,5 @@
+import MacroPeg.CBV.RecursiveScannerProductCapture
+import MacroPeg.CBV.ScannerLanguageSafety
 import MacroPeg.CBV.SelectedCaptureSafety
 import MacroPeg.Syntax
 import MacroPeg.PegEmbed

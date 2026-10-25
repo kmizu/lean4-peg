@@ -235,4 +235,70 @@ theorem frozen_capture {n : Nat} (M : Machine n) (g : MGrammar) (active : Nat �
   capture_of_shape M x p q hp (suffix_shape M g x s _ E hE active
     (frozen_rows M g active hg x s pick floor k) e he p q hp h)
 
+/-- Primitive rows have an independently derived actual capture invariant;
+all other selected rows are checked structurally. -/
+def certifiedCheck {n : Nat} (M : Machine n) (g : MGrammar)
+    (active primitive : Nat → Bool) : Bool :=
+  g.rules.zipIdx.all (fun (r,i) => !active i || primitive i || check M active r.body)
+
+theorem certifiedCheck_sound {n : Nat} (M : Machine n) (g : MGrammar)
+    (active primitive : Nat → Bool) (hg : certifiedCheck M g active primitive=true)
+    (i : Nat) (hi : active i=true) (hn : primitive i=false) (r : MRule)
+    (hr : ruleAtM g.rules i=some r) : Safe M active r.body := by
+  rw [ruleAtM_eq_getElem?] at hr
+  have hm : (r,i)∈g.rules.zipIdx := List.mem_of_getElem? (show g.rules.zipIdx[i]?=some (r,i) from by
+    simp [List.getElem?_zipIdx,hr])
+  have hh := (List.all_eq_true.mp hg) (r,i) hm
+  simpa [hi,hn] using hh
+
+theorem certified_physical_rows {n : Nat} (M : Machine n) (g : MGrammar)
+    (active primitive : Nat → Bool) (hg : certifiedCheck M g active primitive=true)
+    (x : List Char) (s : Strategy)
+    (hPrim : ∀ k, Rows M primitive x (tblV g x s k)) (k : Nat) :
+    Rows M active x (tblV g x s k) := by
+  induction k with
+  | zero => intro i hi E hE p q hp h; simp [tblV,valAt_nil] at h
+  | succ k ih =>
+    intro i hi E hE p q hp h
+    cases hs : primitive i with
+    | true => exact hPrim (k+1) i hs E hE p q hp h
+    | false =>
+      cases hr : ruleAtM g.rules i with
+      | none => simp [tblV,hr,valAt_nil] at h
+      | some r =>
+        rw [valAt_tblV_succ hr E hp] at h
+        exact suffix_shape M g x s _ E hE active ih r.body
+          (certifiedCheck_sound M g active primitive hg i hi hs r hr) p q hp h
+
+theorem certified_frozen_rows {n : Nat} (M : Machine n) (g : MGrammar)
+    (active primitive : Nat → Bool) (hg : certifiedCheck M g active primitive=true)
+    (x : List Char) (s : Strategy) (pick : Nat → Bool) (floor : Nat)
+    (hPrim : ∀ k, Rows M primitive x (tblV g x s k))
+    (hPick : ∀ i, primitive i=true → pick i=true) (k : Nat) :
+    Rows M active x (ClockFreezing.frozen g x s pick floor k) := by
+  induction k with
+  | zero =>
+    intro i hi E hE p q hp h
+    by_cases hb : pick i=true
+    · simp only [ClockFreezing.frozen,hb,if_true] at h
+      exact certified_physical_rows M g active primitive hg x s hPrim floor i hi E hE p q hp h
+    · simp only [ClockFreezing.frozen,hb,Bool.false_eq_true,if_false,valAt_nil] at h
+      cases h
+  | succ k ih =>
+    intro i hi E hE p q hp h
+    by_cases hb : pick i=true
+    · rw [ClockFreezing.frozen_rows g x s pick floor (k+1) i hb E] at h
+      exact certified_physical_rows M g active primitive hg x s hPrim floor i hi E hE p q hp h
+    · have hn : primitive i=false := by
+        cases hs : primitive i with
+        | false => rfl
+        | true => exact False.elim (hb (hPick i hs))
+      simp only [ClockFreezing.frozen,hb,Bool.false_eq_true,if_false,ClockFreezing.step] at h
+      cases hr : ruleAtM g.rules i with
+      | none => simp [hr,valAt_nil] at h
+      | some r =>
+        simp only [hr,valAt_rangeMap,if_pos hp] at h
+        exact suffix_shape M g x s _ E hE active ih r.body
+          (certifiedCheck_sound M g active primitive hg i hi hn r hr) p q hp h
+
 end Shallot.MacroPeg.CBV.SelectedCaptureSafety

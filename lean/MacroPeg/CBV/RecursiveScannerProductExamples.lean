@@ -269,4 +269,71 @@ theorem partial_state_matters :
       (tblV (source partialM wrongEntries mixedBodies) partialInput .callByValuePar 18) []
       (sourceExpr partialM partialRoot) partialInput.length=some none := by decide +kernel
 
+/-- State 0 accepts only a first; a synchronizes both states to 1.
+Thus every word consumed from 0 is total, although the b-helper is unsafe
+and words consumed from 1 need not be total. -/
+def syncM : StatefulScanner.Machine 2 := ⟨fun q =>
+  if q.val=0 then [('a',1)] else [('a',1),('b',1)]⟩
+def syncEntries : Entries 2
+  | 0 => some 0
+  | _ => some 1
+
+def syncParser : Arg := .notP (.param 0)
+def syncNext : Arg := .user 0 (.seq (.param 0) (.lit ['a']))
+def syncBody : Arg := .seq (.lit ['!']) (.seq (.param 0)
+  (.seq (.alt (.seq (.lit [':']) (.user 1 syncNext)) (.lit []))
+    (.seq (.lit ['?']) (.param 0))))
+def syncBodies : List Arg := [syncParser,syncBody]
+def syncRoot : Arg := .user 1 (.user 0 (.lit ['a']))
+def syncInput : List Char := "ab!ab:abaab!abaab?abaab?ab".toList
+
+theorem sync_checked :
+    helperSafe syncM=false ∧ primitive syncM 0=true ∧ primitive syncM 1=false ∧
+    sourceSafe syncM syncEntries syncBodies 1=true ∧
+    syncBodies.all (check syncM syncBodies 1)=true ∧ check syncM syncBodies 1 syncRoot=true ∧
+    TotalCaptureSafety.wordCheck syncM ['b']=false ∧ TotalCaptureSafety.wordCheck syncM ['a','b']=true := by
+  decide +kernel
+
+/-- This actual positive argument call enters the partial scanner user,
+not a replay user. The parent's ab contributes to the child's new argument
+aba, and the scanner really captures the longer abaab. -/
+theorem sync_source :
+    evV (source syncM syncEntries syncBodies) syncInput .callByValuePar
+      (tblV (source syncM syncEntries syncBodies) syncInput .callByValuePar 18) []
+      (sourceExpr syncM syncRoot) syncInput.length=some (some 0) := by decide +kernel
+
+theorem sync_target : ∃ k,
+    evV (target syncM syncEntries syncBodies) syncInput .callByValueSeq
+      (tblV (target syncM syncEntries syncBodies) syncInput .callByValueSeq k) []
+      (plain syncM syncBodies [] syncRoot) syncInput.length=some (some 0) :=
+  (defined_iff syncM syncEntries syncBodies 1 sync_checked.2.2.2.1 sync_checked.2.2.2.2.1
+    syncRoot sync_checked.2.2.2.2.2.1 syncInput (some 0)).mp ⟨18,sync_source⟩
+
+theorem sync_language : ∃ (g : MGrammar) (e : MExp), g.FirstOrder ∧ e.FirstOrder ∧ ∀ x,
+    SObs (source syncM syncEntries syncBodies) .callByValuePar (sourceExpr syncM syncRoot) x (some []) ↔
+      SObs g .callByValueSeq e x (some []) :=
+  language_translation syncM syncEntries syncBodies 1 sync_checked.2.2.2.1 sync_checked.2.2.2.2.1
+    syncRoot sync_checked.2.2.2.2.2.1
+
+def syncShortCopies : List (List Char) := [
+  "ab!ab:abaab!abaa?abaab?ab".toList,
+  "ab!ab:abaab!abaab?abaa?ab".toList,
+  "ab!ab:abaab!abaab?abaab?a".toList]
+
+theorem sync_short_source : syncShortCopies.all (fun x =>
+    evV (source syncM syncEntries syncBodies) x .callByValuePar
+      (tblV (source syncM syncEntries syncBodies) x .callByValuePar 18) []
+      (sourceExpr syncM syncRoot) x.length == some none)=true := by decide +kernel
+
+theorem sync_short_target (x : List Char) (hx : x∈syncShortCopies) : ∃ k,
+    evV (target syncM syncEntries syncBodies) x .callByValueSeq
+      (tblV (target syncM syncEntries syncBodies) x .callByValueSeq k) []
+      (plain syncM syncBodies [] syncRoot) x.length=some none := by
+  have h := (List.all_eq_true.mp sync_short_source) x hx
+  have hv : evV (source syncM syncEntries syncBodies) x .callByValuePar
+      (tblV (source syncM syncEntries syncBodies) x .callByValuePar 18) []
+      (sourceExpr syncM syncRoot) x.length=some none := by simpa using h
+  exact (defined_iff syncM syncEntries syncBodies 1 sync_checked.2.2.2.1 sync_checked.2.2.2.2.1
+    syncRoot sync_checked.2.2.2.2.2.1 x none).mp ⟨18,hv⟩
+
 end Shallot.MacroPeg.CBV.RecursiveScannerProductExamples

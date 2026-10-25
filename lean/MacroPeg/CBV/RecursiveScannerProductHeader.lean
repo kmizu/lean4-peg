@@ -1,4 +1,4 @@
-import MacroPeg.CBV.RecursiveScannerProductHelpers
+import MacroPeg.CBV.RecursiveScannerProductCapture
 
 namespace Shallot.MacroPeg.CBV.RecursiveScannerProductHeader
 open RecursiveScannerProductCompiler
@@ -15,10 +15,10 @@ theorem argument_capture {n : Nat} (M : Machine n) (entries : Entries n) (bodies
     (E : List (List Char)) (hE : TotalCaptureSafety.Environment M E) (p j : Nat) (hp : p≤x.length)
     (hv : evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) E (sourceExpr M a) p=some (some j)) :
     TotalCaptureSafety.Total M (pre x p j) ∧ sfx x p=pre x p j++sfx x j :=
-  SelectedCaptureSafety.frozen_capture M (source M entries bodies) (selected M safeUsers)
-    (Bool.and_eq_true_iff.mp hSafe).2 x .callByValuePar
-    (RecursiveParserStability.pick (helperBodies M)) (RecursiveParserStability.floor (helperBodies M) x) k
-    E hE _ ha p j hp hv
+  ParameterizedCaptureSafety.capture_of_shape M x p j hp
+    (SelectedCaptureSafety.suffix_shape M (source M entries bodies) x .callByValuePar _ E hE
+      (selected M safeUsers) (RecursiveScannerProductCapture.frozen_rows M entries bodies safeUsers hSafe x k)
+      (sourceExpr M a) ha p j hp hv)
 
 theorem source_scan {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg) (q : Fin n)
     (x : List Char) (k p : Nat) (E : List (List Char)) (hp : p≤x.length) :

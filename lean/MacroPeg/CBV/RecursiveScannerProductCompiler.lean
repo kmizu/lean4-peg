@@ -1,3 +1,4 @@
+import MacroPeg.CBV.ScannerLanguageSafety
 import MacroPeg.CBV.SelectedCaptureSafety
 import MacroPeg.CBV.SequentialRecursiveScanner
 import MacroPeg.CBV.RecursiveScannerHelpers
@@ -118,8 +119,13 @@ users and queries but are excluded from consuming argument paths. -/
 def helperSafe {n : Nat} (M : Machine n) : Bool :=
   (helpers M).all (fun r => ParameterizedCaptureSafety.check M (offset M) r.body)
 
+/-- Only plain scanner states with a checked language-inclusion certificate
+are primitive safe rows. Product helpers keep their original checks. -/
+def primitive {n : Nat} (M : Machine n) (i : Nat) : Bool :=
+  if hi : i<n then ScannerLanguageSafety.safe M ⟨i,hi⟩ else false
+
 def selected {n : Nat} (M : Machine n) (safeUsers : Nat) (i : Nat) : Bool :=
-  if i<offset M then helperSafe M else decide (i<offset M+safeUsers)
+  if i<offset M then helperSafe M || primitive M i else decide (i<offset M+safeUsers)
 
 def argumentCheck {n : Nat} (M : Machine n) (safeUsers : Nat) : Arg → Bool :=
   fun a => SelectedCaptureSafety.check M (selected M safeUsers) (sourceExpr M a)
@@ -134,7 +140,7 @@ def check {n : Nat} (M : Machine n) (bodies : List Arg) (safeUsers : Nat) : Arg 
 
 def sourceSafe {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg) (safeUsers : Nat) : Bool :=
   decide (safeUsers≤bodies.length) &&
-    SelectedCaptureSafety.grammarCheck M (source M entries bodies) (selected M safeUsers)
+    SelectedCaptureSafety.certifiedCheck M (source M entries bodies) (selected M safeUsers) (primitive M)
 
 def Valid {n : Nat} (M : Machine n) (bodies : List Arg) (safeUsers : Nat) : Arg → Prop
   | .user i a => i<bodies.length ∧ argumentCheck M safeUsers a=true ∧ Valid M bodies safeUsers a

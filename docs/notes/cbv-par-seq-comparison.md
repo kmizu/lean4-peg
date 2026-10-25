@@ -8471,8 +8471,8 @@ checked selection, on physical tables and frozen analysis tables, with
 arbitrary-arity recursive calls. Every consuming call and its arguments
 must stay in the selected set; queries preserve their actual computations
 and may use unselected rows. The compiler selects a designated initial
-segment of user rules, and selects the closed scanner helpers only when
-those helpers pass their own safety check. Its separate structural check
+segment of user rules, structurally safe helper blocks, and individually
+certified plain scanner states. Its separate structural check
 also validates calls nested inside queries.
 
 This avoids requiring unused scanner helpers to consume words defined from
@@ -8508,6 +8508,36 @@ The actual mixed grammar captures a → aa → aaa and accepts through the
 state-1 scanner's extra b. Configuring that user to start in state 0 instead
 stops before b and rejects the same original input. The fixed generated
 Seq grammar preserves the correct source language on all inputs.
+
+`ScannerLanguageSafety` additionally certifies entire scanner languages.
+A finite relation between states is refined for n² rounds, then explicitly
+checked to be a simulation. The soundness proof does not assume that the
+iteration converged. When the checked relation relates an initial scanner
+state q to every M state, any word whose path from q is defined is defined
+from every state. Induction on the actual scanner run derives this property
+for its exact consumed word, without inspecting a successful capture first.
+
+`RecursiveScannerProductCapture` connects these certificates to actual
+plain scanner rows at every physical clock and retained environment.
+Successful short-clock rows lift monotonically to a sufficient clock,
+where the actual installed scanner block computes the exact run.
+`SelectedCaptureSafety.certified_frozen_rows` combines these concrete
+primitive rows with structurally checked recursive user rows. The compiler
+now treats individually certified plain scanner states as primitives and
+checks every other selected body. The final language and observation
+results still require only finite checks; they receive no primitive-row
+oracle.
+
+A synchronizing partial machine has only a from state 0 and both a and b
+from state 1, with a moving every state to 1. A b word is unsafe, while
+every word scanned from 0 is safe. The whole helper block fails structural
+safety and state 1 fails the scanner-language certificate, but state 0
+passes. An actual positive parameterized scanner call inside an argument
+now captures ab, then receives its parent's ab plus fresh a and captures
+the longer abaab. Both full values are reused after return. The original
+physical grammar accepts and short copies fail; the fixed Seq translation
+preserves the whole source language on all inputs. Earlier mixed-entry and
+partial-scanner examples remain checked.
 
 The remaining restrictions include unary source users, the stated argument
 syntax, replay or scanner entry forms, a common machine M, and the finite
