@@ -264,8 +264,8 @@ shift/replay leaf で元位置から検査する。選択の test は継続前�
 任意 table・環境・strategy で CPS の全 partial 対応を証明し、実元規則を書き換えて
 全入力 SObs・固定一階 Seq 元文字列言語・定義／全 clock 未定義へ接続した。
 source の unary 呼出しの実 Arg は引き続き任意の連結・反復・query・user 呼出しの入れ子を許す。
-この新しい raw prefix 本体には消費する user 呼出しがなく、非有界の再帰継続を
-CPS の終端へ接続する frontend はまだ実装していない。
+この単体 frontend の raw prefix 本体には消費する user 呼出しがない。
+非有界の再帰継続を CPS の終端へ置く場合は、後述の `RecursiveFinitePrefix` を使う。
 
 `FinitePrefixControlExamples` の実元規則は `(aa / a); &param0` そのものである。
 aaa から aa を捕捉すると、aa の選択後に全コピー query が失敗する。正しい生成先も拒否し、
@@ -279,6 +279,32 @@ query を枝へ素朴に分配した本体だけが a へ戻って誤成功す�
 この経路は固定 literal 一個への制限を外したが、prefix の消費は構文から有限に列挙できる
 必要がある。prefix の consuming star／非有界の user 呼出し、一般の PEG prefix、
 独立複数 source capture、および一般 Par/Seq 一致／分離はまだ未解決である。
+
+`RecursiveFinitePrefix` は有限 prefix の CPS 終端を実際の再帰継続へ接続した。
+元 Body は prefix でそのまま終える `finish` と、`prefix; param0; tail` として
+全保持値を再照合して任意の Arg 継続へ入る `resume` を持ち、同じ文法に混在できる。
+`resumeCheck` は各成功消費語に対応する実 shift/replay leaf の本体がその tail と
+構文的に同じことを有限検査する。Arg の構文等値は kernel で計算する。
+単なる「継続結果が一致する」という仮定を最終入力にせず、任意 table／環境／strategy の
+実 leaf 評価を prefix 終点からの全値再照合と継続評価へ合わせる。
+先の CPS 対応をこの終端へ具体化し、元規則の実本体書換え・元位置正規化・自動 profile
+から、再帰規則群全体の全入力観測・固定一階 Seq 元文字列言語・定義／全 clock 未定義を得る。
+tail は旧値参照、任意の Arg 連結・選択・否定・反復、同 user／相互再帰を許す。
+
+`RecursiveFinitePrefixExamples` の raw source 規則本体は、`a;&param0;a/a` の prefix の後に
+全 param0 を読み、子へ `param0;param0` の二倍捕捉で同じ user を呼ぶ。子から戻ると
+`?` と親の元の全値を照合する。実初期引数も入力の a-run から末尾2文字を残して捕捉するため、
+初期捕捉長・各子の捕捉長・実際の再帰深さが同じ固定文法で入力依存となる。
+初期長1/2/4と深さ0/1/2の source 実行、生成 Seq 成功、深さ1の生 Seq 実行を
+kernel 検証した。子のコピー不足や親の復元コピー不足は全消費にならない。
+再照合失敗だけでなく tail だけが失敗する例でも prefix を選び直さず、素朴分配だけが
+誤成功する。prefix と再照合成功後の nullable tail は固定入力の全 clock で未定義を保存する。
+早期終了する負 query user も同じ実元文法に残し、2つの固定開始式の全入力言語変換、
+nullable 実引数の全入力全 clock 未定義、異なる tail／欠けた継続 link の拒否も証明した。
+
+これにより新しい有限 prefix の後に非有界の再帰継続を置ける。prefix 自体で消費する star／
+非有界 user 呼出しはまだ扱わず、tail への入口には全保持値の再照合を要求する。
+任意の PEG prefix と独立複数 source capture、および一般 Par/Seq 一致／分離は未解決である。
 
 断片経路は固定 literal に限らず、入力依存で非有界の区切り scanner prefix を扱う。
 この経路の実引数は G/H で選択する codeword＋a-fragment family とその有限優先選択閉包に限定し、prefix も A に限定する。

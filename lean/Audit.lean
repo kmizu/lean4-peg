@@ -1,3 +1,5 @@
+import MacroPeg.CBV.RecursiveFinitePrefixExamples
+import MacroPeg.CBV.RecursiveFinitePrefix
 import MacroPeg.CBV.FinitePrefixControlExamples
 import MacroPeg.CBV.FinitePrefixControl
 import MacroPeg.CBV.AutomaticOriginControlExamples
@@ -22815,3 +22817,165 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.FinitePrefixControlExamples.missing_prefix_link' depends on axioms: [propext] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.FinitePrefixControlExamples.missing_prefix_link
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefix.resume_sound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefix.resume_sound
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefix.body_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefix.body_eval
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefix.raw_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefix.raw_firstOrder
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefix.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefix.source_firstOrder
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefix.source_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefix.source_rule
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefix.related' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefix.related
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefix.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefix.observations_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefix.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefix.language_translation
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefix.defined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefix.defined_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefix.undefined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefix.undefined_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.raw_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.raw_rule
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.actual_capture' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.actual_capture
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.source_recursive_samples' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.source_recursive_samples
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.target_recursive_samples' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.target_recursive_samples
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.target_direct' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.target_direct
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.committed_replay_failure' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.committed_replay_failure
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.committed_tail_failure' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.committed_tail_failure
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.looping_tail_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.looping_tail_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.looping_tail_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.looping_tail_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.short_copy_samples' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.short_copy_samples
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.language' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.language
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.early_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.early_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.early_language' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.early_language
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.nullable_source' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.nullable_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.nullable_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.nullable_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.invalid_resume' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefixExamples.invalid_resume
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveFinitePrefix.instDecidableEqExpr' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveFinitePrefix.instDecidableEqExpr
