@@ -21649,3 +21649,17 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ScannerOriginControlExamples.nullable_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControlExamples.negative_capture_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControlExamples.negative_capture_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerOriginControlExamples.negative_capture_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerOriginControlExamples.negative_capture_target

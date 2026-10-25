@@ -10,7 +10,7 @@ set_option maxRecDepth 100000
 
 def parts : List (Part 3) := [
   ⟨.shift 0 residuals,ScannerReplayResidualExamples.shifted⟩,
-  ⟨.scan 2,.lit ['Z']⟩,
+  ⟨.scan 2,.seq (.lit ['X']) (.seq (.param 0) (.lit ['Z']))⟩,
   ⟨.scan 2,ScannerReplayResidualExamples.scanned⟩,
   ⟨.replay,.lit []⟩]
 def plans : List ReplayControlFusion.Plan := [.alt (.leaf 0) (.notP (.leaf 1)),.leaf 2,.leaf 3]
@@ -128,5 +128,31 @@ theorem nullable_target (x : List Char) (clock : Nat) :
       (targetExpr machine parts plans nullable) x.length=none :=
   (undefined_iff machine parts plans checked.1 nullable (by decide +kernel) scanners summary inputs
     checked.2.2.1 checked.2.2.2.1 checked.2.2.2.2.1 (by decide +kernel) x).mp (nullable_source x) clock
+
+def completeProbe : List Char := "ababaXabaZ".toList
+def shortProbe : List Char := "ababaXabZ".toList
+
+/-- The negative leaf reads the complete newly captured value after a
+scanner and marker. A complete copy rejects the negative query; a short
+copy lets it return empty success at the original position. -/
+theorem negative_capture_source :
+    evV (original machine parts plans) completeProbe .callByValuePar
+      (tblV (original machine parts plans) completeProbe .callByValuePar 14) []
+      (sourceExpr machine root) completeProbe.length=some none ∧
+    evV (original machine parts plans) shortProbe .callByValuePar
+      (tblV (original machine parts plans) shortProbe .callByValuePar 14) []
+      (sourceExpr machine root) shortProbe.length=some (some shortProbe.length) := by decide +kernel
+
+theorem negative_capture_target :
+    (∃ k, evV (target machine parts plans) completeProbe .callByValueSeq
+      (tblV (target machine parts plans) completeProbe .callByValueSeq k) []
+      (targetExpr machine parts plans root) completeProbe.length=some none) ∧
+    (∃ k, evV (target machine parts plans) shortProbe .callByValueSeq
+      (tblV (target machine parts plans) shortProbe .callByValueSeq k) []
+      (targetExpr machine parts plans root) shortProbe.length=some (some shortProbe.length)) :=
+  ⟨(defined_iff machine parts plans checked.1 root checked.2.1 scanners summary inputs
+      checked.2.2.1 checked.2.2.2.1 checked.2.2.2.2.1 checked.2.2.2.2.2 completeProbe none).mp ⟨14,negative_capture_source.1⟩,
+    (defined_iff machine parts plans checked.1 root checked.2.1 scanners summary inputs
+      checked.2.2.1 checked.2.2.2.1 checked.2.2.2.2.1 checked.2.2.2.2.2 shortProbe (some shortProbe.length)).mp ⟨14,negative_capture_source.2⟩⟩
 
 end Shallot.MacroPeg.CBV.ScannerOriginControlExamples

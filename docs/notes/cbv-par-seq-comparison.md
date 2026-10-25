@@ -77,6 +77,8 @@ physical 定義／全 clock 未定義を証明した。
 元の位置へ空成功で戻り、後続が同じ全入力を読める。生成 Seq の実通常表にも
 その元位置への復帰を導いた。preflight を省くと失敗引数が空成功になる差、
 nullable 引数の全入力・全 clock 未定義も kernel で検査した。
+負 leaf は scanner と `X` の後に新捕捉値を読み、`ababaXabaZ` なら否定失敗、
+短いコピーの `ababaXabZ` なら元位置へ空成功となる両方を生成 Seq へ接続した。
 全体本体には capture 終点以後という制約を課さないが、各消費 leaf の入口形式は
 指定した replay／scanner／認証済み shift とその制御である。
 任意 PEG prefix、独立複数 source 捕捉、一般 Par/Seq 一致／分離は未解決のままである。
