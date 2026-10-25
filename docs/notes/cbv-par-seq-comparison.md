@@ -16,6 +16,21 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 実再帰producerと、捕捉終端より手前のliteral前半を接続
+
+固定literalを保持値の前から後ろへ回す証明と、その値のprofileを選ぶSeq productは既存である。
+`ProducedScannerCompiler`は、そこへ実再帰producerを含む元文法を接続する。
+`SelectedProducerNormalization`は一般の一階文法で選んだarity 1のproducerだけを正規化し、
+選ばないarity 0や複数引数の規則をそのまま保つ。実再帰テーブルの双方向対応を証明し、
+正規化先が既存profile backendの実sourceと一致することを有限AST検査で確認する。
+
+元文法では全nの実a^n捕捉があり、別のuserが`a;w;":";w`を実行する。生成Seqは65規則である。
+引数がn文字を捕捉する一方、前半literalは1文字で終わるため、n≥2ではその終端が実際に異なる。
+既存の回転により、Seq側は捕捉後に残余aを読み、そのあとも同じwを使える。
+親子の別長値の捕捉・復元、短いコピーの拒否、nullable producerの全入力全clock未定義を検証した。
+これは既存の位置回転法と再帰producerの接続であり、任意の異なる成功終端を扱う一般変換ではない。
+一般のPar/Seq一致・分離は未解決のままである。
+
 ## 別の引数parserを共通の成功終端から正規化
 
 `CanonicalProducerCompiler`は、実引数Aと消費前半Dが同じ構文である制約を拡張する。
@@ -27,7 +42,7 @@ Dだけが失敗・発散する場合も保存する。全bodyと開始式を変
 `EndpointSupport`は実評価での成功からcoreの同終端成功を導く。文字/rangeからanyへの拡張、
 実零幅queryの前置・後置、同coreへ成功する選択、sequenceを有限検査する。
 coreは実再帰calleeを含んでよい。Aは親の保持値を検査するqueryを含んでよい。
-実引数と前半を同じcoreへ接続できない場合や、成功終端そのものが異なる場合は、まだ扱わない。
+このcanonicalization自体は、実引数と前半を同じcoreへ接続できない場合や、成功終端そのものが異なる場合を扱わない。
 生成Seqの規則数はn(n+2)+bのままで、元文字列・全残余・有限失敗・全clock未定義を保存する。
 26規則の実例は親値を検査しながら別の子値を捕捉し、両方を復元する。
 
@@ -9982,3 +9997,72 @@ schema. It still requires a certified common successful endpoint and a
 closed canonical prefix; arbitrary different endpoints, other prefix or
 continuation forms, independent multiple captures, and general Par/Seq
 class equality or genuine language separation remain unresolved.
+
+
+## Selected recursive producers with retained-word position shifts
+
+The fixed-literal rotation and finite profile product already exist in
+`BlockCapture`, `ScannerReplayResidual` and the recursive scanner backend.
+This extension connects real recursive producers to that backend in one
+original grammar. It does not claim a new general solution for arbitrary
+position differences.
+
+`SelectedProducerNormalization` takes an ordinary first-order grammar and a
+finite list of selected unary declarations D;B(w). Every syntactic call to
+a selected declaration must use the matching D as its argument; D is
+closed in the caller environment. Finite checks verify the actual arity and
+body, closedness, first-order source bodies and nested call conformance.
+Selected bodies become param0;B(w). Unselected declarations retain their
+original arities and bodies. The source need not belong to a mixed-entry
+DSL: ordinary nullary and multiple-argument rules are covered directly.
+
+The mutual structural evaluator/argument simulation preserves actual Par
+argument order for arbitrary ordinary arities. Conditional producer rows
+and ordinary rows close simultaneously over the original and normalized
+physical tables against their actual finite stabilization tables. The
+capture condition is derived from actual argument evaluation. Stable
+results, all residuals, finite failure, finite definedness and all-clock
+undefinedness are preserved, including under arbitrary retained environments
+at valid source positions. No helper row meaning or totality premise is
+supplied. A multiple-argument example retains distinct values, and an
+argument-order example distinguishes early failure from nullable divergence.
+Selecting an actual nullary declaration as a producer is rejected.
+
+`ProducedScannerCompiler` validates that this emitted ordinary grammar is
+syntactically identical, arities included, to the existing profile-checked
+scanner compiler's source. Existing scanner/grammar/input profile checks
+then connect it to the fixed Seq product. Both interfaces are finite syntax
+or finite profile checks, not semantic table or language-equality oracles.
+The original nullary scanner helper declarations remain present at their
+original arities throughout producer normalization.
+
+The concrete source has a real recursively defined a-star producer. Actual
+DerivesArgsPar capture judgments are proved for every length n before an !
+delimiter and every subsequent suffix, with unbounded captured lengths.
+Another user has the actual body a;param0;":";param0. Its argument consumes
+n characters from the original position; its literal head consumes exactly
+one. For every n≥2, the actual remaining-input positions are respectively
+2 and n+1 on a^(n+1)? and thus differ by n-1. The existing rotation moves
+the literal residual after the Seq argument endpoint, retaining the same
+whole value for the continuation. A parent keeps its own value through this
+call, recursively captures a new child value, and restores its old value
+after a separator. The finite certificates admit all observer profiles;
+an unreadable ab capture is checked and fails finitely, rather than being
+excluded by a word-shape or length premise.
+
+The generated grammar has 65 rules. Direct kernel executions verify a
+length-two capture with the shorter literal head, a parent/child capture
+of lengths one and three, and short parent/child rejection. Original
+executions cover (1,3), (3,1), (2,4); corresponding actual target executions
+also follow from the general finite-definedness theorem. The all-input
+original-language theorem is instantiated. A separate nullable producer
+stays undefined on every input at every clock in both original and generated
+grammars. None of these failures is used as a language-class separation.
+
+The final Seq backend retains its unary user/header/body syntax, one common
+finite scanner and checked profile conditions. Generic producer preparation
+preserves multiple-argument ordinary rules, but this does not translate
+arbitrary multiple-capture source grammars to Seq. Prefixes outside the
+existing replay/rotation/scanner conditions, unmatched producer arguments,
+other continuation forms, independent multiple captures, and unrestricted
+Par/Seq class equality or genuine language separation remain unresolved.
