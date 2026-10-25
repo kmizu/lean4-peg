@@ -16,6 +16,45 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 親の保持値を使う後続を成功復帰の位置に応じて接続
+
+`OriginTailPlan`から`OriginTailInlining`は、下記でClosedに制限していた親tailを拡張する。
+子のPlanの全leafではなく、成功して後続へ返る箇所を`Exits`で追う。altの両側は復帰箇所を
+持つが、guardの第1項は先読み専用であり、そこで親tailを実行することはない。
+notPが成功する場合は元の位置へ返る。`append_eval`はこの区別の下でcommitted choiceと
+有限失敗・未定義を保存する。
+
+有限`flowCheck`は、子の成功復帰箇所について次のいずれかを要求する。
+
+- replay partから返るなら、親tailは任意の一階式でよい。子の新しい`w^m`を再照合したあと、
+  子のCは`w^m`へscopeを固定し、親tailは元のwを保持した環境で実行する。
+- closed partから返るなら、従来どおり親tailがClosedでよい。また、closed partが有限構文検査で
+  零幅成功しか持たず、親tailが`param0; C`なら、元の位置でそのqueryを検査してから親wを再照合できる。
+- notPの成功で元位置へ返る場合も、親tailがClosedまたは`param0; C`であることを要求する。
+
+query専用subtreeはこれらの復帰条件を要求しないが、元のPlanに残り、失敗も未定義も保存する。
+そこでしか使わないclosed partに、実行されない親tailを無条件に付けてbackendへ渡すことをやめた。
+`closed_parts` / `closed_plan`はClosed tailで以前の生成文法と一致すること、
+`extends_closed_check`は以前の有限検査を通る入力が新検査も通ることを証明する。
+
+`OriginTailInlining`は実混合sourceのbody rewriteと既存Seq backendへつなぎ、入力の一階性、
+実entryのlookupと有限checkから、元文字列の全観測・失敗・全clock未定義を保存する。
+規則数はn(n+1)+3b+3、mixed source clock k ≤ Seq clock k ≤ source clock 2((n+2)k)である。
+`OriginTailRawCompiler`は元の`MultiplyingPrefixCompiler.source`からの接続も保持する。
+意味的な復帰位置のoracle、有限捕捉語集合、入力変換は使わない。
+
+`OriginTailExamples`では、子に渡した`w^3`を再照合し、親tailで`!; w; parent(x); w`を実行する。
+childの`w^3`とparentのw、新しいxを区別し、再帰から戻ったあとにも親wを復元する。
+先読み専用closed partは実userへ`c*`を渡し、成功時に入力を進めるがguardが元位置へ戻す。
+`w=c^n d`（n=0/1/4）と親aの生成Seq実行、child値を親へ漏らした入力の拒否、committed child、
+query失敗と引数preflightをkernel検証する。別の元文法では、零幅closed成功とnotP成功から
+`w; C(w)`へ接続する。nullableなqueryの全入力・全clock未定義もsource/targetで証明する。
+元のSpec文法で親の保持値を使う後続を持つ例にも、全入力観測定理を適用する。
+
+入力を消費するclosed成功から親の保持値を使う後続へ戻る一般の場合、成功復帰の上記条件を
+満たさないPlan、複数headの自動閉包展開、一般PEG prefix、独立複数捕捉、
+一般のPar/Seq一致・分離は未解決である。
+
 ## 正倍率headからorigin規則への直接呼出しを展開
 
 `OriginHeadInlining`は、選択した1本の正倍率headがorigin entryを直接呼ぶ場合を扱う。
@@ -52,7 +91,8 @@ partsが元の範囲外leafに誤って見えることを防ぐ。対象のhead�
 preflight省略の誤受理、子選択の誤った再試行、親fallback、nullable引数、短い子値、
 helper privacyも確認する。全入力に対する言語・観測の一般定理をこの元文法に適用する。
 
-親tailが保持値に依存する場合、複数のheadを閉包まで自動展開する手順、一般PEG prefix、
+親tailが保持値に依存する場合は上記の成功復帰条件で拡張した。条件外の後続、
+複数のheadを閉包まで自動展開する手順、一般PEG prefix、
 独立複数捕捉、一般のPar/Seq一致・分離は未解決である。
 
 ## factor-1の経路と循環も混合Seq compilerへ接続

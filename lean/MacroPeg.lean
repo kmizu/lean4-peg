@@ -1,3 +1,9 @@
+import MacroPeg.CBV.OriginTailPlan
+import MacroPeg.CBV.OriginTailParts
+import MacroPeg.CBV.OriginTailEvaluation
+import MacroPeg.CBV.OriginTailInlining
+import MacroPeg.CBV.OriginTailRawCompiler
+import MacroPeg.CBV.OriginTailExamples
 import MacroPeg.CBV.OriginHeadPlan
 import MacroPeg.CBV.OriginHeadParts
 import MacroPeg.CBV.OriginHeadEvaluation
