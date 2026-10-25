@@ -1,3 +1,6 @@
+import MacroPeg.CBV.AutomaticFinitePrefixExamples
+import MacroPeg.CBV.AutomaticFinitePrefix
+import MacroPeg.CBV.FinitePrefixMachines
 import MacroPeg.CBV.GuardedFinitePrefixExamples
 import MacroPeg.CBV.GuardedFinitePrefix
 import MacroPeg.CBV.GuardedLiteralQueryExamples

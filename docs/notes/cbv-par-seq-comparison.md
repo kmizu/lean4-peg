@@ -470,7 +470,28 @@ source の実 rule 本体を書き換える `SemanticBodyRewrite.Related` から
 同値を導き、実 recursive plain/product backend、全入力観測、固定一階 Seq 文法による
 元文字列言語、定義性、全 clock 未定義へ接続する。外側の入力を Σ 語へ制限しない。
 一般定理は任意の有限 prefix 構文と有限 metadata 検査に対するもので、例の unary Σ に
-限定しない。ただし metadata の合成自体を任意 prefix から自動化したわけではない。
+限定しない。
+
+`FinitePrefixMachines` と `AutomaticFinitePrefix` は、この有限 metadata の手動割当てを除く。
+`support` は成功出力だけでなく、選択の失敗枝や not の内部、連結で可能な全 literal offset を
+構文から集める。その語の suffix を literal 観測状態へ、循環回転を shift 観測状態へ変換し、
+重複を除いた有限状態列から machine・read・finish を生成する。空 literal 状態は完成済み
+literal の記憶と alphabet frontier を兼ねる。全長回転が元の語へ戻ること、suffix／回転の
+遷移先が生成集合内にあること、および各有限 label／完全性／alphabet 検査の成功を証明した。
+
+注釈なし `Control` は有限 prefix 原子、retain、seq/alt/not/star を持ち、source の実 rule は
+`rawControl` から直接記述する。`certificates` は、生成した metadata と各生成 capture profile の
+frontier を一般定理から導く。さらに alphabet も prefix、実 recursive body、root の literal から
+自動収集する。`automatic_check`／`automatic_language_translation` の仮定は source の user 参照が
+範囲内にあるという実行可能な構文検査だけであり、機械、状態番号、残余ラベル、成功行、保持値形の
+注釈を受け取らない。元文字列全入力の固定 Seq 言語と、既存の観測／定義性／全 clock 未定義へ接続する。
+生成 target は従来の全 profile 行キーを使うので、サイズ縮小や実用的な変換コストは主張しない。
+`AutomaticFinitePrefixExamples` は手書き metadata なしで、3状態 unary と5状態 binary の観測器を
+生成し、実再帰捕捉・親復帰の source 実行から固定 Seq 全入力言語へ接続する。unary では生成 Seq を
+clock8／実 product 行 clock3で直接 kernel 実行し、空捕捉と全 clock nullable 未定義も検証する。
+binary では ab／aba の非可換残余 ba、長い捕捉内で完成した literal の EOF query、Total ではない
+configured frontier を検証する。否定内部の probe や選択後の全連結 offset の収集、範囲外 user と
+不完全 alphabet の拒否も有限検査する。
 
 
 これは各消費原子の後にも全旧値が照合できる guarded step の PEG 制御である。
