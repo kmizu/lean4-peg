@@ -1,8 +1,9 @@
-import MacroPeg.CBV.SequentialTotalSyntax
+import MacroPeg.CBV.SequentialTotalLanguage
 import MacroPeg.CBV.SequentialLocalExamples
+import MacroPeg.CBV.SequentialResultExamples
 
-/-! Kernel checks of the unrestricted totalization candidate. These concrete
-checks do not replace the missing all-grammars correctness/termination proof. -/
+/-! Concrete kernel checks and symbolic clients of the unrestricted
+totalization and original-string complement theorems. -/
 namespace Shallot.MacroPeg.CBV.SequentialTotalExamples
 open SequentialTotalSyntax
 set_option maxRecDepth 100000
@@ -79,5 +80,50 @@ def mutualCalls : MGrammar := ⟨[⟨1,.call 1 [.param 0]⟩,
 theorem mutual_parameterized_calls_can_progress_or_stay_undefined :
     eval mutualCalls (.call 0 [.chr 'a']) ['a','a','a','a','a'] 12=some (some 0) ∧
     eval mutualCalls (.call 0 [.eps]) ['a'] 12=some none := by decide +kernel
+
+def complementEval (g : MGrammar) (e : MExp) (x : List Char) (k : Nat) : Res :=
+  evV (target g) x .callByValueSeq (tblV (target g) x .callByValueSeq k) []
+    (SequentialTotalLanguage.complementStart g e) x.length
+
+theorem complement_checks_full_consumption :
+    complementEval ⟨[]⟩ (.chr 'a') ['a'] 0=some none ∧
+    complementEval ⟨[]⟩ (.chr 'a') ['a','b'] 0=some (some 0) ∧
+    complementEval ⟨[]⟩ (.chr 'a') [] 0=some (some 0) ∧
+    complementEval ⟨[]⟩ .eps [] 0=some none ∧
+    complementEval ⟨[]⟩ .eps ['a'] 0=some (some 0) := by decide +kernel
+
+theorem cycle_complement_all_strings (x : List Char) :
+    SObs (target SequentialResultExamples.cycle) .callByValueSeq
+      (SequentialTotalLanguage.complementStart SequentialResultExamples.cycle (.call 0 [])) x (some []) := by
+  apply (SequentialTotalLanguage.complement_recognizes _ SequentialResultExamples.cycle_firstOrder _ (by trivial) x).mpr
+  intro h
+  have hs := SequentialTotalCompiler.canonical_success_iff _ SequentialResultExamples.cycle_firstOrder
+    (.call 0 []) (by trivial) x 0 (by omega)
+  simp only [sfx,Nat.sub_zero,List.drop_length] at hs
+  have hv := hs.mpr h
+  have hu := SequentialResultExamples.cycle_undefined x
+    (SequentialLocalCorrectness.clock SequentialResultExamples.cycle x) x.length (Nat.le_refl _)
+  simp only [SequentialLocalCorrectness.canonical] at hv
+  rw [hu] at hv
+  cases hv
+
+theorem arbitrary_depth_fresh_values_and_parent_return (n depth : Nat) :
+    let g := RecursiveFieldExamples.generated
+    let e := RecursiveFieldExamples.generatedRoot
+    let x := RecursiveFieldExamples.tree n depth
+    evV (target g) x .callByValueSeq
+      (tblV (target g) x .callByValueSeq (SequentialLocalCorrectness.clock (target g) x)) []
+      (start g e) x.length=some (some 0) := by
+  intro g e x
+  have hfo := RecursiveFieldCompiler.firstOrder RecursiveFieldExamples.original RecursiveFieldExamples.root [] 2 '#'
+    RecursiveFieldExamples.pattern RecursiveFieldExamples.body RecursiveFieldExamples.root RecursiveFieldExamples.checked
+  have hg : g.FirstOrder := hfo.2.2.1
+  have he : e.FirstOrder := hfo.2.2.2
+  have hs := (RecursiveFieldProofs.source_and_target_all_trees n depth).2
+  have hc := (SequentialClock.finite_eval_iff g x [] e x.length (Nat.le_refl _) (some 0)).mp ⟨depth+1,hs⟩
+  change evV g x .callByValueSeq (SequentialLocalCorrectness.canonical g x) [] e x.length=some (some 0) at hc
+  have ht := SequentialTotalCorrectness.start_correct g hg x [] e he x.length (Nat.le_refl _)
+  rw [hc] at ht
+  exact ht
 
 end Shallot.MacroPeg.CBV.SequentialTotalExamples

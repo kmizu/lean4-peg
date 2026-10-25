@@ -16,45 +16,65 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
-## 固定Seq文法としての全域化候補と、制御演算の条件つき正当性
+## 任意の一階Seq文法の全域化と、元文字列上の補集合閉包
 
-`SequentialTotalSyntax` は、任意の一階 Seq 構文に対する**全域化候補の文法生成**を
-実装した。入力・入力長・保持語を引数に取らず、元の N 規則から厳密に
-`4*N*(N+2)` 規則を生成する。各元規則に arity を保持する success/zero/positive/
-failure の四規則と、段階 0..N の空環境用 nullary 四規則を置く。
-段階 0 の空呼出しは全ての flag が有限失敗し、段階 j+1 は空語代入した元本体を
-段階 j で変換する。未定義を元の有限失敗として扱う設計ではない。
+`SequentialTotalSyntax/FirstOrder/Arguments/Routes/Calls/Layout/Atoms/Expression/Stages/
+Correctness/Compiler/Language` は、**任意の一階 Seq 文法・開始式の全域化**を証明した。
+入力・入力長・保持語を引数に取らず、元の N 規則から厳密に `4*N*(N+2)` 規則を生成する。
+各元規則に arity を保持する success/zero/positive/failure の四規則と、段階 0..N の
+空環境用 nullary 四規則を置く。source の停止性、有限 word palette、alphabet、
+call graph、delimiter/anchor、actual の構文について追加条件を置かない。
+相互 parameterized recursion、actual 内の call、任意 incoming 環境、不正 index/
+arity/parameter の有限失敗も扱う。
 
-一般の call actuals は最初の正の消費箇所ごとに経路を作る。そこまでの actual は
-zero、その一つは positive、その後は full-stage success で評価し、各捕捉値を
-別々の実引数として ordinary callee に渡す。正の actual が一つもなければ空環境
-helper を使う。引数または本体の有限失敗の観測は先読みで caller 位置へ戻す。
-`SequentialTotalFirstOrder` は生成文法・開始式の一階性を証明し、経路数・捕捉
-arity・規則数・nullary helper の形も証明した。
+`SequentialTotalCorrectness.position/expression` は、任意入力の任意の有効位置と
+任意保持環境で、四 mode の実 target canonical 表を元の実 source 結果へ同定する。
+元の成功残余は保持し、元の有限失敗と未定義は success flag の有限失敗へ移す。
+failure flag は**元が有限失敗した場合だけ**空成功し、元が未定義なら有限失敗する。
+そのため source の undefined choice/not/star を誤った正常制御へ変えない。
+`total_at` は target の実 physical clock
+`(4*N*(N+2)+1)*(x.length+1)` で、全 mode が必ず `some result` を返すことを示す。
+`total_observation` はこれを元の実 `SObs` の有限観測へ接続する。
+これは既存の Seq clock 上界を用いた全域性で、時間・空間計算量を改善した主張ではない。
 
-`SequentialTotalControl` は任意の target 表と incoming 環境で、部分式の flag が
-正しいという仮定から、連接・優先選択・否定・反復の flag が正しいことを証明する。
-連接は正の左辺の後だけ full-stage へ戻す。反復は positive parser の star の後に
-元の finite-failure flag を要求する。これを省くと nullable/undefined な停止点が
-誤って成功になる。未知の元結果では全 flag が有限失敗し、元の choice fallback
-や否定の成功は有効にならない。
+一般 call の実引数は最初の正の消費箇所ごとに経路を作る。そこまでの actual は zero、
+その一つは positive、その後は full-stage success で評価する。
+`full_success/routes_correct` は**各捕捉文字列の全リストと最後の残余位置**を保存し、
+callee continuation が失敗・未定義でも別のタプルを選ばないことを証明する。
+全 actual が空なら empty helper を使い、段階 0 では全 flag が有限失敗する。
+段階 j+1 の helper は元本体へ空語を代入して段階 j で変換する。
+正の消費後は小さい残余長へ移るため full-stage に戻せる。
+`position` は残余長の強帰納と段階の帰納で、Calls/Expression の全 row 仮定を外す。
+source の位置ごとの `rounds_j` と、生成文法の実 row を接続した証明である。
 
-`SequentialTotalExamples` の 12 kernel 定理で、空呼出し鎖、fallback/否定を含む
-循環、nullable 反復、空本体を持つ消費 call、第一/第二 actual の正消費と別々の
-保持値、正消費後の引数有限失敗と未定義の区別、保持値を使う再帰と parent への
-backtracking、消費する/空の相互 parameterized call、不正 call の preflight を
-確認した。これらは有限の具体例であり、全入力・全再帰深さの候補正当性ではない。
+連接・優先選択・否定・反復の制御法則は `SequentialTotalControl` にある。
+反復は positive parser の star の後に元の finite-failure flag を要求する。
+これにより nullable/undefined な停止点が反復の正常終了に化けない。
+`successes_iff/recognizes/language_translation` は、全入力の成功残余と、
+**同じ元文字列の全入力消費言語**を固定 Seq 文法で保存する。
 
-**一般の call の意味保存、空 helper の段階帰納法、生成文法の全域性と元言語保存は
-まだ未証明**である。前節の評価器の正当性やこの条件つき制御演算の定理で、これらの
-義務を置き換えない。次の接続は、位置ごとの `rounds_j` を使う source 表と、
-正の actual 後に full-stage へ戻す target 呼出しの各捕捉値・残余の対応である。
-仮にこの Seq→Seq 全域化が閉じても、元の位置からの一般 Par 捕捉を Seq へ移す問題と
-Par/Seq クラス全体の一致・分離は別に残る。
+`SequentialTotalLanguage.complementStart` は
+`!(start(g,e); !any); any*` を生成する。EOF を含む全入力受理を否定するので、元の
+途中までの消費成功も補集合へ入る。`complement_recognizes` は任意 `List Char` で
+この固定 target の受理が元の非受理と同値であることを証明する。
+`Shallot.PegSeparation.firstOrder_seq_complement` は
+`IsFirstOrderCBVPEL .callByValueSeq L → IsFirstOrderCBVPEL .callByValueSeq (¬L)`
+を、実文法生成と実 `SObs` によって示す。元の無限未定義による非受理も含む。
 
-今回の追加は 4 modules・36 guard。全 1,368 jobs/Audit と関連 3,578 公開定理の
-依存検査を通過（標準 Lean 公理 3,498、無公理 80）。PR69 全体は新規 Lean
-58 modules・503 guard。一般一致・分離や補集合閉包の完成は主張しない。
+15 個の example 定理では、空呼出し鎖、fallback/否定を含む循環、nullable 反復、
+複数 actual の個別捕捉、正消費後の引数有限失敗と未定義、保持値を使う再帰と親への
+backtracking、相互 parameterized call、不正 call preflight、補集合の EOF 判定を
+kernel 検証した。さらに、実循環の補集合が全元文字列を認識することと、既存の
+fresh doubled tuple/parent-return 文法について**全初期長・全再帰深さ**で新 target が
+全入力を受理することを記号的に証明した。一般定理はこれらの具体例に依存しない。
+
+今回の追加は 10 modules・56 guard。全 1,378 jobs/Audit と関連 3,634 公開定理の
+依存検査を通過（標準 Lean 公理 3,553、無公理 81）。PR69 全体は新規 Lean
+68 modules・559 guard。新しい axiom/sorry/native_decide は置いていない。
+
+この結果は Seq→Seq の全域化と補集合閉包であり、**一般 Par→Seq の文法変換や、
+Par/Seq 言語クラスの一致・分離を証明したものではない**。元の同じ位置から評価した
+一般 Par actual の live な捕捉値を Seq へ移す問題が残る。
 
 ## 入力位置の再帰と有限な空呼出し閉包で、元のSeq評価を再構成する
 
@@ -79,8 +99,8 @@ oracle として呼ばず、式評価エンジンに自身の下位行と局所�
 新しい倍長値と親復帰を含む任意初期長・任意再帰深さの既存文法にも接続した。
 
 これは Lean の停止する評価器であり、未定義は返り値 `None` として表す。
-未定義を有限失敗へ変える固定 Seq 文法生成、一般の補集合閉包、一般 Par→Seq
-翻訳はまだ証明していない。密な入力位置のリストと再計算を含むため、既存の
+この評価器単独では固定 Seq 文法を生成しない。上の全域化・補集合閉包の文法生成と
+区別する。一般 Par→Seq 翻訳は未解決。密な入力位置のリストと再計算を含むため、既存の
 時間・空間上界を改善したとも主張しない。既存の stationary/clock 定理を再利用し、
 凍結下位行の局所最小固定点の同定と、自前の位置再帰評価器を接続した結果である。
 
@@ -122,7 +142,8 @@ committed choice、無効 call/arity/parameter、nullable star、skip される�
 
 この観測変換は **Seq→Seq** で、一般の Par→Seq 変換そのものではない。未定義を
 有限失敗へ変えていないため、任意プログラムの totalization や、任意の Seq 言語の
-補集合閉包が証明されたとは主張しない。次の全体変換を考えるため、既にある有限
+補集合閉包をこの観測変換単独から主張しない。別の `SequentialTotal*` が上記の一般
+全域化・補集合閉包を証明する。既にある有限
 stationary-state の議論と、ゼロ/positive/failure の実際の文法生成を分けて接続した。
 
 関連研究として、[2019年の原記事](https://kmizu.hatenablog.com/entry/2019/10/24/145039)

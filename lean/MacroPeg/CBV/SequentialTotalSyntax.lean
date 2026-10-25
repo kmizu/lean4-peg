@@ -1,9 +1,10 @@
 import MacroPeg.CBV.SequentialResultSyntax
 
-/-! Candidate fixed-grammar totalization of arbitrary first-order Seq syntax.
-This module proves syntactic properties only. General semantic correctness
-and termination of the generated grammar remain obligations: the already
-verified position evaluator does not discharge them automatically. -/
+/-! Fixed-grammar totalization of arbitrary first-order Seq syntax.
+This module supplies the input-independent construction. Its general
+semantic correctness and totality are proved in SequentialTotalCorrectness
+and SequentialTotalCompiler; original-string complement closure is in
+SequentialTotalLanguage. -/
 namespace Shallot.MacroPeg.CBV.SequentialTotalSyntax
 
 inductive Mode where

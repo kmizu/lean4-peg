@@ -3,8 +3,8 @@ import MacroPeg.CBV.SequentialTotalSyntax
 /-! Semantic control laws for total result flags. Unknown source results
 make every flag finitely fail; in particular, unknown is never a finite
 failure of the source and must not enable its alternative or negation.
-These laws are conditional on the subexpression flags, and do not yet prove
-the recursive grammar construction correct. -/
+These laws are conditional on the subexpression flags. The recursive-row
+assumptions are discharged in SequentialTotalCorrectness. -/
 namespace Shallot.MacroPeg.CBV.SequentialTotalControl
 open SequentialTotalSyntax
 
@@ -20,6 +20,10 @@ def failureResult (p : Nat) : Res → Res
 def successResult : Res → Res
   | some (some q) => some (some q)
   | _ => some none
+
+def modeResult (m : Mode) (p : Nat) (r : Res) : Res := match m with
+  | .success => successResult r | .zero => zeroResult p r
+  | .positive => positiveResult p r | .failure => failureResult p r
 
 def Realizes (g : MGrammar) (x : List Char) (T : SequentialClock.Table)
     (E : List (List Char)) (a : Forms) (p : Nat) (r : Res) : Prop :=
@@ -45,6 +49,14 @@ theorem success_correct (a : Forms) (r : Res) (ha : Realizes g x T E a p r) :
     | none => simp [Forms.success,evV,hpos,hz,positiveResult,zeroResult,successResult]
     | some q => by_cases hq : q=p <;>
         simp [Forms.success,evV,hpos,hz,positiveResult,zeroResult,successResult,hq]
+
+theorem get_correct (a : Forms) (r : Res) (ha : Realizes g x T E a p r) (m : Mode) :
+    evV g x .callByValueSeq T E (a.get m) p=modeResult m p r := by
+  cases m
+  · exact success_correct a r ha
+  · exact ha.1
+  · exact ha.2.1
+  · exact ha.2.2
 
 theorem alt_correct (a b : Forms) (ra rb : Res)
     (ha : Realizes g x T E a p ra) (hb : Realizes g x T E b p rb) :
