@@ -92,8 +92,9 @@ theorem effects_all {n : Nat} (M : Machine n) (S : List (List Nat)) (hS : AllIn 
 Replay components and finite choice/guard composition need no annotation. -/
 def entryCheck {n : Nat} (M : Machine n) : Entry n → Bool
   | .replay | .safeReplay => true
-  | .shift q R => ScannerReplayResidual.entryCheck M R q && ScannerReplayResidual.completeCheck M R
+  | .shift q R | .iterate q R => ScannerReplayResidual.entryCheck M R q && ScannerReplayResidual.completeCheck M R
   | .alt a b | .guard _ a b => entryCheck M a && entryCheck M b
+  | .aligned c => GuardedReplayControl.check M c && GuardedReplayControl.universalCheck c
   | .scan _ => false
 
 theorem entry_sound {n : Nat} (M : Machine n) : ∀ e, entryCheck M e=true →
@@ -102,6 +103,10 @@ theorem entry_sound {n : Nat} (M : Machine n) : ∀ e, entryCheck M e=true →
   | .shift q R,h => by
     obtain ⟨hs,hc⟩ := Bool.and_eq_true_iff.mp h
     exact ⟨hs,fun P => by simp [RecursiveScannerProductHeader.entryCheck,hc]⟩
+  | .iterate q R,h => ⟨h,fun _ => rfl⟩
+  | .aligned c,h => by
+    obtain ⟨hc,hu⟩ := Bool.and_eq_true_iff.mp h
+    exact ⟨hc,fun P => GuardedReplayControl.capture_universal P c hu⟩
   | .alt a b,h | .guard _ a b,h => by
     obtain ⟨ha,hb⟩ := Bool.and_eq_true_iff.mp h
     obtain ⟨ha,ha'⟩ := entry_sound M a ha
@@ -132,6 +137,16 @@ theorem header_all {n : Nat} (M : Machine n) (P : List Nat) (hP : P∈profiles (
     subst Q
     exact hP
   | .scan _ => fun _ h => h
+  | .iterate q R => by
+    apply product_all
+    · rw [effects_noUser M (fun _ _ => []) (summary M) [P] _ (rawControlArg_scoped _)]
+      exact effects_all M [P] (by simpa [AllIn] using hP) _
+    · simpa [AllIn] using hP
+  | .aligned c => by
+    apply product_all
+    · rw [effects_noUser M (fun _ _ => []) (summary M) [P] _ (rawControlArg_scoped _)]
+      exact effects_all M [P] (by simpa [AllIn] using hP) _
+    · simpa [AllIn] using hP
   | .shift q R => product_all _ _ _ (by simpa [AllIn] using profile_mem (observer M) (valid M) ((R q).getD [])) (by simpa [AllIn] using hP)
   | .alt a b => by
     intro Q hQ

@@ -334,20 +334,132 @@ capture-origin 本体書換えを導き、既存の元位置制御・自動 prof
 全入力全 clock 未定義、成功した反復／再照合後の nullable tail の全 clock 未定義、
 不正 tail link の拒否も証明した。generic な残余補題は ab/aba の非可換例で v=ba を使い、
 元の ab をそのまま再開すると誤ることと、空 step の全入力での未定義を確認する。
-この multi-byte 例は補題の検証であり、完成した新 compiler の反復 step は一文字 c である。
+この例単独は補題の検証であり、`GuardedReplayCompiler` 自体の反復 step は一文字 c である。
+次の共通 compiler の入口拡張で、複数文字の step を実文法変換へ接続する。
 
 架空の保持値 b を aba の元位置に与えると、元反復本体は ab だけ消費する一方、
 無条件に正規化すると最後の a も消費する。これは同じ元位置から b を捕捉できない行であり、
 捕捉不変条件を外した body 書換えが実際に誤る反例として kernel 検証した。
 この証明を任意 table の全環境一致と取り違えない。
 
-非有界の prefix 消費はこの一文字・正の保持値 query 付き反復 family で接続した。
-任意 PEG prefix、保持値に依存する一般の反復／消費 user 呼出し、全保持値の再照合を伴わない
-一般の依存継続、独立複数 source capture、および一般 Par/Seq 一致／分離は未解決である。
+この一文字 frontend に続き、`RecursiveScannerProductCompiler.Entry.iterate q R` は
+`(lit u; &param0)*; param0` を直接の source header として扱う。u は開始状態の
+固定ラベルであり、一文字には制限しない。有限 `headerCheck` は residual machine の
+sound-label 検査、開始ラベルの存在、完全性を検査する。成功する捕捉の可読性や形を
+注釈として要求せず、実際の捕捉全体の profile が到達状態を決める。
+
+捕捉 w が読めるなら、実残余ラベル v と `u ++ w = w ++ v` を導き、捕捉終点で
+`lit v` を貪欲反復する。読めないなら、実捕捉 prefix と完全性から最初の `u;param0` が
+有限失敗すると導き、元 header の0反復＋全 w 再照合を、捕捉終点の空消費へ移す。
+可読性の失敗を header 全体の失敗に置き換えない。`iteration_header` は任意の文法・
+strategy・table 間で、この対応を全 partial 結果について証明する。従来の汎用回転補題は
+import cycle を避ける低層 `GuardedReplayRotation` へ移し、名前空間と既存 API を保った。
+
+plain 行に加え、反復残余を読む実 inline filter と継続の product 行も接続した。
+`ControlFilter.seq_transfer` は異なる実文法・table 間の連結 filter 対応を合成する。
+反復 header の出力集合は全有限 profile の保守的な集合とし、実元規則の成功からの
+出力包含を証明した。自動 profile 検査、同じ user-clock の全 partial 対応、元位置 Plan
+正規化、固定一階 Seq 文法の全入力観測・元文字列言語・physical 定義／全 clock 未定義
+へ既存の定理を接続する。Arg 継続・実引数の seq/alt/not/star と実 user 再帰を制限しない。
+入口は有限 alt／正負 guard にも入れ子にできる。
+
+`RotatedGuardedReplayExamples` は二状態の ab 周期機械と、同じ user を再帰的に呼ぶ
+実元規則を使う。親の捕捉 aba の残余は ba、子の abab と次の ababab の残余は ab であり、
+子から戻ると親の全値を再利用する。反復回数1/2/4と深さ0/1/2を独立に変えた source 成功と
+生成 Seq の成功、および通常 clock8での Seq 実行を kernel 検証した。別の root は
+非有界 `a;b*;a` を実捕捉し、周期に非可読な値の0反復を保つ。再帰 user 全体を別 user の
+実引数にする root は新しい product 行を実際に通る。2つの固定開始式の全入力言語変換、
+継続失敗時の反復確定、親コピー不足での未消費残り、空捕捉成功、nullable 実引数の
+全入力全 clock 未定義、反復成功後の nullable 継続の全 clock 未定義、必要 arc 不足と
+空 step の有限拒否も検証する。
+
+固定語一つの反復から、`GuardedReplayControl` は捕捉を保つ step の PEG 制御全体へ広げる。
+原子は `lit u; &param0` であり、seq／優先 alt／notP／star を任意有限の深さに入れ子にできる。
+原子ごとに同じ共通 machine 内の開始状態と完全回転ラベルを有限検査する。各反復で違う語を
+選べる。`Entry.aligned c` の生 source header は、この制御 c の後に全 param0 を再照合する。
+
+核心の `Aligned x w p q` は、実入力に対して `sfx x p = w ++ sfx x q` であることと
+両位置の有効性を記録する。`atom_results` は原子の成功後にも同じ保持値 w が新しい元位置で
+照合できると導く。非可読な原子は有限失敗へ移し、可読な原子は実捕捉 profile が選んだ残余
+literal へ移す。`Results` は成功位置の対応だけでなく None と有限失敗を区別する。
+この関係は連結・優先選択・否定で保存され、`star_results` は元の残り入力長による強い帰納で
+greedy star へ持ち上げる。`p = w.length + q` により、元と残余側の進捗／空成功が一致し、
+nullable step の未定義も保存する。反復回数の有限上限や成功する trace を仮定しない。
+
+`control_results` は構文全体についてこの関係を導き、`header_eq` は最後の全保持値照合を
+外して、捕捉終点からの残余 PEG 制御と全 partial 結果を一致させる。任意の文法・table・
+strategy 間で成立する。新しい controlArg と独立 inline filter の構文一致を証明し、
+plain/product 行、実再帰継続、自動 profile、元位置正規化、固定一階 Seq の全入力観測・
+元文字列言語・physical 定義／全 clock 未定義へ接続した。成功行や捕捉形の oracle は追加しない。
+
+`GuardedReplayControlExamples` の同 user 再帰では、長い abab step と否定 guard 付きの
+短い ab step を各回で選ぶ。捕捉 aba の残余は baba／ba、子の abab では abab／ab となり、
+親の全値へ戻る。ab 単位1/2/3/5と深さ0/1/2、生成 Seq clock8の直接実行、再帰 user 全体を
+別 user の実引数にした product 行の直接実行を kernel 検証した。長い literal が成功しても
+直後の保持値 query が失敗したら短い原子を試す必要があり、`(abab/ab);&param0` とまとめる
+素朴な変換は ababa 上で残り2文字を生じる。正しい guarded alt は全消費する。
+入れ子 `((long*) ; short)*` では内側の貪欲反復の後の失敗を短い反復へ戻さないこと、
+非周期の非有界実捕捉、nullable 実引数の全入力全 clock 未定義、否定原子の空成功を反復する
+制御自身の全 clock 未定義、成功 header 後の nullable 継続、入れ子の不正原子の有限拒否も検証する。
+四状態の別文法は ab／ac という異なる周期を同じ実反復内で混在させ、その source 実行・
+生成 Seq 成功の存在・固定開始式の全入力言語変換を証明する。この大きい生成表の直接実行は
+行わず、直接 Seq 実行の検査は二状態の実再帰／product 文法で行っている。
+
+`FiniteProfileClosure` は、既存の反復用 profile 閉包について、生成元が全て正しい有限 profile
+なら `profiles.length` 回以内に必ず閉じると証明した。各回が未閉包なら重複除去した集合が
+真に増え、有限全 profile 集合の長さを超えるためである。従来の conservative fallback は
+この場合には使われない。任意の閉じた部分集合への包含も導き、反復で情報が失われないようにする。
+
+`AlphabetCaptureProfiles` は、指定した有限アルファベット Σ の一文字 profile から、この閉包で
+domain を自動構成する。Σ 上の全語の profile が入り、domain の各要素も実際の Σ 語で
+実現される。これは有限の保持値 palette ではなく、長さ非有界の全 Σ 語の有限な観測である。
+有限 source 検査は M の arc・実 header・body・root の literal の文字が Σ に含まれること、
+参照範囲・header layout、および domain の各 profile での入口条件を確認する。H/C/A の成功する
+注釈をユーザーが選ぶ必要はない。入力文字列全体が Σ 語であることは要求せず、最終定理は全 x を量化する。
+
+再帰 summary は入力 profile が domain 内なら domain、外なら全 profile とする。
+そのため、実際に source から捕捉できる値だけに domain を適用しつつ、元の grammarCheck が
+検査する全 profile 行についても sound な summary を維持する。`iterate`／`aligned` の
+headerEffects は、旧全 profile 集合から、実 source control の消費効果と全保持値 profile の
+積へ精密化した。`rawControlArg` は guarded control を通常の Arg で表し、call-free 評価一致と
+実成功の output_shape からこの集合への包含を導く。これにより、反復・再帰・保持値の合成でも
+Σ domain が保たれる。既存の全入力観測・固定一階 Seq 元文字列言語・定義／全 clock 未定義へ接続した。
+
+この自動経路は無条件 scanner 入口も一律には拒否しない。実 source alphabet から生成した
+全 profile がその状態で読めれば、既存 scanner 再開の条件を導出できる。
+`AlphabetCaptureProfileExamples` は a/b を読む状態0と、先頭 a の成否を記憶する状態1/2を
+同じ M に持つ。source 全検査を通し、全256 profile のうち生成 domain は3個となる。
+旧 Universal frontend はこの scanner 入口を拒否する一方、新経路は実再帰引数を認証する。
+同じ user の保持値二倍の再捕捉と親全値への復帰で長さ1/4/10の値を作り、その後の scanner
+消費を1/2/4文字で変えた source 実行・生成 Seq 成功、および通常 clock12の Seq 直接実行を
+kernel 検証した。nullable 引数の全入力全 clock 未定義、欠けた alphabet、未知文字を含む
+実引数構文、不正 literal 観測ラベルの有限拒否も検証する。生成 target の行キーは従来の全
+profile 列挙のままであり、ここで target のサイズ削減は主張しない。
+
+`LiteralPrefixObservation` は回転ラベルとは別に、固定 literal の未照合 suffix をラベルに持つ。
+空ラベルになった状態は、その literal が捕捉内で既に読み終わったことを記憶し、Σ の残りの文字を
+吸収する。有限 label 検査と実 capture path から、literal が捕捉内で完了した場合、捕捉後に
+残余 literal を必要とする場合、および有限失敗を区別する。`peek_transfer` は、保持値 w が
+実元位置で照合できれば、元位置の `&lit u` を捕捉終点の実残余 query へ移す。
+追加の alphabet-loop 検査により、実 profile が生成 domain に入ることから w が Σ 語だと導き、
+`argument_domain`／`actual_literal_probe` は source の実再帰引数評価からこの条件を供給する。
+新たな成功行や保持値形 oracle は使わない。
+
+前回衝突した aab／bba は、追加した観測状態では異なる profile になる。
+aabz／bbaz の捕捉後の残余入力が同じ z でも、元位置での literal a の成功／失敗を正しく
+終点へ移す具体例と、任意の実再帰引数成功からの一般 probe 定理を kernel で確認した。
+これは有限 prefix の選択を扱うための観測 primitive であり、生の有限 prefix 原子を
+GuardedReplayControl の反復へ組み込む frontend はまだ実装していない。
+
+これは各消費原子の後にも全旧値が照合できる guarded step の PEG 制御である。
+任意 PEG prefix、捕捉の照合を保たない一般の依存 step／消費 user 呼出し、全保持値の再照合を
+伴わない一般の依存継続、独立複数 source capture、および一般 Par/Seq 一致／分離は
+引き続き未解決である。
 
 断片経路は固定 literal に限らず、入力依存で非有界の区切り scanner prefix を扱う。
 この経路の実引数は G/H で選択する codeword＋a-fragment family とその有限優先選択閉包に限定し、prefix も A に限定する。
-自動 profile 経路は実引数の形を制限せず、対応する入口 family を完全固定 shift／replay 制御木に限定する。
+自動 profile 経路は実引数の形を制限せず、対応する入口 family を完全固定 shift／replay／
+捕捉の照合を保つ guarded step の PEG 制御とその有限入口制御木に限定する。
 有限状態 scanner compiler との任意混在、任意 PEG prefix／実引数、独立複数捕捉、および
 一般 Par/Seq 一致・分離は依然未解決である。
 

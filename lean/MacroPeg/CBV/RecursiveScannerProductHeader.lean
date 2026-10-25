@@ -1,3 +1,5 @@
+import MacroPeg.CBV.IndependentCaptureControl
+import MacroPeg.CBV.ControlFilter
 import MacroPeg.CBV.ScannerFrontierCertificate
 import MacroPeg.CBV.RecursiveScannerProductCapture
 
@@ -13,7 +15,8 @@ def entryCheck {n : Nat} (M : Machine n) (entry : Entry n) (P : List Nat) : Bool
   match entry with
   | .scan q => ScannerFrontierCertificate.check P q
   | .shift q R => ScannerReplayResidual.completeCheck M R || ScannerFrontierCertificate.check P q
-  | .replay | .safeReplay => true
+  | .replay | .safeReplay | .iterate _ _ => true
+  | .aligned c => GuardedReplayControl.captureCheck P c
   | .alt a b | .guard _ a b => entryCheck M a P && entryCheck M b P
 
 theorem entryCheck_of_safe {n : Nat} (M : Machine n) (entry : Entry n) (w : List Char)
@@ -22,7 +25,8 @@ theorem entryCheck_of_safe {n : Nat} (M : Machine n) (entry : Entry n) (w : List
   induction entry with
   | scan q => exact (ScannerFrontierCertificate.check_actual M w q).mpr (h rfl q)
   | shift q R => exact Bool.or_eq_true_iff.mpr (Or.inr ((ScannerFrontierCertificate.check_actual M w q).mpr (h rfl q)))
-  | replay | safeReplay => rfl
+  | replay | safeReplay | iterate _ _ => rfl
+  | aligned c => exact GuardedReplayControl.capture_safe M w c h
   | alt a b ha hb | guard _ a b ha hb =>
     exact Bool.and_eq_true_iff.mpr ⟨ha (fun hx => h (Bool.or_eq_true_iff.mpr (Or.inl hx))),
       hb (fun hx => h (Bool.or_eq_true_iff.mpr (Or.inr hx)))⟩
@@ -171,9 +175,82 @@ theorem replay_prefix (g : MGrammar) (x w : List Char) (s : Strategy) (T : Clock
   have hs := (CBVtoCBN.stripPrefix_exact w (sfx x p) (sfx x j)).mpr hcap
   simp only [evV,List.getElem?_cons_zero,hs,length_sfx x hj]
 
-/-- Every supported header transfers its complete partial result from the
-original source position to the actual capture endpoint. Guards keep their
-own origin and do not substitute a consumed endpoint for that origin. -/
+/-- The actual capture selects a rotated word or zero iterations. -/
+theorem iteration_header {n : Nat} (M : Machine n) (P : List Nat) (q : Fin n)
+    (R : ScannerReplayResidual.Labels n) (hc : headerCheck M (.iterate q R)=true)
+    (w : List Char) (hP : P=profile (observer M) w)
+    (g h : MGrammar) (x : List Char) (s t : Strategy) (T U : ClockFreezing.Table)
+    (p j : Nat) (hp : p≤x.length) (hj : j≤x.length) (hcap : sfx x p=w++sfx x j) :
+    evV g x s T [w] (sourceHeader (.iterate q R)) p=
+      evV h x t U [w] (sourceExpr M (iterationArg P q R)) j := by
+  subst P
+  have ha := replay_prefix g x w s T p j hj hcap
+  obtain ⟨he,hc⟩ := Bool.and_eq_true_iff.mp hc
+  cases hs : StatefulScanner.advance M q w with
+  | some r =>
+    have hr := GuardedReplayIteration.rotate g x s T w _ _
+      (ScannerReplayResidual.actual_rotation M R q he w r hs) p j hp ha
+    simpa only [sourceHeader,iterationArg,DynamicScannerBinding.resume_actual,hs,sourceExpr]
+      using hr.trans (ParserPrefixFusion.pure_eval g h x s t T U [w] [w] (.star (.lit ((R r).getD []))) True.intro j)
+  | none =>
+    have hf := ScannerReplayResidual.replay_unreadable M R q he hc w hs g x s T p j hcap
+    have hg : evV g x s T [w] (GuardedReplayIteration.step ((R q).getD [])) p=some none := by
+      simp only [GuardedReplayIteration.step,evV] at hf ⊢
+      split at hf <;> simp_all [MExp.andP,evV]
+    simp only [sourceHeader,GuardedReplayIteration.header,iterationArg,
+      DynamicScannerBinding.resume_actual,hs,sourceExpr]
+    rw [evV_seq_ok (show evV g x s T [w] (.star (GuardedReplayIteration.step ((R q).getD []))) p=some (some p) from evStar_fail hg),ha]
+    simp [evV,Shallot.stripPrefix?,length_sfx x hj]
+
+theorem iteration_filter {n : Nat} (M : Machine n) (bodies : List Arg)
+    (P : List Nat) (q : Fin n) (R : ScannerReplayResidual.Labels n)
+    (g h : MGrammar) (x : List Char) (T U : ClockFreezing.Table)
+    (hT : OkTV x.length T) (hU : OkTV x.length U) (w : List Char)
+    (hP : P=profile (observer M) w) (p : Nat) (hp : p≤x.length)
+    (a z : Nat) (ha : a<(observer M).width) (hz : z<(observer M).width) :
+    evV h x .callByValueSeq U [w] (filter M bodies [P] (iterationArg P q R) a z) p=
+      RegularCaptureProduct.filtered (observer M) x a z p
+        (evV g x .callByValuePar T [w] (sourceExpr M (iterationArg P q R)) p) := by
+  have hS : DependentCaptureFilter.Accurate (observer M) [P] [w] := by
+    subst P
+    exact DependentCaptureFilter.environment_accurate (observer M) [w]
+  cases hs : DynamicScannerBinding.resume P q with
+  | none =>
+    simp only [iterationArg,hs]
+    exact IndependentCaptureControl.filter_correct (observer M) (valid M) g h x T U hT hU
+      [P] [w] hS (.lit []) True.intro p hp a z ha hz
+  | some r =>
+    simp only [iterationArg,hs]
+    exact IndependentCaptureControl.filter_correct (observer M) (valid M) g h x T U hT hU
+      [P] [w] hS (.star (.lit ((R r).getD []))) True.intro p hp a z ha hz
+
+theorem aligned_header {n : Nat} (M : Machine n) (P : List Nat) (c : GuardedReplayControl.Expr n)
+    (hc : headerCheck M (.aligned c)=true) (w : List Char) (hP : P=profile (observer M) w)
+    (hCap : GuardedReplayControl.captureCheck P c=true)
+    (g h : MGrammar) (x : List Char) (s t : Strategy) (T U : ClockFreezing.Table)
+    (p j : Nat) (hp : p≤x.length) (hj : j≤x.length) (hcap : sfx x p=w++sfx x j) :
+    evV g x s T [w] (sourceHeader (.aligned c)) p=
+      evV h x t U [w] (sourceExpr M (controlArg P c)) j := by
+  subst P
+  rw [controlArg_source]
+  exact GuardedReplayControl.header_eq M c hc g h x w s t T U p j ⟨hp,hj,hcap⟩ hCap
+
+theorem aligned_filter {n : Nat} (M : Machine n) (bodies : List Arg) (P : List Nat)
+    (c : GuardedReplayControl.Expr n) (g h : MGrammar) (x : List Char) (T U : ClockFreezing.Table)
+    (hT : OkTV x.length T) (hU : OkTV x.length U) (w : List Char)
+    (hP : P=profile (observer M) w) (p : Nat) (hp : p≤x.length)
+    (a z : Nat) (ha : a<(observer M).width) (hz : z<(observer M).width) :
+    evV h x .callByValueSeq U [w] (filter M bodies [P] (controlArg P c) a z) p=
+      RegularCaptureProduct.filtered (observer M) x a z p
+        (evV g x .callByValuePar T [w] (sourceExpr M (controlArg P c)) p) := by
+  have hS : DependentCaptureFilter.Accurate (observer M) [P] [w] := by
+    subst P
+    exact DependentCaptureFilter.environment_accurate (observer M) [w]
+  rw [controlArg_filter,controlArg_source]
+  exact IndependentCaptureControl.filter_correct (observer M) (valid M) g h x T U hT hU
+    [P] [w] hS (GuardedReplayControl.residual P c) (GuardedReplayControl.residual_noHelpers P c) p hp a z ha hz
+
+/-- Headers transfer their full partial result to the real capture endpoint. -/
 theorem target_header {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
     (entry : Entry n) (hEntry : headerCheck M entry=true) (w x : List Char) (p j k l : Nat)
     (hp : p≤x.length) (hj : j≤x.length) (hcap : sfx x p=w++sfx x j)
@@ -192,6 +269,10 @@ theorem target_header {n : Nat} (M : Machine n) (entries : Entries n) (bodies : 
       simp only [targetHeader,DynamicScannerBinding.resume_actual,hs,sourceHeader]
       rw [target_scan M entries bodies r x l j [w] hj,source_scan M entries bodies q x k p [w] hp,
         hcap,StatefulScanner.run_after_prefix M w (sfx x j) q r hs]
+  | aligned c =>
+    exact (aligned_header M _ c hEntry w rfl hw _ _ x _ _ _ _ p j hp hj hcap).symm
+  | iterate q R =>
+    exact (iteration_header M _ q R hEntry w rfl _ _ x _ _ _ _ p j hp hj hcap).symm
   | shift q R =>
     cases hs : StatefulScanner.advance M q w with
     | none =>
@@ -230,6 +311,41 @@ theorem entry_plain_body {n : Nat} (M : Machine n) (entries : Entries n) (bodies
       (.seq (sourceHeader entry) (sourceExpr M b)) p := by
   induction entry with
   | scan q => exact plain_body M entries bodies q b w x p j k l hp hj hcap ((ScannerFrontierCertificate.check_actual M w q).mp hw) hBody
+  | iterate q R =>
+    have he := iteration_header M _ q R hEntry w rfl
+      (source M entries bodies) (target M entries bodies) x .callByValuePar .callByValueSeq
+      (sourceTable M entries bodies x k) (targetTable M entries bodies x l) p j hp hj hcap
+    have hplain : plain M bodies [profile (observer M) w] (iterationArg (profile (observer M) w) q R)=
+        sourceExpr M (iterationArg (profile (observer M) w) q R) := by
+      simp only [iterationArg]; split <;> rfl
+    simp only [targetBody,iteratedBody,plain,hplain]
+    cases hv : evV (target M entries bodies) x .callByValueSeq (targetTable M entries bodies x l) [w]
+        (sourceExpr M (iterationArg (profile (observer M) w) q R)) j with
+    | none => rw [evV_seq_none hv,evV_seq_none (he.trans hv)]
+    | some result => cases result with
+      | none => rw [evV_seq_fail hv,evV_seq_fail (he.trans hv)]
+      | some z =>
+        rw [evV_seq_ok hv,evV_seq_ok (he.trans hv)]
+        exact hBody z (DependentCaptureFilter.success_prefix (by decide)
+          (ClockFreezing.frozen_sound (target_firstOrder M entries bodies) x .callByValueSeq (by decide) _ _ l)
+          [w] _ (sourceExpr_firstOrder M _) j z hj hv).1
+  | aligned c =>
+    have he := aligned_header M _ c hEntry w rfl hw
+      (source M entries bodies) (target M entries bodies) x .callByValuePar .callByValueSeq
+      (sourceTable M entries bodies x k) (targetTable M entries bodies x l) p j hp hj hcap
+    have hplain := (controlArg_plain M bodies (profile (observer M) w) c).trans
+      (controlArg_source M (profile (observer M) w) c).symm
+    simp only [targetBody,controlledBody,plain,hplain]
+    cases hv : evV (target M entries bodies) x .callByValueSeq (targetTable M entries bodies x l) [w]
+        (sourceExpr M (controlArg (profile (observer M) w) c)) j with
+    | none => rw [evV_seq_none hv,evV_seq_none (he.trans hv)]
+    | some result => cases result with
+      | none => rw [evV_seq_fail hv,evV_seq_fail (he.trans hv)]
+      | some z =>
+        rw [evV_seq_ok hv,evV_seq_ok (he.trans hv)]
+        exact hBody z (DependentCaptureFilter.success_prefix (by decide)
+          (ClockFreezing.frozen_sound (target_firstOrder M entries bodies) x .callByValueSeq (by decide) _ _ l)
+          [w] _ (sourceExpr_firstOrder M _) j z hj hv).1
   | shift q R =>
     cases hs : StatefulScanner.advance M q w with
     | none =>
@@ -296,6 +412,70 @@ theorem entry_product_body {n : Nat} (M : Machine n) (entries : Entries n) (bodi
         (.seq (sourceHeader entry) (sourceExpr M b)) p) := by
   induction entry with
   | scan q => exact product_body M entries bodies q b w x p j k l hp hj hcap ((ScannerFrontierCertificate.check_actual M w q).mp hw) a t ht hBody
+  | iterate q R =>
+    let e := iterationArg (profile (observer M) w) q R
+    let g := source M entries bodies
+    let h := target M entries bodies
+    let T := sourceTable M entries bodies x k
+    let U := targetTable M entries bodies x l
+    have hT : SoundTV g x .callByValuePar T :=
+      ClockFreezing.frozen_sound (source_firstOrder M entries bodies) x .callByValuePar (by decide) _ _ k
+    have he := iteration_header M _ q R hEntry w rfl g g x .callByValuePar .callByValuePar T T p j hp hj hcap
+    have hseq : evV g x .callByValuePar T [w] (.seq (sourceHeader (.iterate q R)) (sourceExpr M b)) p=
+        evV g x .callByValuePar T [w] (.seq (sourceExpr M e) (sourceExpr M b)) j := by
+      change (match evV g x .callByValuePar T [w] (sourceHeader (.iterate q R)) p with
+        | some (some z) => evV g x .callByValuePar T [w] (sourceExpr M b) z | other => other)=_
+      rw [he]
+      rfl
+    rw [hseq]
+    rw [CapturePrefixRows.filter_prefix (observer M) x w p j a.val t hp hj hcap _
+      (fun z hz => DependentCaptureFilter.success_prefix (by decide) hT [w]
+        (.seq (sourceExpr M e) (sourceExpr M b)) ⟨sourceExpr_firstOrder M e,sourceExpr_firstOrder M b⟩ j z hj hz)]
+    simp only [targetBody,iteratedBody,dif_pos a.isLt,SequentialRecursiveScanner.state_actual]
+    apply ControlFilter.seq_transfer (observer M) (valid M) g h x .callByValuePar .callByValueSeq
+      (by decide) T U hT [w] (sourceExpr M e) (sourceExpr M b)
+      (sourceExpr_firstOrder M e) (sourceExpr_firstOrder M b)
+      (fun a z => filter M bodies [profile (observer M) w] e a z)
+      (fun a z => filter M bodies [profile (observer M) w] b a z) j hj
+      (RegularCaptureProduct.run (observer M) a.val w) t
+      (RegularCaptureProduct.run_bound (valid M) _ a.isLt w) ht
+    · intro a z ha hz
+      exact iteration_filter M bodies _ q R g h x T U
+        (ClockFreezing.frozen_ok _ _ _ _ _ _) (ClockFreezing.frozen_ok _ _ _ _ _ _) w rfl j hj a z ha hz
+    · intro z hz a ha
+      exact hBody z hz a ha
+  | aligned c =>
+    let e := controlArg (profile (observer M) w) c
+    let g := source M entries bodies
+    let h := target M entries bodies
+    let T := sourceTable M entries bodies x k
+    let U := targetTable M entries bodies x l
+    have hT : SoundTV g x .callByValuePar T :=
+      ClockFreezing.frozen_sound (source_firstOrder M entries bodies) x .callByValuePar (by decide) _ _ k
+    have he := aligned_header M _ c hEntry w rfl hw g g x .callByValuePar .callByValuePar T T p j hp hj hcap
+    have hseq : evV g x .callByValuePar T [w] (.seq (sourceHeader (.aligned c)) (sourceExpr M b)) p=
+        evV g x .callByValuePar T [w] (.seq (sourceExpr M e) (sourceExpr M b)) j := by
+      change (match evV g x .callByValuePar T [w] (sourceHeader (.aligned c)) p with
+        | some (some z) => evV g x .callByValuePar T [w] (sourceExpr M b) z | other => other)=_
+      rw [he]
+      rfl
+    rw [hseq]
+    rw [CapturePrefixRows.filter_prefix (observer M) x w p j a.val t hp hj hcap _
+      (fun z hz => DependentCaptureFilter.success_prefix (by decide) hT [w]
+        (.seq (sourceExpr M e) (sourceExpr M b)) ⟨sourceExpr_firstOrder M e,sourceExpr_firstOrder M b⟩ j z hj hz)]
+    simp only [targetBody,controlledBody,dif_pos a.isLt,SequentialRecursiveScanner.state_actual]
+    apply ControlFilter.seq_transfer (observer M) (valid M) g h x .callByValuePar .callByValueSeq
+      (by decide) T U hT [w] (sourceExpr M e) (sourceExpr M b)
+      (sourceExpr_firstOrder M e) (sourceExpr_firstOrder M b)
+      (fun a z => filter M bodies [profile (observer M) w] e a z)
+      (fun a z => filter M bodies [profile (observer M) w] b a z) j hj
+      (RegularCaptureProduct.run (observer M) a.val w) t
+      (RegularCaptureProduct.run_bound (valid M) _ a.isLt w) ht
+    · intro a z ha hz
+      exact aligned_filter M bodies _ c g h x T U
+        (ClockFreezing.frozen_ok _ _ _ _ _ _) (ClockFreezing.frozen_ok _ _ _ _ _ _) w rfl j hj a z ha hz
+    · intro z hz a ha
+      exact hBody z hz a ha
   | shift q R =>
     cases hs : StatefulScanner.advance M q w with
     | none =>

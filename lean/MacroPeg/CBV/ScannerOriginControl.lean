@@ -183,6 +183,9 @@ theorem header_extension {n : Nat} (M : Machine n) (left right : List MRule)
       (tblV (RecursiveScannerProductHelpers.grammar M right) x .callByValuePar k) E (sourceHeader entry) p := by
   induction entry with
   | replay | safeReplay | shift _ _ => rfl
+  | aligned c => exact GuardedReplayControl.header_independent _ _ x _ _ _ _ E c p
+  | iterate q R =>
+    simp only [sourceHeader,GuardedReplayIteration.header,GuardedReplayIteration.step,MExp.andP,evV]
   | scan q =>
     rw [show sourceHeader (.scan q)=.call q.val [] from rfl,
       evV_call_par (RecursiveScannerProductHelpers.scanner_rule M left q) rfl (by decide),

@@ -1,3 +1,5 @@
+import MacroPeg.CBV.GuardedReplayControl
+import MacroPeg.CBV.GuardedReplayRotation
 import MacroPeg.CBV.ScannerReplayResidual
 import MacroPeg.CBV.CaptureInputSafety
 import MacroPeg.CBV.ScannerLanguageSafety
@@ -13,20 +15,23 @@ open SequentialRecursiveScanner (state)
 open StatefulScannerProduct (right)
 abbrev Arg := SequentialRecursiveObserver.Expr
 /-- Entry forms for the common recursive compiler. The legacy safety path
-checks total arguments for non-replay entries; the profile path checks only
+checks total arguments for safety-marked entries; the profile path checks only
 the configured scanner state. Shift entries carry finite residual labels. -/
 inductive Entry (n : Nat) where
   | replay
   | safeReplay
   | scan (q : Fin n)
   | shift (q : Fin n) (residuals : ScannerReplayResidual.Labels n)
+  | iterate (q : Fin n) (residuals : ScannerReplayResidual.Labels n)
+  | aligned (control : GuardedReplayControl.Expr n)
   | alt (left right : Entry n)
   | guard (positive : Bool) (test tail : Entry n)
 
 abbrev Entries (n : Nat) := Nat → Entry n
 
 def Entry.inputSafe {n : Nat} : Entry n → Bool
-  | .replay => false
+  | .replay | .iterate _ _ => false
+  | .aligned c => GuardedReplayControl.inputSafe c
   | .safeReplay | .scan _ | .shift _ _ => true
   | .alt a b | .guard _ a b => a.inputSafe || b.inputSafe
 
@@ -34,12 +39,16 @@ def sourceHeader {n : Nat} : Entry n → MExp
   | .replay | .safeReplay => .param 0
   | .scan q => .call q.val []
   | .shift q R => .seq (.lit ((R q).getD [])) (.param 0)
+  | .iterate q R => GuardedReplayIteration.header ((R q).getD [])
+  | .aligned c => GuardedReplayControl.header c
   | .alt a b => .alt (sourceHeader a) (sourceHeader b)
   | .guard positive a b => .seq (if positive then .andP (sourceHeader a) else .notP (sourceHeader a)) (sourceHeader b)
 
 /-- Finite layout validation for each actual user entry. -/
 def headerCheck {n : Nat} (M : Machine n) : Entry n → Bool
   | .shift q R => ScannerReplayResidual.entryCheck M R q
+  | .iterate q R => ScannerReplayResidual.entryCheck M R q && ScannerReplayResidual.completeCheck M R
+  | .aligned c => GuardedReplayControl.check M c
   | .alt a b | .guard _ a b => headerCheck M a && headerCheck M b
   | _ => true
 
@@ -82,6 +91,22 @@ def sourceExpr {n : Nat} (M : Machine n) : Arg → MExp
   | .alt a b => .alt (sourceExpr M a) (sourceExpr M b)
   | .notP a => .notP (sourceExpr M a)
   | .star a => .star (sourceExpr M a)
+
+/-- Source control as ordinary Arg syntax; lookahead preserves the old value. -/
+def rawControlArg {n : Nat} : GuardedReplayControl.Expr n → Arg
+  | .replayQuery => .notP (.notP (.param 0))
+  | .shift q R => .seq (.lit ((R q).getD [])) (.notP (.notP (.param 0)))
+  | .literalQuery _ _ q L => .notP (.notP (.lit ((L q).getD [])))
+  | .seq a b => .seq (rawControlArg a) (rawControlArg b)
+  | .alt a b => .alt (rawControlArg a) (rawControlArg b)
+  | .star a => .star (rawControlArg a)
+  | .notP a => .notP (rawControlArg a)
+
+theorem rawControlArg_source {n : Nat} (M : Machine n) : ∀ c : GuardedReplayControl.Expr n,
+    sourceExpr M (rawControlArg c)=GuardedReplayControl.render c
+  | .replayQuery | .shift _ _ | .literalQuery _ _ _ _ => rfl
+  | .seq a b | .alt a b => by simp [rawControlArg,sourceExpr,GuardedReplayControl.render,rawControlArg_source M a,rawControlArg_source M b]
+  | .star a | .notP a => by simp [rawControlArg,sourceExpr,GuardedReplayControl.render,rawControlArg_source M a]
 
 mutual
   def plain {n : Nat} (M : Machine n) (bodies : List Arg) (S : List (List Nat)) : Arg → MExp
@@ -140,6 +165,68 @@ def shiftedBody {n : Nat} (M : Machine n) (q : Fin n) (R : ScannerReplayResidual
           (RegularCaptureProduct.run (observer M) (state M P ⟨a,ha⟩).val ((R r).getD [])) z)
       else MExp.failAlways
 
+/-- The real capture profile chooses the rotated repetition operand.
+An unreadable capture permits precisely zero guarded iterations. -/
+def iterationArg {n : Nat} (P : List Nat) (q : Fin n)
+    (R : ScannerReplayResidual.Labels n) : Arg :=
+  match DynamicScannerBinding.resume P q with
+  | none => .lit []
+  | some r => .star (.lit ((R r).getD []))
+
+def iteratedBody {n : Nat} (M : Machine n) (q : Fin n) (R : ScannerReplayResidual.Labels n)
+    (bodies : List Arg) (P : List Nat) (mode : Mode) (b : Arg) : MExp :=
+  match mode with
+  | none => plain M bodies [P] (.seq (iterationArg P q R) b)
+  | some (a,z) => if ha : a<(observer M).width then
+      filter M bodies [P] (.seq (iterationArg P q R) b) (state M P ⟨a,ha⟩).val z
+    else MExp.failAlways
+
+/-- Finite residual PEG control may choose a different word on every step. -/
+def controlArg {n : Nat} (P : List Nat) : GuardedReplayControl.Expr n → Arg
+  | .replayQuery => .lit []
+  | .shift q R => match DynamicScannerBinding.resume P q with
+    | none => .notP (.lit []) | some r => .lit ((R r).getD [])
+  | .literalQuery _ _ q L => match DynamicScannerBinding.resume P q with
+    | none => .notP (.lit []) | some r => .notP (.notP (.lit ((L r).getD [])))
+  | .seq a b => .seq (controlArg P a) (controlArg P b)
+  | .alt a b => .alt (controlArg P a) (controlArg P b)
+  | .star a => .star (controlArg P a)
+  | .notP a => .notP (controlArg P a)
+
+def controlledBody {n : Nat} (M : Machine n) (c : GuardedReplayControl.Expr n)
+    (bodies : List Arg) (P : List Nat) (mode : Mode) (b : Arg) : MExp :=
+  match mode with
+  | none => plain M bodies [P] (.seq (controlArg P c) b)
+  | some (a,z) => if ha : a<(observer M).width then
+      filter M bodies [P] (.seq (controlArg P c) b) (state M P ⟨a,ha⟩).val z
+    else MExp.failAlways
+
+theorem controlArg_source {n : Nat} (M : Machine n) (P : List Nat) : ∀ c : GuardedReplayControl.Expr n,
+    sourceExpr M (controlArg P c)=DependentCaptureFilter.render (GuardedReplayControl.residual P c)
+  | .replayQuery => rfl
+  | .shift q R | .literalQuery _ _ q R => by cases hs : DynamicScannerBinding.resume P q <;> simp only [controlArg,GuardedReplayControl.residual,hs] <;> rfl
+  | .seq a b | .alt a b => by simp [controlArg,sourceExpr,GuardedReplayControl.residual,DependentCaptureFilter.render,controlArg_source M P a,controlArg_source M P b]
+  | .star a | .notP a => by simp [controlArg,sourceExpr,GuardedReplayControl.residual,DependentCaptureFilter.render,controlArg_source M P a]
+
+theorem controlArg_plain {n : Nat} (M : Machine n) (bodies : List Arg) (P : List Nat) : ∀ c : GuardedReplayControl.Expr n,
+    plain M bodies [P] (controlArg P c)=DependentCaptureFilter.render (GuardedReplayControl.residual P c)
+  | .replayQuery => rfl
+  | .shift q R | .literalQuery _ _ q R => by cases hs : DynamicScannerBinding.resume P q <;> simp only [controlArg,GuardedReplayControl.residual,hs] <;> rfl
+  | .seq a b | .alt a b => by simp [controlArg,plain,GuardedReplayControl.residual,DependentCaptureFilter.render,controlArg_plain M bodies P a,controlArg_plain M bodies P b]
+  | .star a | .notP a => by simp [controlArg,plain,GuardedReplayControl.residual,DependentCaptureFilter.render,controlArg_plain M bodies P a]
+
+theorem controlArg_filter {n : Nat} (M : Machine n) (bodies : List Arg) (P : List Nat) : ∀ (c : GuardedReplayControl.Expr n) (a z : Nat),
+    filter M bodies [P] (controlArg P c) a z=
+      DependentCaptureFilter.filter [] (observer M) [P] (GuardedReplayControl.residual P c) a z
+  | .replayQuery,_,_ => rfl
+  | .shift q R,a,z | .literalQuery _ _ q R,a,z => by cases hs : DynamicScannerBinding.resume P q <;> simp only [controlArg,GuardedReplayControl.residual,hs] <;> rfl
+  | .seq a b,q,z | .alt a b,q,z => by
+    simp only [controlArg,filter,GuardedReplayControl.residual,DependentCaptureFilter.filter,
+      controlArg_plain M bodies P a,controlArg_filter M bodies P a,controlArg_filter M bodies P b]
+  | .star a,q,z | .notP a,q,z => by
+    simp only [controlArg,filter,GuardedReplayControl.residual,DependentCaptureFilter.filter,
+      controlArg_plain M bodies P a,controlArg_filter M bodies P a]
+
 /-- Plain residual header, used to preserve the original choice before
 running a continuation that may fail or remain undefined. -/
 def targetHeader {n : Nat} (M : Machine n) (P : List Nat) : Entry n → MExp
@@ -148,6 +235,8 @@ def targetHeader {n : Nat} (M : Machine n) (P : List Nat) : Entry n → MExp
     | none => MExp.failAlways | some r => .call r.val []
   | .shift q R => match DynamicScannerBinding.resume P q with
     | none => MExp.failAlways | some r => .lit ((R r).getD [])
+  | .iterate q R => sourceExpr M (iterationArg P q R)
+  | .aligned c => sourceExpr M (controlArg P c)
   | .alt a b => .alt (targetHeader M P a) (targetHeader M P b)
   | .guard positive a b => .seq
       (if positive then .andP (targetHeader M P a) else .notP (targetHeader M P a)) (targetHeader M P b)
@@ -159,6 +248,8 @@ def targetBody {n : Nat} (M : Machine n) (entry : Entry n) (bodies : List Arg)
   match entry with
   | .scan q => scannerBody M q bodies P mode b
   | .shift q R => shiftedBody M q R bodies P mode b
+  | .iterate q R => iteratedBody M q R bodies P mode b
+  | .aligned c => controlledBody M c bodies P mode b
   | .alt a c => RootObservation.branch (.andP (targetHeader M P a))
       (targetBody M a bodies P mode b) (targetBody M c bodies P mode b)
   | .guard positive a c => .seq
@@ -300,6 +391,8 @@ theorem sourceHeader_firstOrder {n : Nat} (entry : Entry n) :
     (sourceHeader entry).FirstOrder := by
   induction entry with
   | replay | safeReplay | scan _ | shift _ _ => trivial
+  | iterate q R => exact ⟨⟨True.intro,True.intro⟩,True.intro⟩
+  | aligned c => exact ⟨GuardedReplayControl.render_firstOrder c,True.intro⟩
   | alt a b ha hb => exact ⟨ha,hb⟩
   | guard positive a b ha hb => cases positive <;> exact ⟨ha,hb⟩
 
@@ -309,6 +402,7 @@ theorem targetHeader_firstOrder {n : Nat} (M : Machine n) (P : List Nat) (entry 
   | replay | safeReplay => trivial
   | scan q => simp only [targetHeader]; split <;> trivial
   | shift q R => simp only [targetHeader]; split <;> trivial
+  | iterate q R | aligned _ => exact sourceExpr_firstOrder M _
   | alt a b ha hb => exact ⟨ha,hb⟩
   | guard positive a b ha hb => cases positive <;> exact ⟨ha,hb⟩
 
@@ -330,6 +424,24 @@ theorem targetBody_firstOrder {n : Nat} (M : Machine n) (entry : Entry n) (bodie
         split
         · exact ⟨True.intro,filter_firstOrder M bodies [P] b _ _⟩
         · trivial
+  | iterate q R =>
+    cases mode with
+    | none => exact plain_firstOrder M bodies [P] _
+    | some pair =>
+      obtain ⟨a,z⟩ := pair
+      simp only [targetBody,iteratedBody]
+      split
+      · exact filter_firstOrder M bodies [P] _ _ _
+      · trivial
+  | aligned c =>
+    cases mode with
+    | none => exact plain_firstOrder M bodies [P] _
+    | some pair =>
+      obtain ⟨a,z⟩ := pair
+      simp only [targetBody,controlledBody]
+      split
+      · exact filter_firstOrder M bodies [P] _ _ _
+      · trivial
   | replay | safeReplay =>
     cases mode with
     | none => exact plain_firstOrder M bodies [P] b
