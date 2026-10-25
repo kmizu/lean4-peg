@@ -1,3 +1,6 @@
+import MacroPeg.CBV.RecursiveScannerProductCapture
+import MacroPeg.CBV.ScannerLanguageSafety
+import MacroPeg.CBV.SelectedCaptureSafety
 import MacroPeg.Syntax
 import MacroPeg.PegEmbed
 import MacroPeg.CallGraph
@@ -634,3 +637,8 @@ import MacroPeg.CBV.SequentialRecursiveObserver
 import MacroPeg.CBV.SequentialRecursiveObserverExamples
 import MacroPeg.CBV.SequentialRecursiveScanner
 import MacroPeg.CBV.SequentialRecursiveScannerExamples
+import MacroPeg.CBV.RecursiveScannerProductCompiler
+import MacroPeg.CBV.RecursiveScannerProductHelpers
+import MacroPeg.CBV.RecursiveScannerProductHeader
+import MacroPeg.CBV.RecursiveScannerProductCorrespondence
+import MacroPeg.CBV.RecursiveScannerProductExamples
