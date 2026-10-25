@@ -16,6 +16,66 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 共通の先頭再照合を持たない本体を、枝別の型つきheaderへ分配する
+
+`FieldPlanSyntax/Normalization/Compiler` は、元headerの本体全体を一つの再照合patternで
+始める条件を外す。異なるslotを読む枝、引数値を読まない消費fallback、否定、
+先読みguardを`ReplayControlFusion.Plan`の有限control treeで表す。葉ごとに独立した
+型つきfield headerを持ち、headerのarityと各使用葉のarityが一致することを有限検査する。
+先読みguardは`&a; b`であり、消費する通常の`a; b`とは区別する。
+
+`FieldPlanNormalization.physical` はまずPar→Parの正規化を証明する。元callの実引数を
+全て元順でpreflightしてから、body planをcaller側に展開し、その各葉で同じactual式を
+評価して対応する葉headerへ入る。alt/not/guardはどの葉も同じ原点から評価するため、
+再評価するactualの値は元callの実捕捉tupleと完全に一致する。消費した位置からactualを
+再評価するという仮定は置かない。元rule数と葉数、元rule indexと葉indexは別々に扱う。
+
+実clockの強帰納で全葉tailの再帰仮定を閉じ、任意incoming環境・一階式・元入力位置・
+全physical clockで完全一致を示す。clock 0の元callが未知なら、全ての有効な葉callも
+未知になり、否定を含むplan全体が未知のままである。actual失敗/未定義はplanを実行する
+前に止める。無効な元callやarity mismatchはactualを評価する前に有限失敗へ変換する。
+
+`FieldPlanCompiler`は、生成したPar葉群を`TypedFieldCompiler`へ渡す。
+実raw source宣言/root、元葉bodyの一階性、planの参照/arity、展開後のslot型・戻り値effect・
+葉別の再照合条件を有限検査してから、同じ元入力上の固定Seq文法を生成する。
+`physical/observations_iff/language_translation/undefined_iff`は全clockの結果、全有限観測、
+元文字列言語、全clock未定義を保存する。規則数は使用可能な葉について`Σ(arity+1)`で、
+入力やruntimeの値に依存しない。
+
+`FieldPlanExamples`の本体をεを省いて書くと、次の形になる。
+
+```
+F(x,y) = (x '#' ('!' x / '(' F(xx,xx) ')' x))
+       / (y '@' '?' y)
+       / ('b' / '@?b')
+G(z) = z '$' z
+start = G(F('a'*, 'a'*)) EOF
+```
+
+Fの生bodyはaltから始まり、どの`sourceBody d pattern tail`とも等しくないことを
+Leanで証明した。第一枝のpatternは`[0]`、第二枝は`[1]`、fallbackは`[]`で、
+全枝の前に両値を再照合しない。別の元headerは同じ葉を否定/guardで組み合わせる。
+元arityは`[2,1,2,2]`、生成先は固定`[1,1,2,1,1,2,1,1,0,1,2]`である。
+短い第一actualと長い第二actualを使い分ける生成先、消費する独立fallback、guard/否定、
+未知のclock 0、strict actual未定義を検証した。勝った第二枝の後でEOFが失敗しても、
+単独なら全入力を消費できるfallbackへ戻らない。actualが失敗すれば、単独で成功する
+独立fallbackも実行しない。
+
+`FieldPlanProofs`は`t(n,0)=a^n @ ? a^n`、
+`t(n,d+1)=a^n # ( t(2n,d) ) a^n`について、全n/depth/余分clock/元位置/後続文字列の
+実source行を証明する。基底は第二slotを読み、再帰枝は第一slotから二つの新しい倍長値を
+捕捉し、親へ戻って第一slotを使い直す。外側が捕捉する値は実行全体の`t(n,d)`そのもので、
+固定Seq文法が`t(n,d) $ t(n,d)`をclock `d+2`で受理する。空捕捉と長さ非有界も含む。
+
+依然として、**各dependent葉にはその葉で必要な値を読む再照合patternが必要**である。
+原点を越えて消費するseq/starをcontrol treeとして分配する正規化は含まない。
+それらは葉のtail内で扱う。任意一階Par文法をこのplan形へ移す証明、live値を再照合せず
+任意位置へ渡す一般変換、およびPar/Seq全言語クラスの一致・分離は未解決のままである。
+
+今回 5 新 modules・50 新 guard。全 1,401 jobs/Audit と関連 3,864 公開依存
+（標準 Lean 公理 3,780、無公理 84）を検証。PR70は新 Lean 13 modules・147 guard。
+新しい sorry/axiom/native_decide はない。
+
 ## 規則別の区切りと型を持つ、任意個のheader群を生成Seq文法へ
 
 `TypedFieldSyntax/Correspondence/Compiler` は、直下の二段構成を任意個の有限header群へ

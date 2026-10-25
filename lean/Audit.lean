@@ -1,3 +1,8 @@
+import MacroPeg.CBV.FieldPlanSyntax
+import MacroPeg.CBV.FieldPlanNormalization
+import MacroPeg.CBV.FieldPlanCompiler
+import MacroPeg.CBV.FieldPlanExamples
+import MacroPeg.CBV.FieldPlanProofs
 import MacroPeg.CBV.TypedFieldTransfer
 import MacroPeg.CBV.TypedFieldSyntax
 import MacroPeg.CBV.TypedFieldCorrespondence
@@ -38747,3 +38752,221 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.omitted_delimiter_check_changes_the_language
+
+-- Branch-dependent field plans and strict origin dispatch.
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanSyntax.plan_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanSyntax.plan_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanSyntax.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanSyntax.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanSyntax.renderArgs_length' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanSyntax.renderArgs_length
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanSyntax.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanSyntax.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanSyntax.renderArgs_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanSyntax.renderArgs_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanSyntax.sourceLeaf_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanSyntax.sourceLeaf_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanSyntax.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanSyntax.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanSyntax.expanded_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanSyntax.expanded_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanSyntax.source_row' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanSyntax.source_row
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanSyntax.expanded_row' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanSyntax.expanded_row
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanNormalization.preflight_eval' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanNormalization.preflight_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanNormalization.leaf_of_bodies' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanNormalization.leaf_of_bodies
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanNormalization.dispatch' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanNormalization.dispatch
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanNormalization.expression_of_bodies' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanNormalization.expression_of_bodies
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanNormalization.arguments_of_bodies' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanNormalization.arguments_of_bodies
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanNormalization.physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanNormalization.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanCompiler.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanCompiler.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanCompiler.firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanCompiler.firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanCompiler.physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanCompiler.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanCompiler.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanCompiler.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanCompiler.language_translation' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanCompiler.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanCompiler.undefined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanCompiler.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanCompiler.rule_count' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanCompiler.rule_count
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanExamples.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanExamples.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanExamples.short_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanExamples.short_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanExamples.guard_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanExamples.guard_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanExamples.negation_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanExamples.negation_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanExamples.branch_patterns_and_rule_counts' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanExamples.branch_patterns_and_rule_counts
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanExamples.original_header_has_no_common_leading_anchor' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanExamples.original_header_has_no_common_leading_anchor
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanExamples.every_input_every_clock' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanExamples.every_input_every_clock
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanExamples.original_string_language' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanExamples.original_string_language
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanExamples.direct_recursive_runs' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanExamples.direct_recursive_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanExamples.branch_uses_the_second_distinct_value' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanExamples.branch_uses_the_second_distinct_value
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanExamples.consuming_independent_fallback' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanExamples.consuming_independent_fallback
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanExamples.guard_and_negation_commit' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanExamples.guard_and_negation_commit
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanExamples.committed_branch_does_not_retry_after_eof' depends on axioms: [propext,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanExamples.committed_branch_does_not_retry_after_eof
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanExamples.strict_preflight_before_independent_branch' depends on axioms: [propext,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanExamples.strict_preflight_before_independent_branch
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanExamples.undefined_actual_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanExamples.undefined_actual_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanExamples.strict_actual_undefinedness' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanExamples.strict_actual_undefinedness
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanExamples.negated_dispatch_zero_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanExamples.negated_dispatch_zero_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanExamples.negated_dispatch_at_zero_clock_is_still_unknown' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanExamples.negated_dispatch_at_zero_clock_is_still_unknown
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanExamples.malformed_plans_and_declarations_rejected' depends on axioms: [propext,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanExamples.malformed_plans_and_declarations_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanExamples.invalid_calls_keep_their_early_failure' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanExamples.invalid_calls_keep_their_early_failure
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanProofs.fresh_doubled_tuple' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanProofs.fresh_doubled_tuple
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanProofs.producer_rows' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanProofs.producer_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanProofs.initial_tuple' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanProofs.initial_tuple
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanProofs.producer_result' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanProofs.producer_result
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanProofs.outer_capture' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanProofs.outer_capture
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanProofs.source_and_generated_all_trees' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanProofs.source_and_generated_all_trees
+
+/-- info: 'Shallot.MacroPeg.CBV.FieldPlanProofs.outer_capture_length_unbounded' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FieldPlanProofs.outer_capture_length_unbounded

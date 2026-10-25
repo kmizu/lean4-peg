@@ -1,3 +1,8 @@
+import MacroPeg.CBV.FieldPlanSyntax
+import MacroPeg.CBV.FieldPlanNormalization
+import MacroPeg.CBV.FieldPlanCompiler
+import MacroPeg.CBV.FieldPlanExamples
+import MacroPeg.CBV.FieldPlanProofs
 import MacroPeg.CBV.TypedFieldTransfer
 import MacroPeg.CBV.TypedFieldSyntax
 import MacroPeg.CBV.TypedFieldCorrespondence
