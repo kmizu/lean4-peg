@@ -1,3 +1,4 @@
+import MacroPeg.CBV.EntryControlScannerExamples
 import MacroPeg.CBV.ScannerReplayResidual
 import MacroPeg.CBV.ScannerReplayResidualExamples
 import MacroPeg.CBV.RecursiveCaptureProfiles
@@ -21380,3 +21381,100 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductCompiler.entry_checked' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductCompiler.entry_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductCompiler.targetHeader_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductCompiler.targetHeader_firstOrder
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductHeader.target_header' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductHeader.target_header
+
+
+/-- info: 'Shallot.MacroPeg.CBV.EntryControlScannerExamples.checked' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EntryControlScannerExamples.checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.EntryControlScannerExamples.positive_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EntryControlScannerExamples.positive_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.EntryControlScannerExamples.negative_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EntryControlScannerExamples.negative_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.EntryControlScannerExamples.positive_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EntryControlScannerExamples.positive_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.EntryControlScannerExamples.negative_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EntryControlScannerExamples.negative_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.EntryControlScannerExamples.language' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EntryControlScannerExamples.language
+
+
+/-- info: 'Shallot.MacroPeg.CBV.EntryControlScannerExamples.committed_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EntryControlScannerExamples.committed_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.EntryControlScannerExamples.commit_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EntryControlScannerExamples.commit_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.EntryControlScannerExamples.committed_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EntryControlScannerExamples.committed_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.EntryControlScannerExamples.short_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EntryControlScannerExamples.short_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.EntryControlScannerExamples.short_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EntryControlScannerExamples.short_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.EntryControlScannerExamples.nullable_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EntryControlScannerExamples.nullable_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.EntryControlScannerExamples.nullable_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EntryControlScannerExamples.nullable_target

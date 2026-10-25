@@ -228,6 +228,8 @@ def headerEffects {n : Nat} (M : Machine n) (H : ScannerSummary n) (entry : Entr
   | .scan q => H q
   | .shift q R => product [profile (observer M) ((R q).getD [])] [P]
   | .replay | .safeReplay => [P]
+  | .alt a b => headerEffects M H a P ++ headerEffects M H b P
+  | .guard _ _ b => headerEffects M H b P
 
 def scopeCheck (bodies : List Arg) : Arg → Bool
   | .user i a => decide (i<bodies.length) && scopeCheck bodies a
@@ -268,7 +270,7 @@ theorem header_shape {n : Nat} (M : Machine n) (entries : Entries n) (bodies : L
       (sourceHeader entry) p=some (some q)) :
     q≤p ∧ ∃ w, profile (observer M) w∈headerEffects M H entry (profile (observer M) v) ∧
       sfx x p=w++sfx x q := by
-  cases entry with
+  induction entry with
   | replay | safeReplay =>
     have hl : evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [v]
         (.lit v) p=some (some q) := by simpa only [sourceHeader,evV,List.getElem?_cons_zero] using h
@@ -294,6 +296,27 @@ theorem header_shape {n : Nat} (M : Machine n) (entries : Entries n) (bodies : L
     refine ⟨hlen,pre x p _,?_,hh.2⟩
     rw [ObservedScanner.consumed_pre M start x p hp]
     exact scanner_profiles M H hc start (sfx x p)
+  | alt a b ha hb =>
+    cases hv : evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [v] (sourceHeader a) p with
+    | none => simp [sourceHeader,evV,hv] at h
+    | some result => cases result with
+      | none =>
+        have hh : evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [v] (sourceHeader b) p=some (some q) := by
+          simpa only [sourceHeader,evV,hv] using h
+        obtain ⟨hq,w,hw,hs⟩ := hb hh
+        exact ⟨hq,w,List.mem_append_right _ hw,hs⟩
+      | some z =>
+        have hz : z=q := by simpa only [sourceHeader,evV,hv,Option.some.injEq] using h
+        subst z
+        obtain ⟨hq,w,hw,hs⟩ := ha hv
+        exact ⟨hq,w,List.mem_append_left _ hw,hs⟩
+  | guard positive a b ha hb =>
+    have hh : evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [v] (sourceHeader b) p=some (some q) := by
+      cases positive <;>
+        cases hv : evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [v] (sourceHeader a) p with
+        | none => simp [sourceHeader,MExp.andP,evV,hv] at h
+        | some result => cases result <;> simp [sourceHeader,MExp.andP,evV,hv] at h <;> exact h
+    exact hb hh
 
 theorem frozen_rows {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
     (H : ScannerSummary n) (C : Summary) (hH : scannerCheck M H=true)

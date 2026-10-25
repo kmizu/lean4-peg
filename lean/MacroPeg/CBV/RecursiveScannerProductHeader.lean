@@ -13,13 +13,17 @@ def entryCheck {n : Nat} (entry : Entry n) (P : List Nat) : Bool :=
   match entry with
   | .scan q | .shift q _ => ScannerFrontierCertificate.check P q
   | .replay | .safeReplay => true
+  | .alt a b | .guard _ a b => entryCheck a P && entryCheck b P
 
 theorem entryCheck_of_safe {n : Nat} (M : Machine n) (entry : Entry n) (w : List Char)
     (h : entry.inputSafe=true → TotalCaptureSafety.Total M w) :
     entryCheck entry (profile (observer M) w)=true := by
-  cases entry with
+  induction entry with
   | scan q | shift q _ => exact (ScannerFrontierCertificate.check_actual M w q).mpr (h rfl q)
   | replay | safeReplay => rfl
+  | alt a b ha hb | guard _ a b ha hb =>
+    exact Bool.and_eq_true_iff.mpr ⟨ha (fun hx => h (Bool.or_eq_true_iff.mpr (Or.inl hx))),
+      hb (fun hx => h (Bool.or_eq_true_iff.mpr (Or.inr hx)))⟩
 
 /-- A positive parameterized call inside an actual source argument obtains
 its capture safety from the finite certified prefix, with arbitrary other
@@ -154,6 +158,46 @@ theorem replay_prefix (g : MGrammar) (x w : List Char) (s : Strategy) (T : Clock
   have hs := (CBVtoCBN.stripPrefix_exact w (sfx x p) (sfx x j)).mpr hcap
   simp only [evV,List.getElem?_cons_zero,hs,length_sfx x hj]
 
+/-- Every supported header transfers its complete partial result from the
+original source position to the actual capture endpoint. Guards keep their
+own origin and do not substitute a consumed endpoint for that origin. -/
+theorem target_header {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
+    (entry : Entry n) (hEntry : headerCheck M entry=true) (w x : List Char) (p j k l : Nat)
+    (hp : p≤x.length) (hj : j≤x.length) (hcap : sfx x p=w++sfx x j)
+    (hw : entryCheck entry (profile (observer M) w)=true) :
+    evV (target M entries bodies) x .callByValueSeq (targetTable M entries bodies x l) [w]
+      (targetHeader M (profile (observer M) w) entry) j=
+    evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [w]
+      (sourceHeader entry) p := by
+  induction entry with
+  | replay | safeReplay => exact (replay_prefix _ x w .callByValuePar _ p j hj hcap).symm
+  | scan q =>
+    have hr := (ScannerFrontierCertificate.check_actual M w q).mp hw
+    cases hs : StatefulScanner.advance M q w with
+    | none => exact False.elim (hr hs)
+    | some r =>
+      simp only [targetHeader,DynamicScannerBinding.resume_actual,hs,sourceHeader]
+      rw [target_scan M entries bodies r x l j [w] hj,source_scan M entries bodies q x k p [w] hp,
+        hcap,StatefulScanner.run_after_prefix M w (sfx x j) q r hs]
+  | shift q R =>
+    have hr := (ScannerFrontierCertificate.check_actual M w q).mp hw
+    cases hs : StatefulScanner.advance M q w with
+    | none => exact False.elim (hr hs)
+    | some r =>
+      simp only [targetHeader,DynamicScannerBinding.resume_actual,hs]
+      exact (ScannerReplayResidual.replay_eq M R q hEntry w r hs _ _ x _ _ p j hj hcap).symm
+  | alt a b ha hb =>
+    have heA := ha (Bool.and_eq_true_iff.mp hEntry).1 (Bool.and_eq_true_iff.mp hw).1
+    have heB := hb (Bool.and_eq_true_iff.mp hEntry).2 (Bool.and_eq_true_iff.mp hw).2
+    simp only [targetHeader,sourceHeader,evV,heA,heB]
+  | guard positive a b ha hb =>
+    have heA := ha (Bool.and_eq_true_iff.mp hEntry).1 (Bool.and_eq_true_iff.mp hw).1
+    have heB := hb (Bool.and_eq_true_iff.mp hEntry).2 (Bool.and_eq_true_iff.mp hw).2
+    cases positive <;>
+      cases hv : evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [w] (sourceHeader a) p with
+      | none => simp only [targetHeader,sourceHeader,Bool.false_eq_true,if_false,if_true,MExp.andP,evV,heA,hv]
+      | some result => cases result <;> simp only [targetHeader,sourceHeader,Bool.false_eq_true,if_false,if_true,MExp.andP,evV,heA,hv,heB]
+
 theorem entry_plain_body {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
     (entry : Entry n) (hEntry : headerCheck M entry=true) (b : Arg) (w x : List Char) (p j k l : Nat)
     (hp : p≤x.length) (hj : j≤x.length) (hcap : sfx x p=w++sfx x j)
@@ -166,7 +210,7 @@ theorem entry_plain_body {n : Nat} (M : Machine n) (entries : Entries n) (bodies
       (targetBody M entry bodies (profile (observer M) w) none b) j=
     evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [w]
       (.seq (sourceHeader entry) (sourceExpr M b)) p := by
-  cases entry with
+  induction entry with
   | scan q => exact plain_body M entries bodies q b w x p j k l hp hj hcap ((ScannerFrontierCertificate.check_actual M w q).mp hw) hBody
   | shift q R =>
     have hr := (ScannerFrontierCertificate.check_actual M w q).mp hw
@@ -192,6 +236,25 @@ theorem entry_plain_body {n : Nat} (M : Machine n) (entries : Entries n) (bodies
     simp only [sourceHeader]
     rw [evV_seq_ok (replay_prefix _ x w .callByValuePar _ p j hj hcap)]
     exact hBody j hj
+  | alt a c ha hc =>
+    have he := target_header M entries bodies a (Bool.and_eq_true_iff.mp hEntry).1 w x p j k l hp hj hcap (Bool.and_eq_true_iff.mp hw).1
+    simp only [targetBody,ChoiceArguments.branch_eval,he]
+    have hA := ha (Bool.and_eq_true_iff.mp hEntry).1 (Bool.and_eq_true_iff.mp hw).1
+    have hC := hc (Bool.and_eq_true_iff.mp hEntry).2 (Bool.and_eq_true_iff.mp hw).2
+    cases hv : evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [w] (sourceHeader a) p with
+    | none => simp only [sourceHeader,evV,hv] <;> rfl
+    | some result => cases result with
+      | none => simpa only [sourceHeader,evV,hv] using hC
+      | some z => simpa only [sourceHeader,evV,hv] using hA
+  | guard positive a c ha hc =>
+    have he := target_header M entries bodies a (Bool.and_eq_true_iff.mp hEntry).1 w x p j k l hp hj hcap (Bool.and_eq_true_iff.mp hw).1
+    have hC := hc (Bool.and_eq_true_iff.mp hEntry).2 (Bool.and_eq_true_iff.mp hw).2
+    cases positive <;>
+      cases hv : evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [w] (sourceHeader a) p with
+      | none => simp only [targetBody,sourceHeader,Bool.false_eq_true,if_false,if_true,MExp.andP,evV,he,hv] <;> rfl
+      | some result => cases result <;>
+          simp only [targetBody,sourceHeader,Bool.false_eq_true,if_false,if_true,MExp.andP,evV,he,hv] <;>
+          first | exact hC | rfl
 
 theorem entry_product_body {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
     (entry : Entry n) (hEntry : headerCheck M entry=true) (b : Arg) (w x : List Char) (p j k l : Nat)
@@ -208,7 +271,7 @@ theorem entry_product_body {n : Nat} (M : Machine n) (entries : Entries n) (bodi
     RegularCaptureProduct.filtered (observer M) x a.val t p
       (evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [w]
         (.seq (sourceHeader entry) (sourceExpr M b)) p) := by
-  cases entry with
+  induction entry with
   | scan q => exact product_body M entries bodies q b w x p j k l hp hj hcap ((ScannerFrontierCertificate.check_actual M w q).mp hw) a t ht hBody
   | shift q R =>
     have hr := (ScannerFrontierCertificate.check_actual M w q).mp hw
@@ -277,5 +340,24 @@ theorem entry_product_body {n : Nat} (M : Machine n) (entries : Entries n) (bodi
       (fun z h => DependentCaptureFilter.success_prefix (by decide)
         (ClockFreezing.frozen_sound (source_firstOrder M entries bodies) x .callByValuePar (by decide) _ _ k)
         [w] (sourceExpr M b) (sourceExpr_firstOrder M b) j z hj h)).symm
+  | alt a c ha hc =>
+    have he := target_header M entries bodies a (Bool.and_eq_true_iff.mp hEntry).1 w x p j k l hp hj hcap (Bool.and_eq_true_iff.mp hw).1
+    simp only [targetBody,ChoiceArguments.branch_eval,he]
+    have hA := ha (Bool.and_eq_true_iff.mp hEntry).1 (Bool.and_eq_true_iff.mp hw).1
+    have hC := hc (Bool.and_eq_true_iff.mp hEntry).2 (Bool.and_eq_true_iff.mp hw).2
+    cases hv : evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [w] (sourceHeader a) p with
+    | none => simp only [sourceHeader,evV,hv] <;> rfl
+    | some result => cases result with
+      | none => simpa only [sourceHeader,evV,hv] using hC
+      | some z => simpa only [sourceHeader,evV,hv] using hA
+  | guard positive a c ha hc =>
+    have he := target_header M entries bodies a (Bool.and_eq_true_iff.mp hEntry).1 w x p j k l hp hj hcap (Bool.and_eq_true_iff.mp hw).1
+    have hC := hc (Bool.and_eq_true_iff.mp hEntry).2 (Bool.and_eq_true_iff.mp hw).2
+    cases positive <;>
+      cases hv : evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) [w] (sourceHeader a) p with
+      | none => simp only [targetBody,sourceHeader,Bool.false_eq_true,if_false,if_true,MExp.andP,evV,he,hv] <;> rfl
+      | some result => cases result <;>
+          simp only [targetBody,sourceHeader,Bool.false_eq_true,if_false,if_true,MExp.andP,evV,he,hv] <;>
+          first | exact hC | rfl
 
 end Shallot.MacroPeg.CBV.RecursiveScannerProductHeader

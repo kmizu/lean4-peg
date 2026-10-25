@@ -1,3 +1,4 @@
+import MacroPeg.CBV.EntryControlScannerExamples
 import MacroPeg.CBV.ScannerReplayResidual
 import MacroPeg.CBV.ScannerReplayResidualExamples
 import MacroPeg.CBV.RecursiveCaptureProfiles

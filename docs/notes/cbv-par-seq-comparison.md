@@ -35,6 +35,26 @@ physical 定義／全 clock 未定義の対応まで接続した。成功や row
 `ab ++ aba ≠ aba ++ ab` でも残余 `ba` が正しい。有限注釈と指定入口形式という
 制約は残り、任意 PEG prefix や独立複数捕捉、一般の一致／分離は未解決である。
 
+入口は単一 leaf に限定せず、`Entry.alt` と `Entry.guard positive test tail`
+による任意有限の入れ子へ拡張した。leaf は直接再照合・scanner・認証済み固定 shift
+から選び、guard の test と tail は同じ元位置から評価する。生成先の `targetHeader`
+は捕捉終点で同じ全 partial 結果を返し、正／負の query をその場所で評価してから
+対応する tail へ進む。優先選択では plain header の正先読みと負ガードで枝を固定し、
+本体の失敗や未定義によって別入口へ戻らない。単純な本体の枝配布は使わない。
+
+有限 layout／entry-state 検査は両枝・全 test を再帰的に検査する。実元規則の
+header 出力 profile は選択で和、guard で tail の集合となり、query 自体の評価は
+残る。この形を既存の plain/product 同時帰納と全入力言語・physical 定義／未定義
+へ合成した。`EntryControlScannerExamples` は同じ user で正 shift query→別状態走査と
+負 shift query→直接再照合を切り替え、再帰捕捉と親復帰を確認する。`ab!` の
+直接再照合／走査の選択では、選択済み replay の本体失敗を保持し、素朴な枝配布だけが
+誤受理する差も kernel で確認する。
+
+全ての成功する header の消費終点が実 capture 終点以後になる構成であり、
+負 query 単独のように元位置へ空成功で戻る header はここには含まない。
+任意 PEG prefix、別 compiler との統合、独立複数 capture、および一般一致／分離は
+引き続き未解決である。
+
 `ParSimulation.translate source start` は元の文法と開始式だけから一つの固定文法を作る。
 `translate_recognizes` は、全ての元の文字列 `x : List Char` について、
 生成先 Par の全消費成功とソース Seq の全消費成功が同値であることを証明する。

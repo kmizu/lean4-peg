@@ -20,21 +20,27 @@ inductive Entry (n : Nat) where
   | safeReplay
   | scan (q : Fin n)
   | shift (q : Fin n) (residuals : ScannerReplayResidual.Labels n)
+  | alt (left right : Entry n)
+  | guard (positive : Bool) (test tail : Entry n)
 
 abbrev Entries (n : Nat) := Nat → Entry n
 
 def Entry.inputSafe {n : Nat} : Entry n → Bool
   | .replay => false
   | .safeReplay | .scan _ | .shift _ _ => true
+  | .alt a b | .guard _ a b => a.inputSafe || b.inputSafe
 
 def sourceHeader {n : Nat} : Entry n → MExp
   | .replay | .safeReplay => .param 0
   | .scan q => .call q.val []
   | .shift q R => .seq (.lit ((R q).getD [])) (.param 0)
+  | .alt a b => .alt (sourceHeader a) (sourceHeader b)
+  | .guard positive a b => .seq (if positive then .andP (sourceHeader a) else .notP (sourceHeader a)) (sourceHeader b)
 
 /-- Finite layout validation for each actual user entry. -/
 def headerCheck {n : Nat} (M : Machine n) : Entry n → Bool
   | .shift q R => ScannerReplayResidual.entryCheck M R q
+  | .alt a b | .guard _ a b => headerCheck M a && headerCheck M b
   | _ => true
 
 def entriesCheck {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg) : Bool :=
@@ -134,6 +140,18 @@ def shiftedBody {n : Nat} (M : Machine n) (q : Fin n) (R : ScannerReplayResidual
           (RegularCaptureProduct.run (observer M) (state M P ⟨a,ha⟩).val ((R r).getD [])) z)
       else MExp.failAlways
 
+/-- Plain residual header, used to preserve the original choice before
+running a continuation that may fail or remain undefined. -/
+def targetHeader {n : Nat} (M : Machine n) (P : List Nat) : Entry n → MExp
+  | .replay | .safeReplay => .eps
+  | .scan q => match DynamicScannerBinding.resume P q with
+    | none => MExp.failAlways | some r => .call r.val []
+  | .shift q R => match DynamicScannerBinding.resume P q with
+    | none => MExp.failAlways | some r => .lit ((R r).getD [])
+  | .alt a b => .alt (targetHeader M P a) (targetHeader M P b)
+  | .guard positive a b => .seq
+      (if positive then .andP (targetHeader M P a) else .notP (targetHeader M P a)) (targetHeader M P b)
+
 /-- The complete capture selects the residual scanner or rotated literal.
 Replay removes its prefix, and every entry retains the full captured value. -/
 def targetBody {n : Nat} (M : Machine n) (entry : Entry n) (bodies : List Arg)
@@ -141,6 +159,11 @@ def targetBody {n : Nat} (M : Machine n) (entry : Entry n) (bodies : List Arg)
   match entry with
   | .scan q => scannerBody M q bodies P mode b
   | .shift q R => shiftedBody M q R bodies P mode b
+  | .alt a c => RootObservation.branch (.andP (targetHeader M P a))
+      (targetBody M a bodies P mode b) (targetBody M c bodies P mode b)
+  | .guard positive a c => .seq
+      (if positive then .andP (targetHeader M P a) else .notP (targetHeader M P a))
+      (targetBody M c bodies P mode b)
   | .replay | .safeReplay => match mode with
     | none => plain M bodies [P] b
     | some (a,z) => if ha : a<(observer M).width then
@@ -274,11 +297,24 @@ theorem scannerBody_firstOrder {n : Nat} (M : Machine n) (q : Fin n) (bodies : L
       · trivial
 
 theorem sourceHeader_firstOrder {n : Nat} (entry : Entry n) :
-    (sourceHeader entry).FirstOrder := by cases entry <;> trivial
+    (sourceHeader entry).FirstOrder := by
+  induction entry with
+  | replay | safeReplay | scan _ | shift _ _ => trivial
+  | alt a b ha hb => exact ⟨ha,hb⟩
+  | guard positive a b ha hb => cases positive <;> exact ⟨ha,hb⟩
+
+theorem targetHeader_firstOrder {n : Nat} (M : Machine n) (P : List Nat) (entry : Entry n) :
+    (targetHeader M P entry).FirstOrder := by
+  induction entry with
+  | replay | safeReplay => trivial
+  | scan q => simp only [targetHeader]; split <;> trivial
+  | shift q R => simp only [targetHeader]; split <;> trivial
+  | alt a b ha hb => exact ⟨ha,hb⟩
+  | guard positive a b ha hb => cases positive <;> exact ⟨ha,hb⟩
 
 theorem targetBody_firstOrder {n : Nat} (M : Machine n) (entry : Entry n) (bodies : List Arg)
     (P : List Nat) (mode : Mode) (b : Arg) : (targetBody M entry bodies P mode b).FirstOrder := by
-  cases entry with
+  induction entry with
   | scan q => exact scannerBody_firstOrder M q bodies P mode b
   | shift q R =>
     cases hr : DynamicScannerBinding.resume P q with
@@ -303,6 +339,10 @@ theorem targetBody_firstOrder {n : Nat} (M : Machine n) (entry : Entry n) (bodie
       split
       · exact filter_firstOrder M bodies [P] b _ _
       · trivial
+  | alt a c ha hc =>
+    exact ⟨⟨targetHeader_firstOrder M P a,ha⟩,⟨targetHeader_firstOrder M P a,hc⟩⟩
+  | guard positive a c ha hc =>
+    cases positive <;> exact ⟨targetHeader_firstOrder M P a,hc⟩
 
 theorem helpers_firstOrder {n : Nat} (M : Machine n) : ∀ r∈helpers M, r.body.FirstOrder := by
   intro r hr
