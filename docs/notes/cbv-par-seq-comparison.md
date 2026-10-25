@@ -16,6 +16,247 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 実引数と同じproducerを消費するclosed前半を混合文法へ接続
+
+`ParserPrefixFusion`には既に、同じclosed parserを引数とPar本体の前半で評価する単独の
+融合証明がある。`ProducedPrefixCompiler`から`ProducedPrefixCorrespondence`はその
+`Pure`とparser独立性の証明を再利用し、正倍率成長・forwarding・origin制御と
+相互に呼び合う実文法へ接続する。前半のparser Dはcall/parameterを持たない任意のPEG式で、
+選択・先読み・反復を許す。nullable反復も拒否せず、その未定義を保存する。
+
+追加entryは`produced D B`で、元のPar本体は`D; B(w)`である。
+そのentryへの全実呼出しが構文的に`F(D)`であることを、元の全bodyと開始式について
+有限`conforms`で検査する。引数が同じDであることから、実捕捉の終端と本体でDを
+再評価した消費終端が一致する。これにより本体を`param0; B(w)`へ正規化できる。
+捕捉語の長さや有限集合を仮定せず、Dの実成功結果からその都度捕捉値を導く。
+他のgrowth/origin entryへの引数は従来どおり動的な一階式でよい。
+
+この書換えは任意の環境Eでは正しくないため、無条件のbody同値を仮定しない。
+`tables_rows`はproducer行だけを実捕捉に条件付け、他の行は全保持環境で対応させる。
+実引数の有限検査から各producer呼出しの条件を導き、全再帰行を同じ通常clockで閉じる。
+origin Planの元leaf範囲も検査し、追加partsへの不正aliasを防ぐ。正規化後の実混合文法は
+既存`MixedForwardingCompiler`へ渡す。全観測・失敗・全clock未定義を元文字列上で保存し、
+targetはn(n+2)+b規則、inline source clock k ≤ Seq clock k ≤ source clock (n+2)kである。
+
+`ProducedPrefixHeaders`は、元の前半を実`H(empty)`呼出しとして保持する。
+Hの実宣言がarity1で、bodyが指定producer Dと一致することを有限検査し、先に一段展開する。
+この元Par文法からも全観測と言語を保存し、source clock k ≤ Seq clock k ≤ source clock
+2((n+2)k)を得る。callee行の意味を外から与える仮定はない。
+
+`ProducedPrefixExamples`のDは`a*;b`で、実closed calleeが捕捉終端まで消費したあとに
+親wを使う。親wを3倍化する規則、新しい位置で同じproducerから別のvを捕捉する再帰、
+`c*`を渡すorigin規則を経て、growth側のwとproducer側のwをそれぞれ復元する。
+直接例はwのa部分長0/1/4、新捕捉vのa部分長4/0/2で、27規則のSeqを実行する。
+originの早い復帰、誤引数と誤callee宣言の拒否、arity検査、helper privacy、
+nullable producerの全入力全clock未定義も検証する。実calleeを含む小さい例は、元source
+clock1では未定義、clock2で成功し、生成Seqはclock1で成功する。
+引数をD以外へ変えると元sourceだけ受理する実反例があり、`conforms`はこれを拒否する。
+これは変換の検査条件の必要性を示し、言語クラスの分離ではない。
+
+この前半が消費する終端は、検査した引数Dの実捕捉終端と一致する。
+それと異なる位置へ返る一般のconsuming closed prefix、recursive producer、
+検査外の呼出し・複数独立捕捉、一般のPar/Seq一致・分離は未解決である。
+
+## 親の保持値を使う後続を成功復帰の位置に応じて接続
+
+`OriginTailPlan`から`OriginTailInlining`は、下記でClosedに制限していた親tailを拡張する。
+子のPlanの全leafではなく、成功して後続へ返る箇所を`Exits`で追う。altの両側は復帰箇所を
+持つが、guardの第1項は先読み専用であり、そこで親tailを実行することはない。
+notPが成功する場合は元の位置へ返る。`append_eval`はこの区別の下でcommitted choiceと
+有限失敗・未定義を保存する。
+
+有限`flowCheck`は、子の成功復帰箇所について次のいずれかを要求する。
+
+- replay partから返るなら、親tailは任意の一階式でよい。子の新しい`w^m`を再照合したあと、
+  子のCは`w^m`へscopeを固定し、親tailは元のwを保持した環境で実行する。
+- closed partから返るなら、従来どおり親tailがClosedでよい。また、closed partが有限構文検査で
+  零幅成功しか持たず、親tailが`param0; C`なら、元の位置でそのqueryを検査してから親wを再照合できる。
+- notPの成功で元位置へ返る場合も、親tailがClosedまたは`param0; C`であることを要求する。
+
+query専用subtreeはこれらの復帰条件を要求しないが、元のPlanに残り、失敗も未定義も保存する。
+そこでしか使わないclosed partに、実行されない親tailを無条件に付けてbackendへ渡すことをやめた。
+`closed_parts` / `closed_plan`はClosed tailで以前の生成文法と一致すること、
+`extends_closed_check`は以前の有限検査を通る入力が新検査も通ることを証明する。
+
+`OriginTailInlining`は実混合sourceのbody rewriteと既存Seq backendへつなぎ、入力の一階性、
+実entryのlookupと有限checkから、元文字列の全観測・失敗・全clock未定義を保存する。
+規則数はn(n+1)+3b+3、mixed source clock k ≤ Seq clock k ≤ source clock 2((n+2)k)である。
+`OriginTailRawCompiler`は元の`MultiplyingPrefixCompiler.source`からの接続も保持する。
+意味的な復帰位置のoracle、有限捕捉語集合、入力変換は使わない。
+
+`OriginTailExamples`では、子に渡した`w^3`を再照合し、親tailで`!; w; parent(x); w`を実行する。
+childの`w^3`とparentのw、新しいxを区別し、再帰から戻ったあとにも親wを復元する。
+先読み専用closed partは実userへ`c*`を渡し、成功時に入力を進めるがguardが元位置へ戻す。
+`w=c^n d`（n=0/1/4）と親aの生成Seq実行、child値を親へ漏らした入力の拒否、committed child、
+query失敗と引数preflightをkernel検証する。別の元文法では、零幅closed成功とnotP成功から
+`w; C(w)`へ接続する。nullableなqueryの全入力・全clock未定義もsource/targetで証明する。
+元のSpec文法で親の保持値を使う後続を持つ例にも、全入力観測定理を適用する。
+
+入力を消費するclosed成功から親の保持値を使う後続へ戻る場合は、上記で実捕捉と同じ
+producerの消費終端へ返るケースを接続した。一般の場合、成功復帰の上記条件を
+満たさないPlan、複数headの自動閉包展開、一般PEG prefix、独立複数捕捉、
+一般のPar/Seq一致・分離は未解決である。
+
+## 正倍率headからorigin規則への直接呼出しを展開
+
+`OriginHeadInlining`は、選択した1本の正倍率headがorigin entryを直接呼ぶ場合を扱う。
+親のtailは`Closed`、factorは1以上とし、子はclosed/replay part上の任意のPlanでよい。
+親fallback、子part、開始式、新しい呼出し引数は任意の一階式を許し、子のpartから親へ
+戻る実再帰も許す。残りの文法と展開後の有限検査が既存混合backendに適合することを要求する。
+
+子へ実際に渡した`w^m`をWord代入で子のscopeへ固定する。replay partは親の先頭`w`を
+照合したあと、残りm-1個を読み、子本体のparam0を`w^m`へ置き換えて実行する。
+closed partは原点から実行する。caller側のguardは、closed分岐を実行する場合にも
+`w^m`全体の引数preflightを先に検査する。親の元のwと子の新しい`w^m`は混同しない。
+
+後続を子の選択へ単純に分配すると、子の成功後に後続が失敗したとき、子の別分岐を
+再試行してしまう。`OriginHeadPlan.after`は、選択した側の成否をguardとnotPで固定して
+から後続を実行する。任意の有限Planと任意の部分的な後続結果について、この変換が
+成功・有限失敗・未定義を正確に保つことを証明する。子のguard/notPにも対応する。
+
+`OriginHeadParts`は元のpartsを保ち、scopeを変えたparts、後続付きparts、tail、
+preflight、fallbackを有限に生成する。元のorigin Planのleaf範囲も検査し、追加された
+partsが元の範囲外leafに誤って見えることを防ぐ。対象のhead以外の規則とarityは保持する。
+一段の実call展開の後、既存`MixedForwardingCompiler`へ渡し、同じ元文字列言語と全残余、
+有限失敗、全clock未定義を保存する。n規則・b partsならtargetはn(n+1)+3b+3規則で固定され、
+元の混合source clock k ≤ Seq clock k ≤ source clock 2((n+2)k)を満たす。
+
+`OriginHeadRawCompiler`は元の`MultiplyingPrefixCompiler.source rs`からの接続も行う。
+空引数headのPar展開を、旧backendのcallee種別検査と分離し、その後に選択headを展開する。
+これにより、旧backendが拒否した「正倍率headから倍率0のorigin規則を直接呼ぶ」元文法を
+同じ言語のSeq文法へ変換できる。元sourceの一階性、実entryの有限lookup、有限check以外に
+意味的なcallee行の仮定を要求しない。
+
+`OriginHeadExamples`の元文法は、親wから子へ`w^3`を渡す。子のclosed分岐が捕捉終端より
+手前へ返る例と、子のreplay分岐が`w^3`を照合し、新しいxを親へ渡して戻ったあとに再び
+`w^3`を照合する例を、33規則の生成Seqで直接検証する。`c*`部分が長さ0/1/4の`c*;d`捕捉、
+preflight省略の誤受理、子選択の誤った再試行、親fallback、nullable引数、短い子値、
+helper privacyも確認する。全入力に対する言語・観測の一般定理をこの元文法に適用する。
+
+親tailが保持値に依存する場合は上記の成功復帰条件で拡張した。条件外の後続、
+複数のheadを閉包まで自動展開する手順、一般PEG prefix、
+独立複数捕捉、一般のPar/Seq一致・分離は未解決である。
+
+## factor-1の経路と循環も混合Seq compilerへ接続
+
+`MixedForwardingCompiler`から`MixedForwardingCorrespondence`は、下記の混合compilerを
+factor-1まで拡張する。`Entry.growth`は倍率1以上を許し、`Entry.origin`は従来どおり
+任意のclosed/replay Planを持つ。正倍率headの既知calleeは正倍率entryであることを
+要求する。tail/fallback、origin part、開始式、新しいPEG引数は任意の一階式でよく、
+両種類のentryの相互callbackを許す。
+
+実original文法から正倍率entryだけを選択し、`SelectedForwardingNormalization`で有限head
+展開する。factor-1 edgeは選択した実正倍率規則に閉じることを静的に確認する。
+非選択origin規則は本体を保つ。calleeごとのparameter scopeと選択の括弧を保持し、
+閉じたfactor-1循環はpreflight後の非消費未定義へ写す。targetの有限head codeは同じ
+経路と循環を使い、倍率2以上に達したところで既存の複数等値引数へ移る。
+metadata上のcodeの一階性は構文補題だけに使い、行の意味は実混合文法のtblVで証明する。
+
+`tables_rows`は展開後sourceの全正倍率view行とorigin Plan行を同時に閉じ、
+全一階式がtarget Seqと同じ通常clockで一致する。`observations_iff`と
+`original_undefined_iff`は展開前original文法に戻り、全残余・有限失敗・全clock未定義を
+保存する。targetはn(n+1)+parts.length個の固定規則であり、
+original clock k ≤ Seq clock k ≤ original clock (n+2)kを満たす。
+
+`MixedForwardingReset`は、元の`MultiplyingPrefixCompiler.source rs`に対して
+倍率1以上を正倍率entryへ、倍率0を一段展開したorigin Planへ自動変換する。
+既知reset calleeの後続は親parameterから独立であることを検査する。
+source一階性と有限`check`から、n(n+3)規則の固定Seq文法、元文字列の言語・観測・
+未定義保存、source clock k ≤ Seq clock k ≤ source clock 2((n+2)k)を得る。
+入力長、実捕捉値、再帰深度は規則集合や有限展開深度を増やさない。
+
+`MixedForwardingExamples`は同じraw文法にfactor-1経路、`ab → (ab)^3 → (ab)^9`の
+実成長、倍率0のcalleeと`c*`の新捕捉、別の`x`を渡した再帰、2規則factor-1循環を置く。
+生成Seqを通常clock16で実行し、捕捉終端より前のreset復帰、成長した親値とforwarding親値の
+復元、長さ0/1/4の新捕捉、短い親値の拒否を確認する。明示的origin Planとforwardingの
+相互callbackも検証する。factor-1循環の空引数呼出しは全入力全clockでsource/targetとも
+未定義である。preflight失敗、同clockのsource/target差、committed choice、helper privacyも確認する。
+
+正倍率headからorigin entryへの直接呼出しは、上記で親tailがClosedの場合に対応した。
+親保持値に依存する後続、独立複数捕捉、
+一般のPar/Seq一致・分離は未解決である。
+
+## 成長headと原点分岐を同じ再帰文法からSeqへ変換
+
+`MixedGrowthCompiler`から`MixedGrowthCorrespondence`は、それまで別文法だった
+倍率2以上の保持値成長headと、`ReplayControlFusion.Plan`の原点制御を一つのsourceへ
+統合する。成長規則のtail/fallback、原点規則のclosed/replay part、開始式と新しい
+引数は任意の一階式でよく、両種類の規則の間の相互再帰を許す。
+成長headの既知calleeは成長規則であることを要求する。tail/fallbackから原点規則を
+呼ぶこと、原点規則のpartから成長規則を呼ぶことは制限しない。
+
+targetはn(n+1)個の成長用view規則と、parts.length個の原点用0/1引数helperを持つ。
+sourceの成長呼出しは等しい保持値の複数引数へ、原点呼出しはpreflightを保った
+caller側のPlanへ変換する。`MixedGrowthCorrespondence.tables_rows`は、成長viewの行と
+原点Planの行を一つの同時帰納で閉じる。原点partを別文法の意味で解釈する仮定や、
+callee行の意味を外から与える仮定はない。全source式と生成式は同じ通常clockで一致し、
+全残余・有限失敗・全clock未定義・元文字列の全消費言語を保存する。
+`MixedGrowthChecks.check`は一階構文、closed part、Plan leaf範囲、倍率、headのcallee種別を
+有限検査する。`MExp.fo`はここで必要なparameter付き一階性とは別の既存判定なので使わない。
+
+`MixedResetCompiler`は元の`MultiplyingPrefixCompiler.source rs`からこの混合sourceへ
+自動的につなぐ。倍率2以上の規則は成長規則として保持し、それ以外は空引数calleeの
+一段展開でclosed/replay Planへ移す。calleeが存在するresetは倍率0を必要とし、
+展開分岐のclosed検査は親tailの捕捉依存を拒否する。missing headは有限失敗を保存する。
+元sourceの一階性と有限`check`だけから、n(n+3)個の固定Seq規則、
+source clock k ≤ Seq clock k ≤ source clock 2k、全観測と全clock未定義の保存を得る。
+元sourceは入力・clock・実捕捉値に依存せず固定される。
+
+`MixedGrowthExamples`は`ab → (ab)^3 → (ab)^9`の途中で原点規則へ移り、`c*`を新しく
+捕捉し、成長規則へ別の`x`を渡して戻ったあと、`c*`と各親の完全な保持値を再利用する。
+`MixedResetExamples`では同じ成長列の途中で倍率0の子が`c*`を原点から読み、
+`c*!xgab`という実捕捉の終端より前へ戻り、その後に親の`ab`または`(ab)^3`を再照合する。
+長さ0/1/4の新捕捉、親値を短く取り違えた入力の拒否、preflightの失敗・nullable未定義、
+reset fallback、helper privacy、全入力全clockの空引数自己再帰未定義をkernel検証する。
+
+factor-1 forwardingを含む混合sourceは上記の拡張で対応した。Closed tailを持つ選択headから
+原点calleeへの直接呼出しもさらに上の前段で対応する。
+親保持値に依存するreset後続、独立複数捕捉、一般のPar/Seq一致・分離は未解決である。
+
+## 原点へ戻る空引数calleeをSeqへ接続
+
+`ZeroResetOrigin` / `ZeroResetCorrespondence` は、下記の正倍率compilerが拒否した
+倍率0の具体例を、同じ元文字列言語のSeq文法へ変換する。sourceは既存の
+`MultiplyingPrefixCompiler.Spec` の規則族
+`F_i(w) := (F_next(w^m_i); B_i(w)) / (w; C_i(w))` である。
+有限検査`check`は、head calleeが存在する規則について、倍率0と
+`ReplayFallbackFusion.Closed B_i`（親parameterに依存しない構文）を要求する。
+calleeが存在しなければheadは有限失敗するため、倍率とtailを制限しない。
+全source規則と開始式が一階であること以外に、fallbackや新しい動的PEG引数を
+制限せず、再帰・相互再帰も許す。
+
+存在する空引数calleeの本体を一段だけ`subst [lit []]`で展開し、その後のClosed tailと
+合わせて原点独立の分岐にする。calleeのparameter scopeはこの代入で固定される。
+その分岐と元の`w; C_i(w)`分岐を、既存の`ReplayControlFusion`へ渡す。
+従って新しいtargetは2n個の0/1引数規則からなる固定一階Seq文法であり、入力の
+符号化、有限捕捉語集合、アルファベット制限、実行時の規則生成を使わない。
+開始呼出しでは引数のpreflightを保持し、その失敗・未定義も保存する。
+
+`physical_bounds`は任意の実source/target tblVに対してsource clock k ≤ Seq clock k、
+Seq clock k ≤ source clock 2kを証明する。`observations_iff`、`undefined_iff`、
+`language_translation`は展開前sourceの全残余・有限失敗・全clock未定義と、元文字列の
+全消費言語を保存する。これは両方式を別々に保つ空捕捉specializationから進み、
+実際のPar→Seq変換になっている。
+
+`ZeroResetExamples`は、旧compilerで`a!`の末尾`!`が残る例の新target受理、
+3文字捕捉後に2文字だけ消費する原点分岐、preflight省略の誤受理、nullable引数の
+未定義をkernel検証する。相互再帰で`a!`を消費し、新しい`c*`を渡し、さらに
+別の親呼出しへ`x`を渡してfallbackで再利用するsource/targetも直接実行する。
+空引数自己再帰の全入力・全clock未定義も証明する。
+倍率0の後続が親の保持値に依存する場合と、一般のPar→Seq変換は未解決である。
+
+## 異なる本体が混在する実文法で選択的にforwarding headを正規化
+
+`SelectedForwardingContext`から`SelectedForwardingNormalization`は、正倍率head展開を
+任意の一階実文法の選択した規則へ適用する。有限`check`は実arity/bodyとmetadataの
+一致、factor-1 successorの選択集合内への閉包を検査する。非選択規則は任意の本体・
+arityを保ち、そのmetadataは本体を記述する必要がない。補題のtableはすべて実文法の
+tblVであり、metadataから作った別文法の行対応を仮定しない。
+原点独立分岐と正倍率headの相互呼出しを含む例、選択したcycleと非選択0引数規則の
+共存、元のarity・観測・全clock未定義の保存を検証する。
+これは混合文法のPar→Par正規化であり、上記のfactor-1対応混合Seq compilerの前段として
+実際に接続されている。
+
 ## 空捕捉の実呼出しを任意の一階文法で0引数化
 
 `EmptyArgumentSpecialization` は、任意の一階文法について、有限構文検査`zeroCheck`を通る
