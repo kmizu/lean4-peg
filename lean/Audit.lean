@@ -1,3 +1,11 @@
+import MacroPeg.CBV.MixedGrowthCompiler
+import MacroPeg.CBV.MixedGrowthEvaluation
+import MacroPeg.CBV.MixedGrowthCalls
+import MacroPeg.CBV.MixedGrowthCorrespondence
+import MacroPeg.CBV.MixedGrowthChecks
+import MacroPeg.CBV.MixedGrowthExamples
+import MacroPeg.CBV.MixedResetCompiler
+import MacroPeg.CBV.MixedResetExamples
 import MacroPeg.CBV.SelectedForwardingContext
 import MacroPeg.CBV.SelectedForwardingCycles
 import MacroPeg.CBV.SelectedForwardingBounds
@@ -27167,3 +27175,301 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.ZeroResetExamples.cycle_target' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ZeroResetExamples.cycle_target
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthCompiler.leaf_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthCompiler.leaf_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthCompiler.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthCompiler.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthCompiler.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthCompiler.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthCompiler.source_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthCompiler.source_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthCompiler.blocks_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthCompiler.blocks_length
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthCompiler.blocks_rule' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthCompiler.blocks_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthCompiler.target_rule' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthCompiler.target_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthCompiler.helper_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthCompiler.helper_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthCompiler.origin_mode' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthCompiler.origin_mode
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthCompiler.mode_positive' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthCompiler.mode_positive
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthCompiler.rebound_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthCompiler.rebound_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthCompiler.growth_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthCompiler.growth_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthCompiler.target_firstOrder' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthCompiler.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthCompiler.rule_count' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthCompiler.rule_count
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthEvaluation.leaf_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthEvaluation.leaf_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthEvaluation.evaluator' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthEvaluation.evaluator
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthEvaluation.view_evaluator' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthEvaluation.view_evaluator
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthCalls.prefix_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthCalls.prefix_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthCorrespondence.tables_rows' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthCorrespondence.tables_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthCorrespondence.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthCorrespondence.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthCorrespondence.undefined_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthCorrespondence.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthCorrespondence.decide_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthCorrespondence.decide_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthCorrespondence.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthCorrespondence.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthCorrespondence.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthCorrespondence.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthChecks.firstOrder_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthChecks.firstOrder_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthChecks.args_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthChecks.args_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthChecks.plan_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthChecks.plan_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthChecks.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthChecks.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthChecks.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthChecks.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthExamples.checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthExamples.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthExamples.mutual_source' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthExamples.mutual_source
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthExamples.mutual_target' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthExamples.mutual_target
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthExamples.nested_source' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthExamples.nested_source
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthExamples.nested_target' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthExamples.nested_target
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthExamples.short_origin' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthExamples.short_origin
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthExamples.origin_preflight' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthExamples.origin_preflight
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthExamples.nullable_origin' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthExamples.nullable_origin
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthExamples.private_helpers' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthExamples.private_helpers
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthExamples.short_copies' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthExamples.short_copies
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthExamples.all_observations' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthExamples.all_observations
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthExamples.growth_to_origin_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthExamples.growth_to_origin_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthExamples.missing_leaf_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthExamples.missing_leaf_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthExamples.dependent_closed_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthExamples.dependent_closed_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedGrowthExamples.unit_growth_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedGrowthExamples.unit_growth_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedResetCompiler.pair_lookup' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedResetCompiler.pair_lookup
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedResetCompiler.normalized_rule' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedResetCompiler.normalized_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedResetCompiler.valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedResetCompiler.valid
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedResetCompiler.related' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedResetCompiler.related
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedResetCompiler.physical_bounds' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedResetCompiler.physical_bounds
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedResetCompiler.rule_count' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedResetCompiler.rule_count
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedResetCompiler.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedResetCompiler.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedResetCompiler.undefined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedResetCompiler.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedResetCompiler.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedResetCompiler.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedResetExamples.checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedResetExamples.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedResetExamples.firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedResetExamples.firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedResetExamples.mixed_source' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedResetExamples.mixed_source
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedResetExamples.mixed_target' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedResetExamples.mixed_target
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedResetExamples.nested_source' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedResetExamples.nested_source
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedResetExamples.nested_target' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedResetExamples.nested_target
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedResetExamples.reset_returns_early' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedResetExamples.reset_returns_early
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedResetExamples.reset_fallback' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedResetExamples.reset_fallback
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedResetExamples.wrong_restored_word' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedResetExamples.wrong_restored_word
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedResetExamples.missing_argument_suffix' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedResetExamples.missing_argument_suffix
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedResetExamples.nullable_preflight' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedResetExamples.nullable_preflight
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedResetExamples.all_observations' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedResetExamples.all_observations
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedResetExamples.old_reset_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedResetExamples.old_reset_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedResetExamples.old_reset' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedResetExamples.old_reset
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedResetExamples.dependent_reset_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedResetExamples.dependent_reset_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedResetExamples.growth_head_to_reset_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedResetExamples.growth_head_to_reset_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedResetExamples.cycle_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedResetExamples.cycle_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedResetExamples.cycle_target' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedResetExamples.cycle_target
+
+/-- info: 'Shallot.MacroPeg.CBV.ZeroResetCorrespondence.body_bounds_of_zero' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ZeroResetCorrespondence.body_bounds_of_zero

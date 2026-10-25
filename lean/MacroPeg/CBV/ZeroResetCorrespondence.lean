@@ -9,8 +9,8 @@ open MultiplyingPrefixCompiler (Spec source sourceBody source_rule)
 open ForwardingHeadExpansion (frame)
 open ExpressionContext (plug)
 
-theorem body_bounds (rs : List Spec) (hg : (source rs).FirstOrder) (hc : check rs=true)
-    (i : Nat) (r : Spec) (hr : rs[i]?=some r) (x : List Char) (k : Nat) (E : List (List Char))
+theorem body_bounds_of_zero (rs : List Spec) (hg : (source rs).FirstOrder)
+    (r : Spec) (hz : ∀ child, rs[r.callee]?=some child → r.factor=0) (x : List Char) (k : Nat) (E : List (List Char))
     (p : Nat) (hp : p≤x.length) :
     RLe (evV (source rs) x .callByValuePar (tblV (source rs) x .callByValuePar k) E (sourceBody r) p)
       (evV (source rs) x .callByValuePar (tblV (source rs) x .callByValuePar k) E (normalizedBody rs r) p) ∧
@@ -23,7 +23,7 @@ theorem body_bounds (rs : List Spec) (hg : (source rs).FirstOrder) (hc : check r
       simp [sourceBody,normalizedBody,closedBranch,hn,evV,source_rule,MExp.failAlways]
     exact ⟨Or.inr he,by rw [←he]; exact evV_mono (tblV_step _ _ _ k) _ _⟩
   | some child =>
-    have hf := (head_checked rs hc r (List.mem_of_getElem? hr) child hn).1
+    have hf := hz child hn
     have hchild : ruleAtM (source rs).rules r.callee=some ⟨1,sourceBody child⟩ := by rw [source_rule,hn]; rfl
     have hchildFO := hg ⟨1,sourceBody child⟩ (ruleAtM_mem hchild)
     have hs : sourceBody r=plug (.call r.callee [.lit []]) (frame r) := by
@@ -48,6 +48,15 @@ theorem body_bounds (rs : List Spec) (hg : (source rs).FirstOrder) (hc : check r
       (.lit []) True.intro (frame r) x k E p hp
     exact ⟨RLe.trans (Or.inr (hsrc k)) (RLe.trans hb.1 (Or.inr he)),
       RLe.trans (Or.inr he.symm) (RLe.trans hb.2 (Or.inr (hsrc (k+1)).symm))⟩
+
+theorem body_bounds (rs : List Spec) (hg : (source rs).FirstOrder) (hc : check rs=true)
+    (i : Nat) (r : Spec) (hr : rs[i]?=some r) (x : List Char) (k : Nat) (E : List (List Char))
+    (p : Nat) (hp : p≤x.length) :
+    RLe (evV (source rs) x .callByValuePar (tblV (source rs) x .callByValuePar k) E (sourceBody r) p)
+      (evV (source rs) x .callByValuePar (tblV (source rs) x .callByValuePar k) E (normalizedBody rs r) p) ∧
+    RLe (evV (source rs) x .callByValuePar (tblV (source rs) x .callByValuePar k) E (normalizedBody rs r) p)
+      (evV (source rs) x .callByValuePar (tblV (source rs) x .callByValuePar (k+1)) E (sourceBody r) p) :=
+  body_bounds_of_zero rs hg r (fun child hn => (head_checked rs hc r (List.mem_of_getElem? hr) child hn).1) x k E p hp
 
 theorem related (rs : List Spec) (hg : (source rs).FirstOrder) (hc : check rs=true) :
     FiniteBodyRewrite.Related (source rs) (normalized rs) .callByValuePar 1 := by

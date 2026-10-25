@@ -16,6 +16,42 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 成長headと原点分岐を同じ再帰文法からSeqへ変換
+
+`MixedGrowthCompiler`から`MixedGrowthCorrespondence`は、それまで別文法だった
+倍率2以上の保持値成長headと、`ReplayControlFusion.Plan`の原点制御を一つのsourceへ
+統合する。成長規則のtail/fallback、原点規則のclosed/replay part、開始式と新しい
+引数は任意の一階式でよく、両種類の規則の間の相互再帰を許す。
+成長headの既知calleeは成長規則であることを要求する。tail/fallbackから原点規則を
+呼ぶこと、原点規則のpartから成長規則を呼ぶことは制限しない。
+
+targetはn(n+1)個の成長用view規則と、parts.length個の原点用0/1引数helperを持つ。
+sourceの成長呼出しは等しい保持値の複数引数へ、原点呼出しはpreflightを保った
+caller側のPlanへ変換する。`MixedGrowthCorrespondence.tables_rows`は、成長viewの行と
+原点Planの行を一つの同時帰納で閉じる。原点partを別文法の意味で解釈する仮定や、
+callee行の意味を外から与える仮定はない。全source式と生成式は同じ通常clockで一致し、
+全残余・有限失敗・全clock未定義・元文字列の全消費言語を保存する。
+`MixedGrowthChecks.check`は一階構文、closed part、Plan leaf範囲、倍率、headのcallee種別を
+有限検査する。`MExp.fo`はここで必要なparameter付き一階性とは別の既存判定なので使わない。
+
+`MixedResetCompiler`は元の`MultiplyingPrefixCompiler.source rs`からこの混合sourceへ
+自動的につなぐ。倍率2以上の規則は成長規則として保持し、それ以外は空引数calleeの
+一段展開でclosed/replay Planへ移す。calleeが存在するresetは倍率0を必要とし、
+展開分岐のclosed検査は親tailの捕捉依存を拒否する。missing headは有限失敗を保存する。
+元sourceの一階性と有限`check`だけから、n(n+3)個の固定Seq規則、
+source clock k ≤ Seq clock k ≤ source clock 2k、全観測と全clock未定義の保存を得る。
+元sourceは入力・clock・実捕捉値に依存せず固定される。
+
+`MixedGrowthExamples`は`ab → (ab)^3 → (ab)^9`の途中で原点規則へ移り、`c*`を新しく
+捕捉し、成長規則へ別の`x`を渡して戻ったあと、`c*`と各親の完全な保持値を再利用する。
+`MixedResetExamples`では同じ成長列の途中で倍率0の子が`c*`を原点から読み、
+`c*!xgab`という実捕捉の終端より前へ戻り、その後に親の`ab`または`(ab)^3`を再照合する。
+長さ0/1/4の新捕捉、親値を短く取り違えた入力の拒否、preflightの失敗・nullable未定義、
+reset fallback、helper privacy、全入力全clockの空引数自己再帰未定義をkernel検証する。
+
+factor-1 forwardingを含む混合sourceの統合、成長headから原点calleeへの直接呼出し、
+親保持値に依存するreset後続、独立複数捕捉、一般のPar/Seq一致・分離は未解決である。
+
 ## 原点へ戻る空引数calleeをSeqへ接続
 
 `ZeroResetOrigin` / `ZeroResetCorrespondence` は、下記の正倍率compilerが拒否した
@@ -57,7 +93,8 @@ arityを保ち、そのmetadataは本体を記述する必要がない。補題�
 tblVであり、metadataから作った別文法の行対応を仮定しない。
 原点独立分岐と正倍率headの相互呼出しを含む例、選択したcycleと非選択0引数規則の
 共存、元のarity・観測・全clock未定義の保存を検証する。
-これは混合文法のPar→Par正規化であり、混合文法全体のSeq compilerはまだ構成していない。
+これは混合文法のPar→Par正規化である。上記の混合Seq compilerとの接続に必要な
+factor-1 headの統合はまだ構成していない。
 
 ## 空捕捉の実呼出しを任意の一階文法で0引数化
 
