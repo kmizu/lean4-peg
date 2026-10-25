@@ -16,6 +16,226 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 消費した分岐の後続を、束縛済みの保持環境へ融合する
+
+`RetainedContinuationSyntax/Algebra/Compiler` は、`(P.exp leaves); C`という元headerを
+扱う。Pは選択・否定・先読みguardの有限treeであり、Cは任意の一階式である。
+Cは実際に消費し、古いparameterを読み、parameterized callや反復も含められる。
+最終Seq化には、生成後の型・effect検査の通過が必要である。
+元の全call宣言とrootを有限検査し、生成した葉群を`FieldPlanCompiler`へ接続する。
+
+消費後の位置で元actualを取り直さず、Pの正の実行経路の葉にCを融合する。
+元葉が`anchor; B`なら生成コピーは`anchor; (B; C)`で、捕捉値は同じentry環境に残る。
+再捕捉patternはBだけでなくCが読むslotもcoverする必要があり、生成後の型・effect・
+参照検査で確認する。query専用経路にはC付きコピーを作らない。否定が成功して原点を
+保持する経路には空patternのC葉を作るため、そこでlive値の束縛が必要なら検査で拒否する。
+
+選択の単純分配`(a/b); C → (a; C)/(b; C)`は正しくない。
+`committed_suffix`は、代わりに`(&a; a; C) / (&!a; b; C)`が全ての部分結果を保つことを
+任意grammar/table/strategyで証明する。aが成功してCが失敗しても、bへ戻らない。
+未定義のa/Cも有限失敗やfallback成功へ変えない。guardを含む残りのcontrolは原点を保つ
+条件だけを使って構成し、コピーのlookupと元の選択判定を有限な生成データから導く。
+
+`related`は元bodyと生成bodyの任意tableでの局所一致を証明し、既存
+`SemanticBodyRewrite.physical`で元header群の再帰を閉じる。
+`RetainedContinuationCompiler.physical/observations_iff/language_translation/undefined_iff`
+は、この正規化・原点dispatch・型つきPar→Seqを合成し、全元入力・全physical clock・
+全有限観測・元文字列言語・全clock未定義を保存する。呼出し回数の意味を変える外部状態は
+モデルに含めず、同じtable/位置での純粋な再評価だけを使う。入力の符号化やpaddingはない。
+
+実例の元規則をεを省いて書くと、次のようになる。
+
+```
+F(w) = (w '#' ('!' / '(' F(ww) ')') / w '@' '?'); ';' H(w) w
+H(w) = w '?'
+G(v) = v '$' v
+start = G(F('a'*)) EOF
+```
+
+Fは分岐が消費した後に`;`を読み、同じ古い値をHのactualとして渡し、戻ってその値を
+再利用する。実際にその後続位置で元actual`a*`を再評価すると空語が捕捉され、
+保持していた`a`で成功する同じ後続が失敗することもkernel検証した。
+正しい生成先は後続へ値を保持し、子の倍長値で親を置き換えない。
+否定とguardの別headerも合わせ、元はarity1の5規則、生成Seqは固定20規則である。
+
+`RetainedContinuationProofs`は、`end(n)=; a^n ? a^n`、
+`t(n,0)=a^n @ ? end(n)`、`t(n,d+1)=a^n # ( t(2n,d) ) end(n)`について、
+全n/depth/余分clock/元位置/後続文字列の実source行を証明する。
+後続のH呼出しと親の再利用、外側の実捕捉`t(n,d)`、固定生成Seqでの
+`t(n,d) $ t(n,d)`のclock `d+3`受理まで接続した。空捕捉と捕捉長非有界を含む。
+単純分配だけが誤受理する入力、後続が必要とする未保持slotの拒否、独立prefixだけでは
+live bindingを供給できない例、nullable suffixの全入力非受理と成功prefix後の全clockNoneも
+検証している。
+
+**先行する選択枝が、後続で必要な値も既に束縛できる場合の正規化**である。
+独立prefixだけが消費してから初めて任意のlive値を読む一般の場合や、任意Parをこの形へ
+分解する証明は残る。Par/Seq全言語クラスの一致・分離は未解決のままである。
+
+今回 5 新 modules・46 新 guard。全 1,406 jobs/Audit と関連 3,910 公開依存
+（標準 Lean 公理 3,826、無公理 84）を検証。PR70は新 Lean 18 modules・193 guard。
+新しい sorry/axiom/native_decide はない。
+
+## 共通の先頭再照合を持たない本体を、枝別の型つきheaderへ分配する
+
+`FieldPlanSyntax/Normalization/Compiler` は、元headerの本体全体を一つの再照合patternで
+始める条件を外す。異なるslotを読む枝、引数値を読まない消費fallback、否定、
+先読みguardを`ReplayControlFusion.Plan`の有限control treeで表す。葉ごとに独立した
+型つきfield headerを持ち、headerのarityと各使用葉のarityが一致することを有限検査する。
+先読みguardは`&a; b`であり、消費する通常の`a; b`とは区別する。
+
+`FieldPlanNormalization.physical` はまずPar→Parの正規化を証明する。元callの実引数を
+全て元順でpreflightしてから、body planをcaller側に展開し、その各葉で同じactual式を
+評価して対応する葉headerへ入る。alt/not/guardはどの葉も同じ原点から評価するため、
+再評価するactualの値は元callの実捕捉tupleと完全に一致する。消費した位置からactualを
+再評価するという仮定は置かない。元rule数と葉数、元rule indexと葉indexは別々に扱う。
+
+実clockの強帰納で全葉tailの再帰仮定を閉じ、任意incoming環境・一階式・元入力位置・
+全physical clockで完全一致を示す。clock 0の元callが未知なら、全ての有効な葉callも
+未知になり、否定を含むplan全体が未知のままである。actual失敗/未定義はplanを実行する
+前に止める。無効な元callやarity mismatchはactualを評価する前に有限失敗へ変換する。
+
+`FieldPlanCompiler`は、生成したPar葉群を`TypedFieldCompiler`へ渡す。
+実raw source宣言/root、元葉bodyの一階性、planの参照/arity、展開後のslot型・戻り値effect・
+葉別の再照合条件を有限検査してから、同じ元入力上の固定Seq文法を生成する。
+`physical/observations_iff/language_translation/undefined_iff`は全clockの結果、全有限観測、
+元文字列言語、全clock未定義を保存する。規則数は使用可能な葉について`Σ(arity+1)`で、
+入力やruntimeの値に依存しない。
+
+`FieldPlanExamples`の本体をεを省いて書くと、次の形になる。
+
+```
+F(x,y) = (x '#' ('!' x / '(' F(xx,xx) ')' x))
+       / (y '@' '?' y)
+       / ('b' / '@?b')
+G(z) = z '$' z
+start = G(F('a'*, 'a'*)) EOF
+```
+
+Fの生bodyはaltから始まり、どの`sourceBody d pattern tail`とも等しくないことを
+Leanで証明した。第一枝のpatternは`[0]`、第二枝は`[1]`、fallbackは`[]`で、
+全枝の前に両値を再照合しない。別の元headerは同じ葉を否定/guardで組み合わせる。
+元arityは`[2,1,2,2]`、生成先は固定`[1,1,2,1,1,2,1,1,0,1,2]`である。
+短い第一actualと長い第二actualを使い分ける生成先、消費する独立fallback、guard/否定、
+未知のclock 0、strict actual未定義を検証した。勝った第二枝の後でEOFが失敗しても、
+単独なら全入力を消費できるfallbackへ戻らない。actualが失敗すれば、単独で成功する
+独立fallbackも実行しない。
+
+`FieldPlanProofs`は`t(n,0)=a^n @ ? a^n`、
+`t(n,d+1)=a^n # ( t(2n,d) ) a^n`について、全n/depth/余分clock/元位置/後続文字列の
+実source行を証明する。基底は第二slotを読み、再帰枝は第一slotから二つの新しい倍長値を
+捕捉し、親へ戻って第一slotを使い直す。外側が捕捉する値は実行全体の`t(n,d)`そのもので、
+固定Seq文法が`t(n,d) $ t(n,d)`をclock `d+2`で受理する。空捕捉と長さ非有界も含む。
+
+依然として、**各dependent葉にはその葉で必要な値を読む再照合patternが必要**である。
+原点を越えて消費するseq/starをcontrol treeとして分配する正規化は含まない。
+それらは葉のtail内で扱う。任意一階Par文法をこのplan形へ移す証明、live値を再照合せず
+任意位置へ渡す一般変換、およびPar/Seq全言語クラスの一致・分離は未解決のままである。
+
+今回 5 新 modules・50 新 guard。全 1,401 jobs/Audit と関連 3,864 公開依存
+（標準 Lean 公理 3,780、無公理 84）を検証。PR70は新 Lean 13 modules・147 guard。
+新しい sorry/axiom/native_decide はない。
+
+## 規則別の区切りと型を持つ、任意個のheader群を生成Seq文法へ
+
+`TypedFieldSyntax/Correspondence/Compiler` は、直下の二段構成を任意個の有限header群へ
+一般化する。各headerは引数slot別のalphabet、戻り値alphabet、自分の区切り文字、
+再照合pattern、生の本体を持つ。arityはheaderごとに異なってよく、nullary headerも
+許可する。helperの別扱いは不要で、nullary/空patternとして同じ相互再帰表で扱う。
+
+actual内の正のproducer callを構文で禁止せず、そのcalleeの実戻り値effectを使って
+次のcalleeの引数alphabetを検査する。parameterはcallerのslot型で扱うので、
+親に依存するactualも許可する。headerの戻り値effectは、宣言されたsource本体に対する
+`CaptureAlphabetEffects.grammarCheck`で検証する。単に注釈を信用する条件ではない。
+source各規則は`sourceBody delimiter pattern body`と一致し、startも宣言rootと一致する
+ことを有限検査する。実行結果やruntimeの語は検査器へ渡さない。
+
+`TypedFieldTransfer.physical_retaining/physical_empty_retaining` は、実actual捕捉が
+満たす任意の不変条件Qを本体へ渡す。compilerではQをcalleeのslot別alphabet環境と
+する。`TypedFieldCorrespondence.physical`は実physical clockに強帰納し、型つきの
+全header・全ての新捕捉・親復帰を同時に扱って、本体同値の仮定を全て外す。
+seq/alt/not/starとactual内の再帰呼出しへ対応し、全actualのpreflightを元順に残す。
+
+`TypedFieldCompiler.physical/observations_iff/language_translation/undefined_iff` は、
+有限検査だけから、全元入力・全physical clock・全有限観測・元文字列言語・
+全clock未定義の保存を証明する。生成規則数は`Σ_i(arity_i+1)`で、入力と保持語に
+依存しない。再照合する値は継続が構文上読むslotだけでよく、何も読まない場合には
+空patternを許可する。元入力への符号化やpaddingはない。
+
+`TypedFieldExamples`は、前の二段例をこのcompilerへ入力すると、以前と全く同じ
+固定Seq文法が生成されることを証明する。前の全n/depthの受理族もこの生成文法へ
+そのまま接続した。別の実相互呼出し例はsource arity `[1,2,0]`、生成先
+`[1,2,1,1,2,0]`、delimiter `#/@/$`。PはQをpredicate内で呼び、QはPをpredicate内で
+呼びつつ、rootのactualでPの正の戻り値全体を捕捉する。使用されない第二slotも保持し、
+nullaryの左再帰は全入力全clock未定義のままである。
+
+三段の正のproducer捕捉、及びproducer全体と別の短い値を独立に再利用する二slotの
+生成先`[1,2,1,1,4]`を直接kernel評価した。異なるslotの戻り順序、空入力側のactual失敗、
+使わないactualの有限失敗と全入力全clock未定義、偽の戻り値effect、欠けたcover、範囲外の
+pattern/規則/arity、raw宣言/rootの不一致を検証する。区切り条件を省くとproducerの
+内部でscannerが止まり、元sourceが受理した同じ入力を生成先が拒否する反例も固定した。
+
+これは**型検査された再照合header群のcompiler**である。すべてのslot alphabetは
+callee自身の区切りを含まないことが必要で、実際に読む値は先頭patternから再捕捉する。
+正の出力effect検査の構文制約も残る。任意の一階Par文法をこの形に正規化できる証明、
+live値を再照合なしで任意位置へ引き継ぐ一般変換、Par/Seq全言語クラスの一致・分離は
+依然未解決である。
+
+今回 5 新 modules・58 新 guard。全 1,396 jobs/Audit と関連 3,814 公開依存
+（標準 Lean 公理 3,730、無公理 84）を検証。PR70は新 Lean 8 modules・97 guard。
+新しい sorry/axiom/native_decide はない。
+
+## 異なる区切りを持つ、再帰producer全体の新しい捕捉
+
+`CaptureAlphabetEffects` は、規則ごとの戻り値 alphabet と、引数 slot ごとの
+独立した alphabet を持つ有限検査を実装する。消費する call の actual を各 slot の
+alphabet で検査し、callee の戻り値 alphabet を呼出し式の出力へ使う。
+seq/alt/star、literal、character、保持 parameter を扱い、predicate の出力は空とする。
+predicate 内の呼出しや未定義はそのまま実行し、停止性を仮定しない。
+
+`physical_rows` は実 Par table の clock に帰納し、任意の再帰表・相互呼出し・異なる
+arity・異なる入出力 alphabet について行安全性の仮定を外す。`capture/captured_free`
+は実際の成功結果の `pre x p q` が指定 alphabet 内、従って指定外の区切りを含まない
+ことを証明する。全規則の宣言と body を検査し、runtime の語や成功結果を検査器へ渡さない。
+これは Par の戻り値の検査である。Par は actual 評価の消費文字を call 結果へ加えないため、
+この effect を Seq へそのまま流用してはならない。正の actual と空本体の kernel 例で
+その違いを固定した。
+
+`NestedFieldProducer` の実 source は次の二規則である。
+
+```
+P(w) = w '#' (('!' w) / (P(w w) w))
+Q(v) = v '@' v
+start = Q(P('a'*)) EOF
+```
+
+P の入力 alphabet は `a`、出力は `a/#/!`、Q の入力は `a/#/!`、出力は
+`a/#/!/@` である。P の正の呼出しを Q の actual として評価し、その実行全体の
+文字列を Q の新しい保持値にする。内側 producer の `#` を禁止せず、外側は `@` で
+その値を再捕捉して別々に再照合する。source arity は `[1,1]`、target は固定 `[1,2,1,2]`。
+元入力へ符号化やpaddingを追加しない。従来の `DelimitedValueSafety.check '@'` が
+この positive producer を拒否することも kernel 検査した。
+
+`producer_call` は任意の actual/caller 環境を扱い、P の実再帰・倍長の新捕捉・親復帰を
+実 table の強い clock 帰納で証明する。`outer_physical/physical/observations/`
+`language_translation/undefined_iff` は、上記の固定 source/target について
+全元入力・全 physical clock・全有限観測・元文字列言語・全 clock 未定義を保存する。
+
+`NestedFieldProducerProofs` は、`t(n,0)=a^n# ! a^n`、
+`t(n,d+1)=a^n# t(2n,d) a^n` の実 source row を、全 n/depth/余分 clock/後続文字列へ
+証明する。外側の実捕捉が `t(n,d)` そのものであることと、同じ固定 Seq 文法が
+`t(n,d) @ t(n,d)` を clock `d+2` で受理することまで接続する。
+空捕捉 n=0 を含み、外側の保持値の長さは非有界である。直接 Seq kernel 評価、外側値の
+取り違え、子の値による親復帰の取り違え、全入力全 clock の nullable actual 未定義、
+異なる slot の alphabet を交換する誤代入、不正な戻り値 effect の拒否も検証した。
+
+これは**具体的な二段の固定文法の変換**であり、任意個の異種 header を生成する
+compilerへの接続は、上記TypedFieldCompilerで追加した。旧 `MutualFieldCompiler` の構文検査も
+そのままである。一般の Par 文法をこの形へ正規化する証明、再照合 anchor を必要としない
+live 値の引継ぎ、および Par/Seq 全言語クラスの一致・分離は引き続き未解決である。
+
+今回 3 新 modules・39 新 guard。全 1,391 jobs/Audit と関連 3,756 公開依存
+（標準 Lean 公理 3,673、無公理 83）を検証。新しい sorry/axiom/native_decide はない。
+
 ## 継続が読む値だけを再捕捉し、全く読まないときはanchorを空にする
 
 `ParameterSupport` は、式が実際に構文上参照する parameter だけで view の一致を
