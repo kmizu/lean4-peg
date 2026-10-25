@@ -16,6 +16,34 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 反復全体の成功判定だけでは停止位置を選べない
+
+`FrontierStatusSelector` は、二つの実 unary projection を probe とする有限 selector を定義し、
+実 `MExp` へコンパイルする。guard は probe 全体への先読み、空成功・失敗、連接、優先選択、否定、
+零幅反復を任意に組み合わせられる。selector はこれらの guard で分岐し、最後に一方の projection を
+消費するか、失敗・未定義となる。判定木の深さや query の反復回数に構文上の固定上限は置かない。
+追加の再帰 selector 規則や、元入力の文字を直接調べる guard はこの構文の対象外である。
+
+`guard_physical` と `render_physical` は、すべての probe が成功する入力では、
+guard が返せる情報が成功/失敗/未定義のどれかだけで、個別の返す残余位置を区別しないことを示す。
+nullable な guard 反復の未定義も保存し、単純な二値モデルへ落としていない。
+有限の選択制御全体は `selected tree` という、入力に依存しない同じ最終選択へ帰着する。
+
+`FrontierSelectorObstruction.no_status_selector` は、保持語 `a/ab` と周期 `[1,0]` の実 Seq projection
+について、**すべてのこの形の有限 selector** が `ab#a#ab#b#` または `ab#a#x#a#` の
+どちらかで、元 Par の残余位置を保存できないことを証明する。
+両入力ですべての probe が成功するのに、最早停止の側が逆になるためである。
+`positive_clock` は、実 probe の有限結果の単調性から selector の全ての正 clock の結果が一致することを示す。
+`no_status_selector_any_clock` は、同じ反例入力で**全 clock** が元の正しい残余を返せないことを導く。
+`no_status_selector_observation` は、実 first-order Seq grammar と root の有限導出による
+残余観測そのものが存在しないことまで接続する。評価 clock を増やす回避には依存していない。
+
+これは、固定 projection 一つの不適切さから、成功判定を組み合わせる有限制御全体へ広げた
+**特定の翻訳方法の限界**である。任意の Seq grammar を排除する定理ではなく、
+元文字列言語クラスの分離でもない。入力内容に依存する新しい検査、停止残余を比較する構成、
+別の捕捉表現、追加の再帰規則を使う翻訳は排除していない。
+一般の最大残余を選ぶ Seq 文法と、Par/Seq のクラス一致・分離は引き続き未解決である。
+
 ## 末尾確認なしの反復：停止位置の一般式と残る文法操作
 
 `SynchronizedStarFrontier.star_maximum` は、同期する有限個の検査の conjunction と、
@@ -11601,3 +11629,11 @@ RepeatedFrontierTransfer connects this formula to actual Par calls and actual un
 The maximum operation is an explicit Lean calculation on evaluator results, not an MExp, a grammar closure assumption or a general Par-to-Seq construction. Selecting that frontier in a Seq grammar remains unresolved, as do unrestricted class equality/separation. The established EOF compiler retains its stated scope.
 
 Validation after this addition: full lake build including Audit passes (1,323 jobs). All 3,193 related public dependencies are standard (3,125) or axiom-free (68). This addition has 26 public theorem guards in four new modules; PR69 totals 118 new guards across 13 new Lean modules.
+
+## Finite status-only selection cannot repair the frontier (restricted compiler obstruction)
+
+FrontierStatusSelector compiles arbitrary finite branching selectors into actual first-order expressions. Guards may combine whole-projection lookahead with sequence, ordered choice, negation and zero-width repetition, including undefined nullable loops. Leaves select one of the two original consuming projections, fail or diverge. When both probes succeed, the selected leaf is independent of their returned endpoints.
+
+FrontierSelectorObstruction proves that every such selector fails to preserve the original residual on one of the two fixed a/ab examples. All positive evaluation clocks give the same output; no clock and no alternative finite derivation recovers the correct residual observation. The fixed projection grammar and all generated roots are first-order. This excludes this status-only selector compiler, not arbitrary Seq grammars or language-preserving translations. Input-sensitive guards, additional recursive selector rules and different retained-word representations are outside the theorem.
+
+Validation: full lake build including Audit passes (1,325 jobs); all 3,210 related public dependency reports are standard (3,140) or axiom-free (70). This addition has 17 guarded public theorems in two modules; PR69 totals 135 new guards across 15 new Lean modules. General frontier selection and unrestricted class equality/separation remain unresolved.

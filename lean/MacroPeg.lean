@@ -1,3 +1,5 @@
+import MacroPeg.CBV.FrontierStatusSelector
+import MacroPeg.CBV.FrontierSelectorObstruction
 import MacroPeg.CBV.SynchronizedStarFrontier
 import MacroPeg.CBV.RepeatedWordFrontier
 import MacroPeg.CBV.RepeatedFrontierTransfer

@@ -1,3 +1,5 @@
+import MacroPeg.CBV.FrontierStatusSelector
+import MacroPeg.CBV.FrontierSelectorObstruction
 import MacroPeg.CBV.SynchronizedStarFrontier
 import MacroPeg.CBV.RepeatedWordFrontier
 import MacroPeg.CBV.RepeatedFrontierTransfer
@@ -35955,3 +35957,73 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.RepeatedFrontierExamples.clock_zero_is_undefined' depends on axioms: [propext] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.RepeatedFrontierExamples.clock_zero_is_undefined
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierStatusSelector.guard_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierStatusSelector.guard_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierStatusSelector.guard_physical' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierStatusSelector.guard_physical
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierStatusSelector.render_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierStatusSelector.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierStatusSelector.render_physical' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierStatusSelector.render_physical
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierSelectorObstruction.small_probes_succeed' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierSelectorObstruction.small_probes_succeed
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierSelectorObstruction.large_probes_succeed' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierSelectorObstruction.large_probes_succeed
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierSelectorObstruction.small_output' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierSelectorObstruction.small_output
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierSelectorObstruction.large_output' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierSelectorObstruction.large_output
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierSelectorObstruction.no_status_selector' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierSelectorObstruction.no_status_selector
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierSelectorObstruction.probes_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierSelectorObstruction.probes_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierSelectorObstruction.selectors_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierSelectorObstruction.selectors_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierSelectorObstruction.projected_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierSelectorObstruction.projected_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierSelectorObstruction.sample_probes_succeed' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierSelectorObstruction.sample_probes_succeed
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierSelectorObstruction.positive_clock' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierSelectorObstruction.positive_clock
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierSelectorObstruction.sample_source_success' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierSelectorObstruction.sample_source_success
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierSelectorObstruction.no_status_selector_any_clock' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierSelectorObstruction.no_status_selector_any_clock
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierSelectorObstruction.no_status_selector_observation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierSelectorObstruction.no_status_selector_observation
