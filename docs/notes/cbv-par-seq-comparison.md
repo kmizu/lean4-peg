@@ -16,6 +16,45 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## Cell-probe下界という別経路の調査（2026-10-26）
+
+[Kim–Park, arXiv:2608.29592v1](https://arxiv.org/html/2608.29592v1)は、
+通常のPEGに対する一般の非所属証明を、scaffolding automata（SCA）からcell-probe
+データ構造への変換で与えている。Theorem 3.5の要点は、固定degree/radiusの局所遷移を
+定数回のmemory probeで模倣し、短い更新blockと照会suffixの長さをそれぞれのprobe予算へ
+移すことにある。論文の対象は通常PEGで、捕捉付きCBV-Seqではない。
+
+[公開Lean成果物 v0.1.0](https://doi.org/10.5281/zenodo.22099762)を別の一時directoryへ
+展開し、pinned Lean 4.31.0 / mathlib fabf563a7c95a166b8d7b6efca11c8b4dc9d911fを使用した。
+main entryの負の結論にはKo下界の追加公理が含まれる一方、optionalな
+`InternalLowerBoundMain`は内部の下界証明を提供する。内部証明を
+`ExternalAssumptions.ko2026MultiphaseIPLowerBound`へ入れてから`final_separation`へ接続する
+独立[audit driver](cbv-cell-probe-audit.lean)を作成した。
+成果物の両entryのビルド（8,666 jobs）とdriverの実行が成功し、最終分離定理と
+一般transfer theoremの公理依存が標準3公理のみであることを確認した。
+このrepoへ外部公理や成果物の定義をimportしていない。成果物の負の定理は
+`RecognizedByTotalPEG`についてであり、こちらの部分的CBV観測とのモデル対応も別途必要になる。
+
+この経路をPar/Seqの分離へ使うには、任意の固定一階Seq文法について、正確な言語意味を保つ
+データ構造を構成し、更新と照会のprobe数を証明する必要がある。
+`SequentialClock.position_stable`や`SequentialLocalCorrectness.saturated_eq_source`は
+この証明ではない。後者が固定個数のclosureへ減らすのは同位置の空引数callであり、
+小さい位置の行は依然として任意の捕捉tuple Wで索引されている。
+線形なphysical clockだけから、各入力文字あたり定数回のアクセスは従わない。
+`RenamedCopy.no_flat_interface`も入口の未消化caller stackを対象にしないので、この橋を埋めない。
+
+完全なSeq→通常PEG変換より弱い予算でも足りる可能性がある。
+[Ko, arXiv:2603.25914v2, Theorem 1.1](https://arxiv.org/html/2603.25914v2)の式からの推論として、
+更新に`O(log(n)^a)`、照会に`O(log(n)^(1+a))`のprobeを要する橋でも、固定`0≤a<1`なら
+下界`Ω(log(n)^2/loglog(n)^2)`と衝突する。必要なのは適切なlocal serialization上での
+`O(log n)` word size・多項式memoryと正確なworst-case budgetであり、
+単に多項式時間で認識できるという上界では足りない。
+この予算を満たすSeqシミュレーションはまだ構成していない。
+
+新たなSeq非所属定理、候補`w#uppercase(w)`のSeq所属・非所属、一般Par/Seqの一致・分離は
+いずれも今回の調査からは主張しない。次の非所属経路の課題を、捕捉環境を含む
+量的なシミュレーションへ具体化した調査結果である。
+
 ## 別アルファベットへのコピーを、具体的な分離候補として固定する
 
 `RenamedCopy.Language`は、元の5文字a,b,A,B,#上の
