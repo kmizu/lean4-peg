@@ -1,3 +1,5 @@
+import MacroPeg.CBV.FragmentPrefixQueryExamples
+import MacroPeg.CBV.FragmentPrefixQuery
 import MacroPeg.CBV.PrefixCaptureQueryExamples
 import MacroPeg.CBV.PrefixCaptureQuery
 import MacroPeg.CBV.SemanticBodyRewrite

@@ -154,6 +154,37 @@ cccabababa 上で複数回入れ直して正 query に至り、後続が残り�
 生の固定 prefix query まで到達したが、保持値を使う任意 PEG prefix・独立複数 capture・
 一般 Par/Seq 一致／分離は引き続き未解決である。
 
+入力依存の可変長 prefix にも、断片捕捉の既存 compiler を使って接続した。
+`FragmentMixedRecursive` へ独立 scanner leaf（tails.length+1）を追加し、
+その元本体は `A = a*#` だけを評価する。生成先は元位置で空引数を渡す独立 scanner 行を
+追加し、実引数の preflight を先に保つ。純粋な scanner を直に置くと clock 0 でだけ
+元 user の未定義とずれるため、実 unary 行を使って全 ordinary physical clock を合わせた。
+従来の consuming/replay/stuck leaf と同じ Plan 内で混在できる。旧アドレスは保持する。
+
+`FragmentPrefixQuery` の実元 user Body は `A; &param0` / `A; !param0` そのものである。
+有限 `copyCheck` で shift-kind と空継続の実 leaf を結び、共通の predicate-push 恒等式で
+その copy を元位置から先読みしてから独立 A を消費する Plan へ変換する。
+既存の selected-fragment 引数 `star(step G); H` を ternary/unary target 呼出しへ分ける
+変換が、A の終点より後で捕捉が終わる場合も受け持つ。source の捕捉は一つのままで、
+target の三つの引数はその捕捉の断片であり、独立複数の source 捕捉ではない。
+SemanticBodyRewrite から実元／Plan 文法の各 physical 段数一致を導き、断片 compiler の
+対応へ合成して、全入力 SObs・固定一階 Seq 元文字列言語・physical 定義／全 clock 未定義を
+有限 Body/link 検査だけから得る。停止や実行行の oracle を入力にしない。
+
+`FragmentPrefixQueryExamples` は長さの異なる a-run を読み、aa#a の全捕捉を確認しても
+A の aa# だけで成功する。短い aa# コピーは正 query を拒否し、負 query を通す。
+H の正 query は同じ元 user を新しい空捕捉で呼び、その後外側の完全な捕捉へ戻る。
+同じ固定開始式が n=1,2,4 の反復語で全入力を消費し、その文法全体に全入力言語変換を
+接続する。scanner 単独なら成功する a# 上でも実 aa 引数の失敗を先に保ち、preview を
+省いた素朴な呼出しだけが誤成功する。clock 0 の実未定義、nullable H の全入力全 clock
+未定義、非空継続や replay-kind を copy として指定した場合の有限拒否も kernel で確認する。
+
+これで固定 literal に限らず、この入力依存で非有界の区切り scanner prefix に進んだ。
+実引数は既存の G/H で選択する codeword＋a-fragment family に限定し、prefix も A に限定する。
+有限状態 scanner compiler との任意混在、任意 PEG prefix／実引数、独立複数捕捉、および
+一般 Par/Seq 一致・分離は依然未解決である。
+
+
 任意の捕捉依存 PEG prefix、独立複数捕捉、一般 Par/Seq 一致・分離は未解決である。
 
 
