@@ -16,11 +16,26 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 実producerと複数の累積捕捉をSeqへ
+
+`SelectedProducerNormalization`を、選択規則の任意の正のarityへ拡張した。
+実body `D;B` のDを最後の実引数と照合し、全引数の捕捉値を保持したまま
+`param(arity-1);B` へ正規化する。普通の規則も選択規則も元のarityを保つ。
+`ProducedPrefixFamilyCompiler`は、その出力が既存`PrefixFamilyFusion`の累積捕捉文法と
+一致することを有限構文検査し、固定Seq文法へ接続する。
+成功残余・有限失敗・定義性・全clock未定義と、元文字列上の受理言語を保存する。
+
+具体例では、同じ入口からParが`a^n`と`a^n b^m`を捕捉し、Seqが順に`a^n`と`b^m`を捕捉する。
+元のbodyは全体を読む実再帰producerで始まり、先頭で捕捉値を再照合する構文ではない。
+生成先は3規則、arity `[2,0,0]`。親子の別々の値の保持・復元も実行する。
+これは既存の累積引数/連続chunk backendと新しい複数引数producer正規化の接続であり、
+任意の独立したPar実引数から差分parserを生成する一般変換は未解決である。
+
 ## 実再帰producerと、捕捉終端より手前のliteral前半を接続
 
 固定literalを保持値の前から後ろへ回す証明と、その値のprofileを選ぶSeq productは既存である。
 `ProducedScannerCompiler`は、そこへ実再帰producerを含む元文法を接続する。
-`SelectedProducerNormalization`は一般の一階文法で選んだarity 1のproducerだけを正規化し、
+`SelectedProducerNormalization`は一般の一階文法で選んだ正のarityのproducerを正規化し、
 選ばないarity 0や複数引数の規則をそのまま保つ。実再帰テーブルの双方向対応を証明し、
 正規化先が既存profile backendの実sourceと一致することを有限AST検査で確認する。
 
@@ -10008,11 +10023,11 @@ original grammar. It does not claim a new general solution for arbitrary
 position differences.
 
 `SelectedProducerNormalization` takes an ordinary first-order grammar and a
-finite list of selected unary declarations D;B(w). Every syntactic call to
-a selected declaration must use the matching D as its argument; D is
+finite list of selected positive-arity declarations D;B(W). Every syntactic call to
+a selected declaration must use the matching D as its last argument; D is
 closed in the caller environment. Finite checks verify the actual arity and
 body, closedness, first-order source bodies and nested call conformance.
-Selected bodies become param0;B(w). Unselected declarations retain their
+Selected bodies become param(arity-1);B(W), keeping the full argument tuple. Unselected declarations retain their
 original arities and bodies. The source need not belong to a mixed-entry
 DSL: ordinary nullary and multiple-argument rules are covered directly.
 
@@ -10059,10 +10074,50 @@ original-language theorem is instantiated. A separate nullable producer
 stays undefined on every input at every clock in both original and generated
 grammars. None of these failures is used as a language-class separation.
 
-The final Seq backend retains its unary user/header/body syntax, one common
+The scanner Seq backend retains its unary user/header/body syntax, one common
 finite scanner and checked profile conditions. Generic producer preparation
 preserves multiple-argument ordinary rules, but this does not translate
 arbitrary multiple-capture source grammars to Seq. Prefixes outside the
 existing replay/rotation/scanner conditions, unmatched producer arguments,
 other continuation forms, independent multiple captures, and unrestricted
 Par/Seq class equality or genuine language separation remain unresolved.
+
+
+## Multiple retained values with an actual recursive producer
+
+The selected producer simulation now handles every positive arity. Its
+conditional row invariant keeps the complete actual argument tuple W; only
+the final slot is required to be the captured successful result of the
+closed producer D. A mutual argument_capture theorem derives that capture
+from the actual Par argument evaluation and the checked last AST. Ordinary
+and selected rows close simultaneously over the real recursive tables.
+An indexed replay lemma replaces the former singleton-only replay proof.
+Argument order, finite failure and all-clock undefinedness remain preserved.
+
+ProducedPrefixFamilyCompiler checks that the normalized grammar is exactly
+the existing PrefixFamilyFusion cumulative-capture source, including every
+rule arity and body. It composes their observation correspondences to one
+fixed first-order Seq grammar with an unchanged original string language;
+finite definedness and all-clock undefinedness are also proved. The
+cumulative argument rendering and parameter-view reconstruction are reused
+from PrefixFamilyFusion, not claimed as new general difference synthesis.
+
+The concrete three-rule recursive grammar has arities [2,0,0]. Actual Par
+arguments capture a^n and a^n b^m from the same position, while actual Seq
+arguments capture the consecutive chunks a^n and b^m. Both operational
+argument judgments hold for every n,m and every suffix after a ! delimiter.
+Both chunks have unbounded lengths. The original selected body starts with
+a real closed recursive producer, not a longest-value parameter replay.
+The continuation observes both values, recursively obtains distinct child
+values, then restores both parent values. Direct kernel runs cover empty
+chunks, several nonempty lengths, nested distinct values, and rejection of
+short parent, wrong first, and short child copies. A nullable recursive
+helper remains undefined for all inputs and clocks in both grammars. A
+nonmatching last argument is rejected by the finite source check.
+
+This extends the actual producer frontend beyond unary retained users.
+It still requires cumulative source argument syntax for this Seq backend
+and a matching closed last-argument producer. Arbitrarily specified Par
+argument parsers, arbitrary successful endpoint orders, parameter-dependent
+producers, other body shapes, and the unrestricted language-class question
+remain unresolved.

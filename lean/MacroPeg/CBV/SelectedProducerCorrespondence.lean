@@ -9,6 +9,12 @@ abbrev targetTable (g : MGrammar) (ps : Selection) (x : List Char) (k : Nat) := 
 abbrev sourceStable (g : MGrammar) (x : List Char) := StablePar.table g x
 abbrev targetStable (g : MGrammar) (ps : Selection) (x : List Char) := StablePar.table (target g ps) x
 
+theorem replay_parameter (g : MGrammar) (x : List Char) (s : Strategy) (T : ClockFreezing.Table)
+    (E : List (List Char)) (k : Nat) (w : List Char) (hget : E[k]?=some w)
+    (p j : Nat) (hcap : GuardedReplayControl.Aligned x w p j) :
+    evV g x s T E (.param k) p=some (some j) := by
+  simp only [evV,hget,(CBVtoCBN.stripPrefix_exact _ _ _).mpr hcap.2.2,length_sfx x hcap.2.1]
+
 theorem forward_evaluator (g : MGrammar) (ps : Selection) (hc : check g ps=true) (x : List Char) (k : Nat)
     (rows : Rows g ps x (sourceStable g x) (sourceTable g x k) (targetStable g ps x))
     (E : List (List Char)) (e : MExp) (he : e.FirstOrder) (hcon : conforms ps e=true) (p : Nat) (hp : p≤x.length) :
@@ -35,63 +41,61 @@ theorem forward_rows (g : MGrammar) (ps : Selection) (hc : check g ps=true) (x :
   induction k with
   | zero => constructor
             · intro i r hr hs W hw p hp; exact Or.inl rfl
-            · intro i r hr d hs w hw p j hj; exact Or.inl rfl
+            · intro i r hr d hs W hW w hw p j hj; exact Or.inl rfl
   | succ k ih =>
     constructor
     · intro i r hr hs W hw p hp
       have ht : ruleAtM (target g ps).rules i=some ⟨r.arity,r.body⟩ := by rw [target_rule,hr]; simp [body,hs]
       rw [valAt_tblV_succ hr W hp,StablePar.row_eq _ x i _ ht W hw p hp]
       exact forward_evaluator g ps hc x k ih W r.body (source_firstOrder g ps hc _ (ruleAtM_mem hr)) (body_conforms g ps hc i r hr) p hp
-    · intro i r hr d hs w hw p j hj
+    · intro i r hr d hs W hW w hw p j hj
       have hp := hj.1.1
       have hsel := checked g ps hc i r hr d hs
-      have ht : ruleAtM (target g ps).rules i=some ⟨r.arity,.seq (.param 0) d.tail⟩ := by rw [target_rule,hr]; simp [body,hs]
-      have hw1 : [w]∈words (subStrs x) r.arity := by rw [hsel.1]; exact StablePar.singleton_mem x w hw
-      rw [valAt_tblV_succ hr [w] hp,StablePar.row_eq _ x i _ ht [w] hw1 p hp,hsel.2.1]
+      have ht : ruleAtM (target g ps).rules i=some ⟨r.arity,.seq (.param (r.arity-1)) d.tail⟩ := by rw [target_rule,hr]; simp [body,hs]
+      rw [valAt_tblV_succ hr W hp,StablePar.row_eq _ x i _ ht W hW p hp,hsel.2.1]
       have hfo := source_firstOrder g ps hc _ (ruleAtM_mem hr)
       have hcon := body_conforms g ps hc i r hr
       rw [hsel.2.1] at hfo hcon
-      have hrep := GuardedReplayControl.aligned_replay (target g ps) x w .callByValuePar (targetStable g ps x) p j hj.1
+      have hrep := replay_parameter (target g ps) x .callByValuePar (targetStable g ps x) W (r.arity-1) w hw p j hj.1
       rw [evV_seq_ok hrep]
-      cases ed : evV g x .callByValuePar (sourceTable g x k) [w] d.head p with
+      cases ed : evV g x .callByValuePar (sourceTable g x k) W d.head p with
       | none => rw [evV_seq_none ed]; exact Or.inl rfl
       | some v =>
-        have he := (StablePar.eval_le g x k [w] d.head p hp).eq_of_some ed
-        rw [ReplayFallbackFusion.closed_env _ _ _ _ d.head hsel.2.2 [w] p,hj.2] at he
+        have he := (StablePar.eval_le g x k W d.head p hp).eq_of_some ed
+        rw [ReplayFallbackFusion.closed_env _ _ _ _ d.head hsel.2.2 W p,hj.2] at he
         cases v with
         | none => cases he
         | some q =>
           have hq : q=j := by simpa only [Option.some.injEq] using he.symm
           subst q
           rw [evV_seq_ok ed]
-          exact forward_evaluator g ps hc x k ih [w] d.tail hfo.2 (Bool.and_eq_true_iff.mp hcon).2 j hj.1.2.1
+          exact forward_evaluator g ps hc x k ih W d.tail hfo.2 (Bool.and_eq_true_iff.mp hcon).2 j hj.1.2.1
 
 theorem backward_rows (g : MGrammar) (ps : Selection) (hc : check g ps=true) (x : List Char) (k : Nat) :
     Rows g ps x (sourceStable g x) (targetTable g ps x k) (sourceStable g x) := by
   induction k with
   | zero => constructor
             · intro i r hr hs W hw p hp; exact Or.inl rfl
-            · intro i r hr d hs w hw p j hj; exact Or.inl rfl
+            · intro i r hr d hs W hW w hw p j hj; exact Or.inl rfl
   | succ k ih =>
     constructor
     · intro i r hr hs W hw p hp
       have ht : ruleAtM (target g ps).rules i=some ⟨r.arity,r.body⟩ := by rw [target_rule,hr]; simp [body,hs]
       rw [valAt_tblV_succ ht W hp,StablePar.row_eq _ x i _ hr W hw p hp]
       exact backward_evaluator g ps hc x k ih W r.body (source_firstOrder g ps hc _ (ruleAtM_mem hr)) (body_conforms g ps hc i r hr) p hp
-    · intro i r hr d hs w hw p j hj
+    · intro i r hr d hs W hW w hw p j hj
       have hp := hj.1.1
       have hsel := checked g ps hc i r hr d hs
-      have ht : ruleAtM (target g ps).rules i=some ⟨r.arity,.seq (.param 0) d.tail⟩ := by rw [target_rule,hr]; simp [body,hs]
-      have hw1 : [w]∈words (subStrs x) r.arity := by rw [hsel.1]; exact StablePar.singleton_mem x w hw
-      rw [valAt_tblV_succ ht [w] hp,StablePar.row_eq _ x i _ hr [w] hw1 p hp,hsel.2.1]
+      have ht : ruleAtM (target g ps).rules i=some ⟨r.arity,.seq (.param (r.arity-1)) d.tail⟩ := by rw [target_rule,hr]; simp [body,hs]
+      rw [valAt_tblV_succ ht W hp,StablePar.row_eq _ x i _ hr W hW p hp,hsel.2.1]
       have hfo := source_firstOrder g ps hc _ (ruleAtM_mem hr)
       have hcon := body_conforms g ps hc i r hr
       rw [hsel.2.1] at hfo hcon
-      have hrep := GuardedReplayControl.aligned_replay (target g ps) x w .callByValuePar (targetTable g ps x k) p j hj.1
-      have hd : evV g x .callByValuePar (sourceStable g x) [w] d.head p=some (some j) := by
-        rw [ReplayFallbackFusion.closed_env _ _ _ _ d.head hsel.2.2 [w] p]; exact hj.2
+      have hrep := replay_parameter (target g ps) x .callByValuePar (targetTable g ps x k) W (r.arity-1) w hw p j hj.1
+      have hd : evV g x .callByValuePar (sourceStable g x) W d.head p=some (some j) := by
+        rw [ReplayFallbackFusion.closed_env _ _ _ _ d.head hsel.2.2 W p]; exact hj.2
       rw [evV_seq_ok hrep,evV_seq_ok hd]
-      exact backward_evaluator g ps hc x k ih [w] d.tail hfo.2 (Bool.and_eq_true_iff.mp hcon).2 j hj.1.2.1
+      exact backward_evaluator g ps hc x k ih W d.tail hfo.2 (Bool.and_eq_true_iff.mp hcon).2 j hj.1.2.1
 
 theorem stable_eq (g : MGrammar) (ps : Selection) (hc : check g ps=true) (x : List Char)
     (E : List (List Char)) (e : MExp) (he : e.FirstOrder) (hcon : conforms ps e=true) (p : Nat) (hp : p≤x.length) :

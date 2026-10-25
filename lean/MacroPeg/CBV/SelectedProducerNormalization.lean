@@ -10,15 +10,17 @@ def selected (ps : Selection) (i : Nat) := (ps[i]?).getD none
 
 def body (ps : Selection) (i : Nat) (r : MRule) : MExp := match selected ps i with
   | none => r.body
-  | some p => .seq (.param 0) p.tail
+  | some p => .seq (.param (r.arity-1)) p.tail
 
 def target (g : MGrammar) (ps : Selection) : MGrammar := ⟨g.rules.mapIdx (fun i r => ⟨r.arity,body ps i r⟩)⟩
 
 mutual
   def conforms (ps : Selection) : MExp → Bool
-    | .call i args => arguments ps args && (match selected ps i,args with
-      | some p,[a] => MExp.beqE a p.head
-      | _,_ => true)
+    | .call i args => arguments ps args && (match selected ps i with
+      | some p => match args[args.length-1]? with
+        | some a => MExp.beqE a p.head
+        | none => true
+      | none => true)
     | .seq a b | .alt a b => conforms ps a && conforms ps b
     | .notP a | .star a => conforms ps a
     | _ => true
@@ -31,7 +33,7 @@ def check (g : MGrammar) (ps : Selection) : Bool := decide (ps.length≤g.rules.
   g.rules.zipIdx.all (fun (r,i) => (MixedGrowthChecks.firstOrderCheck r.body && conforms ps r.body) &&
     match selected ps i with
     | none => true
-    | some p => (decide (r.arity=1) && MExp.beqE r.body (.seq p.head p.tail)) && ZeroResetOrigin.closedCheck p.head)
+    | some p => (decide (0<r.arity) && MExp.beqE r.body (.seq p.head p.tail)) && ZeroResetOrigin.closedCheck p.head)
 
 theorem source_firstOrder (g : MGrammar) (ps : Selection) (hc : check g ps=true) : g.FirstOrder := by
   intro r hr
@@ -50,7 +52,7 @@ theorem body_conforms (g : MGrammar) (ps : Selection) (hc : check g ps=true)
 
 theorem checked (g : MGrammar) (ps : Selection) (hc : check g ps=true)
     (i : Nat) (r : MRule) (hr : ruleAtM g.rules i=some r) (p : Producer) (hp : selected ps i=some p) :
-    r.arity=1 ∧ r.body=.seq p.head p.tail ∧ ReplayFallbackFusion.Closed p.head := by
+    0<r.arity ∧ r.body=.seq p.head p.tail ∧ ReplayFallbackFusion.Closed p.head := by
   have hi : g.rules[i]?=some r := by simpa only [ruleAtM_eq_getElem?] using hr
   have hm : (r,i)∈g.rules.zipIdx := List.mem_of_getElem? (show g.rules.zipIdx[i]?=some (r,i) from by simp [List.getElem?_zipIdx,hi])
   have h := (Bool.and_eq_true_iff.mp (List.all_eq_true.mp (Bool.and_eq_true_iff.mp hc).2 (r,i) hm)).2

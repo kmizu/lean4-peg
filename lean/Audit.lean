@@ -1,3 +1,5 @@
+import MacroPeg.CBV.ProducedPrefixFamilyCompiler
+import MacroPeg.CBV.ProducedPrefixFamilyExamples
 import MacroPeg.CBV.SelectedProducerNormalization
 import MacroPeg.CBV.SelectedProducerSimulation
 import MacroPeg.CBV.SelectedProducerCorrespondence
@@ -29630,3 +29632,205 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.ProducedScannerExamples.selecting_nullary_rejected' depends on axioms: [propext] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ProducedScannerExamples.selecting_nullary_rejected
+
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedProducerSimulation.argument_capture' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedProducerSimulation.argument_capture
+
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedProducerCorrespondence.replay_parameter' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedProducerCorrespondence.replay_parameter
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyCompiler.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyCompiler.checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyCompiler.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyCompiler.observations_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyCompiler.defined_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyCompiler.defined_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyCompiler.undefined_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyCompiler.undefined_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyCompiler.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyCompiler.language_translation
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.root_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.root_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.actual_producer' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.actual_producer
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.original_arguments' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.original_arguments
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.consecutive_target_arguments' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.consecutive_target_arguments
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.prepared_replay_slot' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.prepared_replay_slot
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.target_layout' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.target_layout
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.first_source_rule' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.first_source_rule
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.second_source_rule' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.second_source_rule
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.first_target_rule' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.first_target_rule
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.second_target_rule' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.second_target_rule
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.call0_derive' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.call0_derive
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.lexer_capture' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.lexer_capture
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.actual_parallel_captures' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.actual_parallel_captures
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.actual_sequential_chunks' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.actual_sequential_chunks
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.unbounded_chunks' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.unbounded_chunks
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.source_simple' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.source_simple
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.target_simple' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.target_simple
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.source_nested' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.source_nested
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.target_nested' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.target_nested
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.short_source' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.short_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.short_target' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.short_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.observations' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.observations
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.wrong_last_argument_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.wrong_last_argument_rejected
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.nullable_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.nullable_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.nullable_rule' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.nullable_rule
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.nullable_rows' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.nullable_rows
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.nullable_source' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.nullable_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.nullable_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.nullable_target

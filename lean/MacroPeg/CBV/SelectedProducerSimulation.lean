@@ -9,8 +9,8 @@ structure Rows (orig : MGrammar) (ps : Selection) (x : List Char) (S T U : Table
   ordinary : ∀ i r, ruleAtM orig.rules i=some r → selected ps i=none → ∀ W, W∈words (subStrs x) r.arity →
     ∀ p, p≤x.length → RLe (valAt (T i W) p) (valAt (U i W) p)
   producer : ∀ i r, ruleAtM orig.rules i=some r → ∀ d, selected ps i=some d →
-    ∀ w, w∈subStrs x → ∀ p j, Captured orig x S d.head w p j →
-      RLe (valAt (T i [w]) p) (valAt (U i [w]) p)
+    ∀ W, W∈words (subStrs x) r.arity → ∀ w, W[r.arity-1]?=some w →
+    ∀ p j, Captured orig x S d.head w p j → RLe (valAt (T i W) p) (valAt (U i W) p)
 
 structure Simulation (orig : MGrammar) (ps : Selection) (g h : MGrammar) (x : List Char) (S T U : Table) : Prop where
   sourceArity : SemanticBodyRewrite.ArityEq orig g
@@ -38,7 +38,7 @@ theorem missing (orig g : MGrammar) (ha : SemanticBodyRewrite.ArityEq orig g) (i
   | some a => simp [hr,hg] at h
 
 mutual
-  /-- Ordinary rules retain arbitrary arity. Only the finitely selected unary
+  /-- Ordinary rules retain arbitrary arity. Only the finitely selected nonempty-arity
   producers require the capture invariant, established from their arguments. -/
   theorem evaluator (orig : MGrammar) (ps : Selection) (hc : check orig ps=true)
       (g h : MGrammar) (x : List Char) (S T U : Table) (sim : Simulation orig ps g h x S T U)
@@ -52,50 +52,41 @@ mutual
       | some r =>
         obtain ⟨a,ha,haa⟩ := declaration orig g sim.sourceArity i r hr
         obtain ⟨b,hb,hba⟩ := declaration orig h sim.targetArity i r hr
-        cases hs : selected ps i with
-        | none =>
-          by_cases hlen : r.arity=args.length
-          · rw [evV_call_par ha (haa.trans hlen) (by decide),evV_call_par hb (hba.trans hlen) (by decide)]
-            have ih := argument_results orig ps hc g h x S T U sim E args he (Bool.and_eq_true_iff.mp hcon).1 p hp
-            cases hv : evParArgs g x .callByValuePar T E args p with
-            | none => exact Or.inl rfl
-            | some v =>
-              have hu := ih.eq_of_some hv
-              rw [hu]
-              cases v with
-              | none => exact RLe.refl _
-              | some W =>
-                exact sim.rows.ordinary i r hr hs W ((mem_words _ _ _).mpr
-                  ⟨(evPar_length args W hv).trans hlen.symm,evPar_mem hp args W hv⟩) p hp
-          · have hga : a.arity≠args.length := by omega
-            have hhb : b.arity≠args.length := by omega
-            simp only [evV,ha,hb,if_neg hga,if_neg hhb]; exact RLe.refl _
-        | some d =>
-          have hsel := checked orig ps hc i r hr d hs
-          have hga : a.arity=1 := haa.trans hsel.1
-          have hhb : b.arity=1 := hba.trans hsel.1
-          cases args with
-          | nil => simp [evV,ha,hb,hga,hhb,RLe]
-          | cons arg args => cases args with
-            | cons arg2 args => simp [evV,ha,hb,hga,hhb,RLe]
-            | nil =>
-              rw [evV_call_par ha (by simpa using hga) (by decide),evV_call_par hb (by simpa using hhb) (by decide)]
-              have harg := evaluator orig ps hc g h x S T U sim E arg he.1 (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp hcon).1).1 p hp
-              simp only [evParArgs]
-              cases ea : evV g x .callByValuePar T E arg p with
-              | none => exact Or.inl rfl
-              | some v =>
-                have eb := harg.eq_of_some ea
-                rw [eb]
-                cases v with
-                | none => exact RLe.refl _
-                | some j =>
-                  have hprefix := ReplayFusion.success_prefix sim.sound E arg he.1 p j hp ea
-                  have heq : arg=d.head := (MExp.beqE_iff _ _).mp (by
-                    simpa only [hs] using (Bool.and_eq_true_iff.mp hcon).2)
-                  subst arg
-                  exact sim.rows.producer i r hr d hs _ (pre_mem hp j) p j
-                    ⟨⟨hp,hprefix.1,hprefix.2⟩,sim.captures i r hr d hs E p j hp ea eb⟩
+        by_cases hlen : r.arity=args.length
+        · rw [evV_call_par ha (haa.trans hlen) (by decide),evV_call_par hb (hba.trans hlen) (by decide)]
+          have ih := argument_results orig ps hc g h x S T U sim E args he (Bool.and_eq_true_iff.mp hcon).1 p hp
+          cases hv : evParArgs g x .callByValuePar T E args p with
+          | none => exact Or.inl rfl
+          | some v =>
+            have hu := ih.eq_of_some hv
+            rw [hu]
+            cases v with
+            | none => exact RLe.refl _
+            | some W =>
+              have hW : W∈words (subStrs x) r.arity := (mem_words _ _ _).mpr
+                ⟨(evPar_length args W hv).trans hlen.symm,evPar_mem hp args W hv⟩
+              cases hs : selected ps i with
+              | none => exact sim.rows.ordinary i r hr hs W hW p hp
+              | some d =>
+                have hsel := checked orig ps hc i r hr d hs
+                have hargBound : r.arity-1<args.length := by omega
+                have hargGet := List.getElem?_eq_getElem hargBound
+                have heq : args[r.arity-1]=d.head := (MExp.beqE_iff _ _).mp (by
+                  have hh := (Bool.and_eq_true_iff.mp hcon).2
+                  simpa only [hs,show args.length-1=r.arity-1 by omega,hargGet] using hh)
+                have hD : args[r.arity-1]?=some d.head := by rw [hargGet,heq]
+                have hWlen := evPar_length args W hv
+                have hWBound : r.arity-1<W.length := by omega
+                have hWGet := List.getElem?_eq_getElem hWBound
+                obtain ⟨j,ea,eb,hw⟩ := argument_capture orig ps hc g h x S T U sim E args he
+                  (Bool.and_eq_true_iff.mp hcon).1 p hp W hv (r.arity-1) d.head W[r.arity-1] hD hWGet
+                have hprefix := ReplayFusion.success_prefix sim.sound E d.head
+                  (ReplayFallbackFusion.closed_firstOrder _ hsel.2.2) p j hp ea
+                exact sim.rows.producer i r hr d hs W hW _ hWGet p j
+                  ⟨⟨hp,hprefix.1,by simpa only [hw] using hprefix.2⟩,sim.captures i r hr d hs E p j hp ea eb⟩
+        · have hga : a.arity≠args.length := by omega
+          have hhb : b.arity≠args.length := by omega
+          simp only [evV,ha,hb,if_neg hga,if_neg hhb]; exact RLe.refl _
     | .seq a b,he,hcon,p,hp => by
       have ih := evaluator orig ps hc g h x S T U sim E a he.1 (Bool.and_eq_true_iff.mp hcon).1 p hp
       cases ea : evV g x .callByValuePar T E a p with
@@ -151,6 +142,41 @@ mutual
           rcases argument_results orig ps hc g h x S T U sim E args he.2 (Bool.and_eq_true_iff.mp hcon).2 p hp with hh|hh
           · rw [hh]; exact Or.inl rfl
           · rw [hh]; exact OLe.refl _
+
+  /-- A successful full Par argument list supplies the selected captured
+  word and both simulated evaluations of its actual argument expression. -/
+  theorem argument_capture (orig : MGrammar) (ps : Selection) (hc : check orig ps=true)
+      (g h : MGrammar) (x : List Char) (S T U : Table) (sim : Simulation orig ps g h x S T U)
+      (E : List (List Char)) : ∀ args, MExp.FirstOrderArgs args → arguments ps args=true →
+      ∀ p, p≤x.length → ∀ W, evParArgs g x .callByValuePar T E args p=some (some W) →
+      ∀ (k : Nat) (a : MExp) (w : List Char), args[k]?=some a → W[k]?=some w → ∃ j,
+        evV g x .callByValuePar T E a p=some (some j) ∧
+        evV h x .callByValuePar U E a p=some (some j) ∧ w=pre x p j
+    | [],_,_,_,_,_,_,_,_,_,hi,_ => by cases hi
+    | b::args,he,hcon,p,hp,W,hv,k,a,w,hi,hw => by
+      cases eb : evV g x .callByValuePar T E b p with
+      | none => rw [evPar_cons_none eb] at hv; cases hv
+      | some v => cases v with
+        | none => rw [evPar_cons_fail eb] at hv; cases hv
+        | some j =>
+          rw [evPar_cons_ok eb] at hv
+          cases ht : evParArgs g x .callByValuePar T E args p with
+          | none => simp [ht] at hv
+          | some v => cases v with
+            | none => simp [ht] at hv
+            | some V =>
+              have hW : pre x p j::V=W := by simpa only [ht,Option.some.injEq] using hv
+              subst W
+              cases k with
+              | zero =>
+                simp only [List.getElem?_cons_zero,Option.some.injEq] at hi hw
+                subst a; subst w
+                exact ⟨j,eb,(evaluator orig ps hc g h x S T U sim E b he.1
+                  (Bool.and_eq_true_iff.mp hcon).1 p hp).eq_of_some eb,rfl⟩
+              | succ k =>
+                exact argument_capture orig ps hc g h x S T U sim E args he.2
+                  (Bool.and_eq_true_iff.mp hcon).2 p hp V ht k a w hi hw
+
 end
 
 end Shallot.MacroPeg.CBV.SelectedProducerSimulation
