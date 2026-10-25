@@ -1,3 +1,10 @@
+import MacroPeg.CBV.EmptyObservedExamples
+import MacroPeg.CBV.EmptyObservedCompiler
+import MacroPeg.CBV.EmptyObservedCorrespondence
+import MacroPeg.CBV.EmptyObservedFirstOrder
+import MacroPeg.CBV.EmptyObservedEvaluation
+import MacroPeg.CBV.EmptyObservedDispatch
+import MacroPeg.CBV.EmptyObservedSyntax
 import MacroPeg.CBV.EmptyResultExamples
 import MacroPeg.CBV.EmptyCaptureDecision
 import MacroPeg.CBV.EmptyResultObservation

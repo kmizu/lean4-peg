@@ -16,6 +16,42 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## EOFで保持値を再照合する相互再帰文法の全体変換
+
+`EmptyObservedSyntax`から`EmptyObservedCompiler`は、保持値の直接の再照合が
+`(!any);param_k`（入力末尾の検査後の再照合）という形に限られる一階Par文法を、
+固定の全nullary Seq文法へ変換する。この位置では、空の保持値だけが成功する。
+この参照を含むseq/alt/not/starや、任意arityのuser呼出しと実引数の相互再帰は許す。
+引数内でも親の保持値を同じ操作で調べたり、他のuserを呼び出して消費したりできる。
+独立したnullary引数、scanner終端、固定アルファベット、捕捉長の上限は要求しない。
+
+各calleeのarityに応じて有限個の空／非空パターンを列挙し、それぞれ通常結果と空成功だけを
+残す二系統のnullary規則を生成する。実Par引数の左から右へのpreflight後、
+実際の捕捉列の空性に従って規則番号を選ぶ。捕捉内容を列挙したり、値を入力へ符号化したりしない。
+callee行の不変条件は、arityの合う**任意の実保持文字列列**について成り立つ。
+空性判定も同じ相互再帰の一部として構成し、外部の停止判定や引数意味の仮定は受け取らない。
+
+通常版／空成功版の式・引数の対応から実規則表の同clock対応を帰納的に証明した。
+全入力の全残余・有限失敗・全clock未定義と、元文字列上の受理言語を保存する。
+`EmptyObservedCompiler`は実際の全規則（arity/body）と開始式を有限構文比較で確認してから
+この定理を適用する。コンパイラは通常版と空成功版を一緒に扱う構造再帰で、生成した実文法の
+kernel直接実行も可能である。
+
+具体例の元文法はarity `[0,2,2,1]`、Seqは固定22規則・全てarity0。
+balanced a/bの再帰helperからの捕捉、親子で逆になる空／非空パターン、親の保持値への復帰、
+親依存queryを含む実引数、実引数内のparameterized user呼出しを直接kernel実行で検証した。
+三つの捕捉長（1/2/4組のa/b）と親子長1/3・3/1を確認し、任意入力文字列そのものを捕捉できる
+実引数列の全入力・全clockの定理もある。同じ元文法をそのままSeqで動かすと失敗する例は、
+文法変換の必要性を示す実行例であり、言語クラス分離ではない。
+parameter依存の再帰実引数とnullableなparameter反復は、空入力で全clock未定義のまま。
+preflightの評価順序、不正arityや範囲外calleeで引数を評価しない動作も検証した。
+
+この変換は**EOFでの保持値参照という条件を残す**。元の実入力`ab!a`から得た二捕捉`a`/`ab`は
+両方非空でも、`ab!`を消費した先では片方だけが再照合できる。
+この実反例は空／非空だけでは一般の再照合を置き換えられないことを示す。
+無guardのparameterを持つ実規則は有限検査が拒否する。
+一般のPar/Seq言語クラスの一致・分離は未解決である。
+
 ## scannerによらない実捕捉の空／非空判定
 
 `EmptyResultObservation`は、任意のnullary再帰PEG（引数なしの規則だけからなる文法）を、
@@ -10686,3 +10722,51 @@ All-clock proofs retain divergence after a consumed prefix and preserve
 nullable-star undefinedness on every input. Concrete omissions of sequence/
 star gates, choice priority and original argument preflight give different
 results and are explicitly rejected as alternative constructions.
+
+
+## Whole-grammar elimination of EOF-observed retained values
+
+EmptyObservedSyntax/Dispatch/Evaluation/Correspondence/Compiler extends the
+previous independent-nullary emptiness observers to mutually recursive user
+rules and argument expressions of arbitrary arity. The explicit restriction
+is that every direct retained-parameter replay has the source form
+(!any);param_k. Such a replay succeeds precisely for an empty retained value
+at EOF. Queries may reach EOF under lookahead and restore the caller's
+position, so both callee bodies and actual arguments can inspect the parent's
+empty/nonempty state before further consumption or user calls.
+
+The fixed target enumerates finite empty-bit patterns for each declared
+arity and generates normal/empty-result nullary rows. Ordered preflight
+retains original actual-argument failure/undefinedness order, then emitted
+observer expressions select a concrete row number from the real captured
+word tuple. Normal and empty-result channels close simultaneously against
+the actual Par and Seq tables at exactly the same physical clock. The row
+invariant quantifies over every retained environment of the declared arity,
+without a finite word palette, source-input encoding, helper termination
+oracle or supplied semantic row table. No scanner-frontier restriction,
+producer alphabet or bound on captured length is used by this backend.
+
+The source and target syntax are first order; all target rules are nullary.
+The complete declaration/root equality checks are finite AST comparisons.
+The final theorems preserve every original-string observation and residual,
+finite failure, all-clock undefinedness, and the fully consumed language.
+Structural mutual recursion makes the emitter and original lowering directly
+computable by the kernel, including the normal/zero pairs used in arguments.
+
+The concrete four-rule source has arities [0,2,2,1]; its generated Seq target
+has exactly 22 fixed nullary rules. Kernel executions cover balanced recursive
+a/b producer captures at n=1,2,4, reversed parent/child empty-state patterns,
+restoration of both parent values, parent-dependent actual-argument queries,
+parameterized user calls inside actual arguments, and nested lengths (1,3)
+and (3,1). A separate symbolic argument theorem captures any input word at
+every clock, so the real retained values have no finite length palette.
+Parameter-dependent recursive actuals and nullable parameter repetition
+retain all-clock undefinedness on empty input. Preflight order, skipped arguments on wrong
+arity/out-of-range calls, and wrong acceptance after bypassing preflight are
+checked. These executions support the translation, not class separation.
+
+The EOF guard is essential to this finite view: actual source captures a and
+ab from the same ab!a input are both nonempty, yet after consuming ab! only
+a replays successfully. The checker rejects an unguarded parameter rule.
+The unrestricted content-dependent replay problem and the full Par/Seq
+language-class equality or genuine separation remain unresolved.
