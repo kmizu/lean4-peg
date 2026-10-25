@@ -16,6 +16,58 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 異なる区切りを持つ、再帰producer全体の新しい捕捉
+
+`CaptureAlphabetEffects` は、規則ごとの戻り値 alphabet と、引数 slot ごとの
+独立した alphabet を持つ有限検査を実装する。消費する call の actual を各 slot の
+alphabet で検査し、callee の戻り値 alphabet を呼出し式の出力へ使う。
+seq/alt/star、literal、character、保持 parameter を扱い、predicate の出力は空とする。
+predicate 内の呼出しや未定義はそのまま実行し、停止性を仮定しない。
+
+`physical_rows` は実 Par table の clock に帰納し、任意の再帰表・相互呼出し・異なる
+arity・異なる入出力 alphabet について行安全性の仮定を外す。`capture/captured_free`
+は実際の成功結果の `pre x p q` が指定 alphabet 内、従って指定外の区切りを含まない
+ことを証明する。全規則の宣言と body を検査し、runtime の語や成功結果を検査器へ渡さない。
+これは Par の戻り値の検査である。Par は actual 評価の消費文字を call 結果へ加えないため、
+この effect を Seq へそのまま流用してはならない。正の actual と空本体の kernel 例で
+その違いを固定した。
+
+`NestedFieldProducer` の実 source は次の二規則である。
+
+```
+P(w) = w '#' (('!' w) / (P(w w) w))
+Q(v) = v '@' v
+start = Q(P('a'*)) EOF
+```
+
+P の入力 alphabet は `a`、出力は `a/#/!`、Q の入力は `a/#/!`、出力は
+`a/#/!/@` である。P の正の呼出しを Q の actual として評価し、その実行全体の
+文字列を Q の新しい保持値にする。内側 producer の `#` を禁止せず、外側は `@` で
+その値を再捕捉して別々に再照合する。source arity は `[1,1]`、target は固定 `[1,2,1,2]`。
+元入力へ符号化やpaddingを追加しない。従来の `DelimitedValueSafety.check '@'` が
+この positive producer を拒否することも kernel 検査した。
+
+`producer_call` は任意の actual/caller 環境を扱い、P の実再帰・倍長の新捕捉・親復帰を
+実 table の強い clock 帰納で証明する。`outer_physical/physical/observations/`
+`language_translation/undefined_iff` は、上記の固定 source/target について
+全元入力・全 physical clock・全有限観測・元文字列言語・全 clock 未定義を保存する。
+
+`NestedFieldProducerProofs` は、`t(n,0)=a^n# ! a^n`、
+`t(n,d+1)=a^n# t(2n,d) a^n` の実 source row を、全 n/depth/余分 clock/後続文字列へ
+証明する。外側の実捕捉が `t(n,d)` そのものであることと、同じ固定 Seq 文法が
+`t(n,d) @ t(n,d)` を clock `d+2` で受理することまで接続する。
+空捕捉 n=0 を含み、外側の保持値の長さは非有界である。直接 Seq kernel 評価、外側値の
+取り違え、子の値による親復帰の取り違え、全入力全 clock の nullable actual 未定義、
+異なる slot の alphabet を交換する誤代入、不正な戻り値 effect の拒否も検証した。
+
+これは**具体的な二段の固定文法の変換**であり、任意個の異種 header を生成する
+一般 compiler はまだ実装していない。旧 `MutualFieldCompiler` の構文検査も
+そのままである。一般の Par 文法をこの形へ正規化する証明、再照合 anchor を必要としない
+live 値の引継ぎ、および Par/Seq 全言語クラスの一致・分離は引き続き未解決である。
+
+今回 3 新 modules・39 新 guard。全 1,391 jobs/Audit と関連 3,756 公開依存
+（標準 Lean 公理 3,673、無公理 83）を検証。新しい sorry/axiom/native_decide はない。
+
 ## 継続が読む値だけを再捕捉し、全く読まないときはanchorを空にする
 
 `ParameterSupport` は、式が実際に構文上参照する parameter だけで view の一致を

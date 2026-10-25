@@ -1,3 +1,6 @@
+import MacroPeg.CBV.CaptureAlphabetEffects
+import MacroPeg.CBV.NestedFieldProducer
+import MacroPeg.CBV.NestedFieldProducerProofs
 import MacroPeg.CBV.ParameterSupport
 import MacroPeg.CBV.UsedFieldCapture
 import MacroPeg.CBV.UsedFieldExamples
@@ -38311,3 +38314,176 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.MutualFieldSyntax.header_check_of_cover' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.MutualFieldSyntax.header_check_of_cover
+
+-- Heterogeneous recursive producer capture and alphabet effects.
+/-- info: 'Shallot.MacroPeg.CBV.CaptureAlphabetEffects.subset_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureAlphabetEffects.subset_sound
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureAlphabetEffects.within_mono' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureAlphabetEffects.within_mono
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureAlphabetEffects.within_append' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureAlphabetEffects.within_append
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureAlphabetEffects.environment_lookup' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureAlphabetEffects.environment_lookup
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureAlphabetEffects.captured_of_shape' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureAlphabetEffects.captured_of_shape
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureAlphabetEffects.shape_mono' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureAlphabetEffects.shape_mono
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureAlphabetEffects.expression' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureAlphabetEffects.expression
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureAlphabetEffects.arguments' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureAlphabetEffects.arguments
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureAlphabetEffects.grammar_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureAlphabetEffects.grammar_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureAlphabetEffects.physical_rows' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureAlphabetEffects.physical_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureAlphabetEffects.capture' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureAlphabetEffects.capture
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureAlphabetEffects.captured_free' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureAlphabetEffects.captured_free
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducer.effects_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedFieldProducer.effects_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducer.actual_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedFieldProducer.actual_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducer.producer_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedFieldProducer.producer_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducer.positive_producer_was_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedFieldProducer.positive_producer_was_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducer.source_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedFieldProducer.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducer.target_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedFieldProducer.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducer.producer_call' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedFieldProducer.producer_call
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducer.producer_physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedFieldProducer.producer_physical
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducer.outer_physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedFieldProducer.outer_physical
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducer.physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedFieldProducer.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducer.observations' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedFieldProducer.observations
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducer.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedFieldProducer.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducer.undefined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedFieldProducer.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducerProofs.doubled_capture' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedFieldProducerProofs.doubled_capture
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducerProofs.producer_rows' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedFieldProducerProofs.producer_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducerProofs.initial_captures' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedFieldProducerProofs.initial_captures
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducerProofs.producer_result' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedFieldProducerProofs.producer_result
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducerProofs.outer_capture' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedFieldProducerProofs.outer_capture
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducerProofs.source_and_target_all_trees' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedFieldProducerProofs.source_and_target_all_trees
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducerProofs.capture_length_unbounded' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedFieldProducerProofs.capture_length_unbounded
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducerProofs.direct_generated_runs' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedFieldProducerProofs.direct_generated_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducerProofs.wrong_outer_word_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedFieldProducerProofs.wrong_outer_word_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducerProofs.fresh_child_does_not_replace_parent' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedFieldProducerProofs.fresh_child_does_not_replace_parent
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducerProofs.undefined_actual_stays_undefined' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedFieldProducerProofs.undefined_actual_stays_undefined
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducerProofs.parameter_alphabets_are_independent' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedFieldProducerProofs.parameter_alphabets_are_independent
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducerProofs.producer_separators_cannot_be_erased_from_effects' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedFieldProducerProofs.producer_separators_cannot_be_erased_from_effects
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducerProofs.actual_output_is_not_the_par_call_output' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedFieldProducerProofs.actual_output_is_not_the_par_call_output
