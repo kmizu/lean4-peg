@@ -91,6 +91,20 @@ def sourceExpr {n : Nat} (M : Machine n) : Arg → MExp
   | .notP a => .notP (sourceExpr M a)
   | .star a => .star (sourceExpr M a)
 
+/-- Source control as ordinary Arg syntax; lookahead preserves the old value. -/
+def rawControlArg {n : Nat} : GuardedReplayControl.Expr n → Arg
+  | .shift q R => .seq (.lit ((R q).getD [])) (.notP (.notP (.param 0)))
+  | .seq a b => .seq (rawControlArg a) (rawControlArg b)
+  | .alt a b => .alt (rawControlArg a) (rawControlArg b)
+  | .star a => .star (rawControlArg a)
+  | .notP a => .notP (rawControlArg a)
+
+theorem rawControlArg_source {n : Nat} (M : Machine n) : ∀ c : GuardedReplayControl.Expr n,
+    sourceExpr M (rawControlArg c)=GuardedReplayControl.render c
+  | .shift _ _ => rfl
+  | .seq a b | .alt a b => by simp [rawControlArg,sourceExpr,GuardedReplayControl.render,rawControlArg_source M a,rawControlArg_source M b]
+  | .star a | .notP a => by simp [rawControlArg,sourceExpr,GuardedReplayControl.render,rawControlArg_source M a]
+
 mutual
   def plain {n : Nat} (M : Machine n) (bodies : List Arg) (S : List (List Nat)) : Arg → MExp
     | .lit w => .lit w

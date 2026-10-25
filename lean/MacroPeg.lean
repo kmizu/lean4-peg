@@ -1,3 +1,7 @@
+import MacroPeg.CBV.AlphabetCaptureProfileExamples
+import MacroPeg.CBV.AlphabetCaptureProfiles
+import MacroPeg.CBV.LiteralPrefixObservation
+import MacroPeg.CBV.FiniteProfileClosure
 import MacroPeg.CBV.GuardedReplayControlExamples
 import MacroPeg.CBV.GuardedReplayControl
 import MacroPeg.CBV.RotatedGuardedReplayExamples

@@ -133,7 +133,17 @@ theorem header_all {n : Nat} (M : Machine n) (P : List Nat) (hP : P∈profiles (
     have hQP : Q=P := by simpa [headerEffects] using hQ
     subst Q
     exact hP
-  | .scan _ | .iterate _ _ | .aligned _ => fun _ h => h
+  | .scan _ => fun _ h => h
+  | .iterate q R => by
+    apply product_all
+    · rw [effects_noUser M (fun _ _ => []) (summary M) [P] _ (rawControlArg_scoped _)]
+      exact effects_all M [P] (by simpa [AllIn] using hP) _
+    · simpa [AllIn] using hP
+  | .aligned c => by
+    apply product_all
+    · rw [effects_noUser M (fun _ _ => []) (summary M) [P] _ (rawControlArg_scoped _)]
+      exact effects_all M [P] (by simpa [AllIn] using hP) _
+    · simpa [AllIn] using hP
   | .shift q R => product_all _ _ _ (by simpa [AllIn] using profile_mem (observer M) (valid M) ((R q).getD [])) (by simpa [AllIn] using hP)
   | .alt a b => by
     intro Q hQ

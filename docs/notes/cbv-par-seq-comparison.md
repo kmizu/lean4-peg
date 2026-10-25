@@ -405,6 +405,52 @@ plain/product 行、実再帰継続、自動 profile、元位置正規化、固�
 生成 Seq 成功の存在・固定開始式の全入力言語変換を証明する。この大きい生成表の直接実行は
 行わず、直接 Seq 実行の検査は二状態の実再帰／product 文法で行っている。
 
+`FiniteProfileClosure` は、既存の反復用 profile 閉包について、生成元が全て正しい有限 profile
+なら `profiles.length` 回以内に必ず閉じると証明した。各回が未閉包なら重複除去した集合が
+真に増え、有限全 profile 集合の長さを超えるためである。従来の conservative fallback は
+この場合には使われない。任意の閉じた部分集合への包含も導き、反復で情報が失われないようにする。
+
+`AlphabetCaptureProfiles` は、指定した有限アルファベット Σ の一文字 profile から、この閉包で
+domain を自動構成する。Σ 上の全語の profile が入り、domain の各要素も実際の Σ 語で
+実現される。これは有限の保持値 palette ではなく、長さ非有界の全 Σ 語の有限な観測である。
+有限 source 検査は M の arc・実 header・body・root の literal の文字が Σ に含まれること、
+参照範囲・header layout、および domain の各 profile での入口条件を確認する。H/C/A の成功する
+注釈をユーザーが選ぶ必要はない。入力文字列全体が Σ 語であることは要求せず、最終定理は全 x を量化する。
+
+再帰 summary は入力 profile が domain 内なら domain、外なら全 profile とする。
+そのため、実際に source から捕捉できる値だけに domain を適用しつつ、元の grammarCheck が
+検査する全 profile 行についても sound な summary を維持する。`iterate`／`aligned` の
+headerEffects は、旧全 profile 集合から、実 source control の消費効果と全保持値 profile の
+積へ精密化した。`rawControlArg` は guarded control を通常の Arg で表し、call-free 評価一致と
+実成功の output_shape からこの集合への包含を導く。これにより、反復・再帰・保持値の合成でも
+Σ domain が保たれる。既存の全入力観測・固定一階 Seq 元文字列言語・定義／全 clock 未定義へ接続した。
+
+この自動経路は無条件 scanner 入口も一律には拒否しない。実 source alphabet から生成した
+全 profile がその状態で読めれば、既存 scanner 再開の条件を導出できる。
+`AlphabetCaptureProfileExamples` は a/b を読む状態0と、先頭 a の成否を記憶する状態1/2を
+同じ M に持つ。source 全検査を通し、全256 profile のうち生成 domain は3個となる。
+旧 Universal frontend はこの scanner 入口を拒否する一方、新経路は実再帰引数を認証する。
+同じ user の保持値二倍の再捕捉と親全値への復帰で長さ1/4/10の値を作り、その後の scanner
+消費を1/2/4文字で変えた source 実行・生成 Seq 成功、および通常 clock12の Seq 直接実行を
+kernel 検証した。nullable 引数の全入力全 clock 未定義、欠けた alphabet、未知文字を含む
+実引数構文、不正 literal 観測ラベルの有限拒否も検証する。生成 target の行キーは従来の全
+profile 列挙のままであり、ここで target のサイズ削減は主張しない。
+
+`LiteralPrefixObservation` は回転ラベルとは別に、固定 literal の未照合 suffix をラベルに持つ。
+空ラベルになった状態は、その literal が捕捉内で既に読み終わったことを記憶し、Σ の残りの文字を
+吸収する。有限 label 検査と実 capture path から、literal が捕捉内で完了した場合、捕捉後に
+残余 literal を必要とする場合、および有限失敗を区別する。`peek_transfer` は、保持値 w が
+実元位置で照合できれば、元位置の `&lit u` を捕捉終点の実残余 query へ移す。
+追加の alphabet-loop 検査により、実 profile が生成 domain に入ることから w が Σ 語だと導き、
+`argument_domain`／`actual_literal_probe` は source の実再帰引数評価からこの条件を供給する。
+新たな成功行や保持値形 oracle は使わない。
+
+前回衝突した aab／bba は、追加した観測状態では異なる profile になる。
+aabz／bbaz の捕捉後の残余入力が同じ z でも、元位置での literal a の成功／失敗を正しく
+終点へ移す具体例と、任意の実再帰引数成功からの一般 probe 定理を kernel で確認した。
+これは有限 prefix の選択を扱うための観測 primitive であり、生の有限 prefix 原子を
+GuardedReplayControl の反復へ組み込む frontend はまだ実装していない。
+
 これは各消費原子の後にも全旧値が照合できる guarded step の PEG 制御である。
 任意 PEG prefix、捕捉の照合を保たない一般の依存 step／消費 user 呼出し、全保持値の再照合を
 伴わない一般の依存継続、独立複数 source capture、および一般 Par/Seq 一致／分離は

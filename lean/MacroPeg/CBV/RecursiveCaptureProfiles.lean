@@ -96,6 +96,32 @@ def Scoped (bodies : List Arg) : Arg → Prop
   | .notP a | .star a => Scoped bodies a
   | _ => True
 
+theorem rawControlArg_scoped {n : Nat} : ∀ c : GuardedReplayControl.Expr n, Scoped [] (rawControlArg c)
+  | .shift _ _ => ⟨True.intro,True.intro⟩
+  | .seq a b | .alt a b => ⟨rawControlArg_scoped a,rawControlArg_scoped b⟩
+  | .star a | .notP a => rawControlArg_scoped a
+
+theorem noUser_eval {n : Nat} (M : Machine n) (g h : MGrammar) (x : List Char)
+    (s t : Strategy) (T U : ClockFreezing.Table) (E : List (List Char)) : ∀ e, Scoped [] e → ∀ p,
+    evV g x s T E (sourceExpr M e) p=evV h x t U E (sourceExpr M e) p
+  | .lit _,_,_ | .param _,_,_ => rfl
+  | .user _ _,he,_ => False.elim (Nat.not_lt_zero _ he.1)
+  | .seq a b,he,p | .alt a b,he,p => by
+    simp only [sourceExpr,evV,noUser_eval M g h x s t T U E a he.1 p]
+    split <;> first | rfl | exact noUser_eval M g h x s t T U E b he.2 _
+  | .notP a,he,p => by simp only [sourceExpr,evV,noUser_eval M g h x s t T U E a he p]
+  | .star a,he,p => by
+    rw [sourceExpr,evV_star,evV_star]
+    exact evStar_congr p (fun q _ => noUser_eval M g h x s t T U E a he q)
+
+theorem effects_noUser {n : Nat} (M : Machine n) (C D : Summary) (S : List (List Nat)) :
+    ∀ e, Scoped [] e → effects M C S e=effects M D S e
+  | .lit _,_ | .param _,_ => rfl
+  | .user _ _,he => False.elim (Nat.not_lt_zero _ he.1)
+  | .seq a b,he | .alt a b,he => by simp only [effects,effects_noUser M C D S a he.1,effects_noUser M C D S b he.2]
+  | .notP _,_ => rfl
+  | .star a,he => by simp only [effects,effects_noUser M C D S a he]
+
 theorem output_shape {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
     (C : Summary) (x : List Char) (T : ClockFreezing.Table) (hRows : Rows M bodies C x T)
     (S : List (List Nat)) (E : List (List Char))
@@ -223,9 +249,22 @@ theorem scanner_profiles {n : Nat} (M : Machine n) (H : ScannerSummary n)
       have hh := List.contains_iff_mem.mp ((List.all_eq_true.mp hstep) _ (ih r))
       simpa only [compose_correct _ (valid M),List.singleton_append,ObservedScanner.consumed,hs] using hh
 
+theorem output_shape_noUser {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
+    (C : Summary) (x : List Char) (T : ClockFreezing.Table) (S : List (List Nat)) (E : List (List Char))
+    (hS : DependentCaptureFilter.Accurate (observer M) S E) (e : Arg) (he : Scoped [] e)
+    (p q : Nat) (hp : p≤x.length)
+    (h : evV (source M entries bodies) x .callByValuePar T E (sourceExpr M e) p=some (some q)) :
+    q≤p ∧ ∃ w, profile (observer M) w∈effects M C S e ∧ sfx x p=w++sfx x q := by
+  have hh := noUser_eval M (source M entries bodies) (source M (fun _ => .replay) []) x
+    .callByValuePar .callByValuePar T T E e he p
+  rw [hh] at h
+  exact output_shape M (fun _ => .replay) [] C x T
+    (by intro i b hi; cases i <;> cases hi) S E hS e he p q hp h
+
 def headerEffects {n : Nat} (M : Machine n) (H : ScannerSummary n) (entry : Entry n) (P : List Nat) : List (List Nat) :=
   match entry with
-  | .iterate _ _ | .aligned _ => profiles (observer M)
+  | .iterate q R => product (effects M (fun _ _ => []) [P] (rawControlArg (.star (.shift q R)))) [P]
+  | .aligned c => product (effects M (fun _ _ => []) [P] (rawControlArg c)) [P]
   | .scan q => H q
   | .shift q R => product [profile (observer M) ((R q).getD [])] [P]
   | .replay | .safeReplay => [P]
@@ -277,15 +316,19 @@ theorem header_shape {n : Nat} (M : Machine n) (entries : Entries n) (bodies : L
         (.lit v) p=some (some q) := by simpa only [sourceHeader,evV,List.getElem?_cons_zero] using h
     obtain ⟨hq,hs⟩ := literal_shape _ x .callByValuePar _ [v] v p q hp hl
     exact ⟨hq,v,by simp [headerEffects],hs⟩
-  | iterate start R | aligned _ =>
-    have hs := DependentCaptureFilter.success_prefix (by decide)
-      (ClockFreezing.frozen_sound (source_firstOrder M entries bodies) x .callByValuePar (by decide) _ _ k)
-      [v] _ (sourceHeader_firstOrder _) p q hp h
-    have hle : q≤p := by
-      have hl := congrArg List.length hs.2
-      rw [List.length_append,length_sfx x hp,length_sfx x hs.1] at hl
-      omega
-    exact ⟨hle,pre x p q,profile_mem _ (valid M) _,hs.2⟩
+  | iterate start R =>
+    have hs := output_shape_noUser M entries bodies (fun _ _ => []) x _
+      [profile (observer M) v] [v] (DependentCaptureFilter.environment_accurate _ _)
+      (.seq (rawControlArg (.star (.shift start R))) (.param 0))
+      ⟨rawControlArg_scoped _,True.intro⟩ p q hp
+      (by simpa only [sourceExpr,rawControlArg_source,GuardedReplayControl.render,GuardedReplayIteration.header,sourceHeader] using h)
+    simpa only [effects,List.getElem?_cons_zero,headerEffects] using hs
+  | aligned c =>
+    have hs := output_shape_noUser M entries bodies (fun _ _ => []) x _
+      [profile (observer M) v] [v] (DependentCaptureFilter.environment_accurate _ _)
+      (.seq (rawControlArg c) (.param 0)) ⟨rawControlArg_scoped _,True.intro⟩ p q hp
+      (by simpa only [sourceExpr,rawControlArg_source,GuardedReplayControl.header,sourceHeader] using h)
+    simpa only [effects,List.getElem?_cons_zero,headerEffects] using hs
   | shift start R =>
     let u := (R start).getD []
     have he := WordArguments.word_eval (source M entries bodies) x .callByValuePar
