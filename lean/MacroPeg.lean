@@ -1,3 +1,7 @@
+import MacroPeg.CBV.SequentialTotalSyntax
+import MacroPeg.CBV.SequentialTotalFirstOrder
+import MacroPeg.CBV.SequentialTotalControl
+import MacroPeg.CBV.SequentialTotalExamples
 import MacroPeg.CBV.FiniteResultClosure
 import MacroPeg.CBV.SequentialLocalClosure
 import MacroPeg.CBV.SequentialLocalOrder
