@@ -1,3 +1,13 @@
+import MacroPeg.CBV.CopyBodyControl
+import MacroPeg.CBV.CopyBodyEvaluation
+import MacroPeg.CBV.CopyBodyProjections
+import MacroPeg.CBV.CopyBodyEmission
+import MacroPeg.CBV.ControlledCaptureEffects
+import MacroPeg.CBV.ControlledCopySyntax
+import MacroPeg.CBV.ControlledCopyCorrespondence
+import MacroPeg.CBV.ControlledCopyCompiler
+import MacroPeg.CBV.ControlledCopyExamples
+import MacroPeg.CBV.ControlledCopyProofs
 import MacroPeg.CBV.FiniteSuffixExamples
 import MacroPeg.CBV.FiniteSuffixCallCompiler
 import MacroPeg.CBV.FiniteSuffixBody

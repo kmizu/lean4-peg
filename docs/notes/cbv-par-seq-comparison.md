@@ -16,6 +16,43 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 保持語を読み進めた後の選択・否定を含むコピー本体
+
+`CopyBodyControl/Evaluation/Projections/Emission` と
+`ControlledCopySyntax/Correspondence/Compiler` は、従来の平坦な parameter 列から、
+`param_i;d` を原子とする有限本体へ拡張する。空成功・失敗・連接・優先選択・否定と、
+構造上零幅の operand の反復を許す。元の捕捉 tuple は保ったまま、消費後の位置で別の
+保持語を否定したり、選択したりできる。消費する反復と本体内の一般再帰は対象外である。
+
+本体を有限の構文履歴へ正規化し、元のコピー呼出し位置から履歴の語列を検査する unary Seq
+規則を生成する。有限なのは parameter index の履歴で、捕捉文字列の辞書ではない。
+CPS の成功・失敗継続を分け、選択肢が成功した後の継続の失敗で別の選択肢へ戻らない性質を保存する。
+全 actual を元の順に評価する preflight と nullary 初期化 gate を置き、空本体でも
+clock 0 の未定義と、gate より先に起こる actual の失敗・未定義を保存する。
+
+`ControlledCaptureEffects` は実 source grammar に対する条件付き alphabet 保存を一般化し、
+親を正に消費する actual、parameterized recursive producer、子での新捕捉、帰還後の親語の復帰を
+この本体翻訳と接続する。全 raw 宣言・root の一致、参照 scope、actual の捕捉効果、client ごとの親条件、
+実 tail の戻り値効果の閉包を有限検査する。`ControlledCopyCompiler.physical` は全入力・全 clock の
+実評価一致を示し、元文字列言語、残余、有限失敗、定義性、全 clock 未定義性を導く。
+
+具体例は 5 規則 `[0,0,1,1,4]` から 97 規則（独立 helper 2、unary client 2、初期化 1、
+unary projection 92）への固定翻訳である。実捕捉 tuple は
+`[a^(2n)b c^(2n), a^n, a^(2n), a^(2n)b]`。
+先頭の語を消費後、否定・選択が異なる経路を通る入力を両方の実評価で確認した。
+任意の `n` と再帰深さについて、子が親語を倍にして捕捉し、帰還後に親の語を復帰させる
+source/target の受理を証明した。
+
+選択へ継続を誤って分配する書換えの反例、空本体で初期化 gate を除く clock 0 の誤成功、
+preflight を除くと未定義 actual を飛ばす反例、初期化前の actual 失敗を検証した。
+零幅反復は保持値との照合結果によって空成功または全 clock 未定義になる。
+範囲外 parameter・消費する反復・元宣言不一致を checker が拒否する。
+
+この拡張でも、独立 nullary helper、先頭で親語を再照合する unary client、共通の arity・区切り・本体、
+区切りを含まない新捕捉語という制約は残る。一般の複数親、任意 PEG 本体、消費する反復、
+先頭再照合なしの client、無制限の Par/Seq クラス一致・分離は未解決である。
+以下の平坦な本体に関する記述は、この拡張前の frontend の範囲を記録している。
+
 ## 親を正に消費する actual と、実再帰 producer の消費効果
 
 `RetainedCaptureEffects` と `ConsumingPatternChecks/Correspondence/Compiler` は、コピー actual の
@@ -11440,3 +11477,11 @@ The existing fixed source/target grammar builders are reused. Parent-word precon
 The five-rule source compiles to eight Seq rules. For a retained parent a^n, its actual tuple [a^(2n)b c^(2n),a^n,a^(2n),a^(2n)b] contains direct parent consumption and the actual returned word of a parameterized recursive producer. Symbolic derivations cover every n and following suffix; both grammars accept every parent length and nesting depth with child doubling and parent restoration. All four capture lengths are simultaneously unbounded. With an empty argument the same producer recursively captures a^m for every m. A return-certified divergent client is allowed as a positive actual and stays undefined on every input and clock; omitting preflight produces finite failure. Kernel checks reject missing parent requirements, an unsafe marked seed and a separator-consuming producer actual, while allowing a separator-containing parent for an unmarked ordinary producer call. Earlier query-only validation rejects this grammar.
 
 Independent nullary helpers, leading replay in unary clients and shared delimited parameter-list copy bodies remain restrictions. Marked parent values must satisfy the finitely checked alphabet condition. General multiple-parent clients, arbitrary multi-value bodies and unrestricted Par/Seq class equality/separation remain unresolved.
+
+## Controlled retained-word body translation (latest extension)
+
+CopyBodyControl/Evaluation/Projections/Emission and ControlledCopySyntax/Correspondence/Compiler extend flat delimited parameter lists to finite bodies of param_i;d atoms, epsilon, failure, sequence, committed ordered choice, negation and structurally zero-width repetition. Finite syntax histories are tested from the original copy origin; captured words remain unbounded. Separate CPS continuations preserve committed choice. Original-order actual preflight and a nullary initialization gate preserve failure/divergence and clock-zero behavior, even for empty bodies.
+
+ControlledCaptureEffects connects the actual grammar's recursive return-effect certificates, positive parent consumption, parameterized recursive producers and parent restoration to the same-physical-clock proof. Complete source/root and finite scope/effect checks yield original-string language and residual preservation, finite failure/definedness and all-clock undefinedness. The five-rule example generates 97 fixed Seq rules. Symbolic proofs cover every parent length and recursion depth with actual unbounded captures and child doubling. Kernel cases cover alternative post-consumption choice paths, incorrect continuation distribution, missing initialization/preflight, early argument failure, value-dependent nullable repetition and malformed scope/body rejection.
+
+Validation: full lake build including Audit passes (1,310 jobs). All 3,075 related public dependency reports use only standard axioms (3,014) or no axioms (61); the 97 new reports are guarded in Audit. The PR has 1,443 new guarded dependency checks across 134 new Lean modules. Consuming body repetition, general header recursion, arbitrary body atoms, multiple-parent clients and the unrestricted Par/Seq class comparison remain unresolved.

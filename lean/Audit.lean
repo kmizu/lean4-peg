@@ -1,3 +1,13 @@
+import MacroPeg.CBV.CopyBodyControl
+import MacroPeg.CBV.CopyBodyEvaluation
+import MacroPeg.CBV.CopyBodyProjections
+import MacroPeg.CBV.CopyBodyEmission
+import MacroPeg.CBV.ControlledCaptureEffects
+import MacroPeg.CBV.ControlledCopySyntax
+import MacroPeg.CBV.ControlledCopyCorrespondence
+import MacroPeg.CBV.ControlledCopyCompiler
+import MacroPeg.CBV.ControlledCopyExamples
+import MacroPeg.CBV.ControlledCopyProofs
 import MacroPeg.CBV.RetainedCaptureEffects
 import MacroPeg.CBV.ConsumingPatternChecks
 import MacroPeg.CBV.ConsumingPatternCorrespondence
@@ -35024,3 +35034,413 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.ConsumingPatternProofs.preflight_required_for_consuming_producer' depends on axioms: [propext] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ConsumingPatternProofs.preflight_required_for_consuming_producer
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyControl.render_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyControl.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyControl.related_chain' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyControl.related_chain
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyControl.related_choice' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyControl.related_choice
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyControl.related_negative' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyControl.related_negative
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyControl.related_repeatZero' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyControl.related_repeatZero
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyControl.eval_related' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyControl.eval_related
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyControl.eval_zero' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyControl.eval_zero
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyControl.eval_preserves' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyControl.eval_preserves
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyControl.compile_eval' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyControl.compile_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyControl.normalized_eval' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyControl.normalized_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyControl.compile_scope' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyControl.compile_scope
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyControl.normalized_scope' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyControl.normalized_scope
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyEvaluation.sourceParts_append' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyEvaluation.sourceParts_append
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyEvaluation.run_append' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyEvaluation.run_append
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyEvaluation.parts_append' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyEvaluation.parts_append
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyEvaluation.parts_suffix' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyEvaluation.parts_suffix
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyEvaluation.run_suffix' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyEvaluation.run_suffix
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyEvaluation.history_related' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyEvaluation.history_related
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyEvaluation.resolve_related' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyEvaluation.resolve_related
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyEvaluation.normalized_run' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyEvaluation.normalized_run
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyEvaluation.physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyEvaluation.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyProjections.query_physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyProjections.query_physical
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyProjections.unary_at' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyProjections.unary_at
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyProjections.passesAt_eval' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyProjections.passesAt_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyProjections.passesAt_clock' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyProjections.passesAt_clock
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyProjections.queryAt_physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyProjections.queryAt_physical
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyEmission.key_mem' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyEmission.key_mem
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyEmission.rules_gate' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyEmission.rules_gate
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyEmission.rules_projection' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyEmission.rules_projection
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyEmission.rules_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyEmission.rules_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyEmission.passesAt_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyEmission.passesAt_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyEmission.query_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyEmission.query_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyEmission.plan_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyEmission.plan_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyEmission.head_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyEmission.head_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyEmission.query_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyEmission.query_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyEmission.plan_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyEmission.plan_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyEmission.initialized' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyEmission.initialized
+
+/-- info: 'Shallot.MacroPeg.CBV.CopyBodyEmission.physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CopyBodyEmission.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCaptureEffects.evaluator_safe' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCaptureEffects.evaluator_safe
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCaptureEffects.physical_rows' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCaptureEffects.physical_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCaptureEffects.captured_alpha' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCaptureEffects.captured_alpha
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopySyntax.emitArgs_eq_map' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopySyntax.emitArgs_eq_map
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopySyntax.emitArgs_length' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopySyntax.emitArgs_length
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopySyntax.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopySyntax.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopySyntax.emit_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopySyntax.emit_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopySyntax.emitArgs_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopySyntax.emitArgs_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopySyntax.source_installed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopySyntax.source_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopySyntax.target_installed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopySyntax.target_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopySyntax.source_user' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopySyntax.source_user
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopySyntax.target_user' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopySyntax.target_user
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopySyntax.source_copy' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopySyntax.source_copy
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopySyntax.target_extra' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopySyntax.target_extra
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopySyntax.target_copy' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopySyntax.target_copy
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopySyntax.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopySyntax.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopySyntax.target_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopySyntax.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyCorrespondence.expression_physical' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyCorrespondence.expression_physical
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyCorrespondence.arguments_physical' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyCorrespondence.arguments_physical
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyCorrespondence.tables_related' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyCorrespondence.tables_related
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyCorrespondence.physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyCorrespondence.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyCorrespondence.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyCorrespondence.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyCompiler.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyCompiler.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyCompiler.firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyCompiler.firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyCompiler.physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyCompiler.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyCompiler.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyCompiler.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyCompiler.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyCompiler.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyCompiler.defined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyCompiler.defined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyCompiler.undefined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyCompiler.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyExamples.checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyExamples.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyExamples.source_arities' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyExamples.source_arities
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyExamples.target_rule_count' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyExamples.target_rule_count
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyExamples.target_arities' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyExamples.target_arities
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyExamples.source_trees' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyExamples.source_trees
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyExamples.target_trees' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyExamples.target_trees
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyExamples.different_choice_path' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyExamples.different_choice_path
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyExamples.actual_tuple_preserved' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyExamples.actual_tuple_preserved
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyExamples.committed_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyExamples.committed_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyExamples.committed_choice_failure' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyExamples.committed_choice_failure
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyExamples.distributing_continuation_is_wrong' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyExamples.distributing_continuation_is_wrong
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyExamples.empty_body_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyExamples.empty_body_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyExamples.clock_zero_and_one' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyExamples.clock_zero_and_one
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyExamples.initialization_gate_is_required' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyExamples.initialization_gate_is_required
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyExamples.nullable_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyExamples.nullable_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyExamples.nullable_can_stop' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyExamples.nullable_can_stop
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyExamples.consuming_star_rejected' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyExamples.consuming_star_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyExamples.bad_body_scope_rejected' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyExamples.bad_body_scope_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyExamples.wrong_source_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyExamples.wrong_source_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyExamples.same_physical_clock' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyExamples.same_physical_clock
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyProofs.actual_captures' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyProofs.actual_captures
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyProofs.source_and_target_all_trees' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyProofs.source_and_target_all_trees
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyProofs.nullable_source_undefined' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyProofs.nullable_source_undefined
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyProofs.nullable_target_undefined' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyProofs.nullable_target_undefined
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyProofs.cycle_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyProofs.cycle_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyProofs.cycle_rows' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyProofs.cycle_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyProofs.cycle_source' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyProofs.cycle_source
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyProofs.cycle_target' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyProofs.cycle_target
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyProofs.preflight_required_for_empty_body' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyProofs.preflight_required_for_empty_body
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledCopyProofs.failure_before_initialization' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledCopyProofs.failure_before_initialization
