@@ -634,3 +634,8 @@ import MacroPeg.CBV.SequentialRecursiveObserver
 import MacroPeg.CBV.SequentialRecursiveObserverExamples
 import MacroPeg.CBV.SequentialRecursiveScanner
 import MacroPeg.CBV.SequentialRecursiveScannerExamples
+import MacroPeg.CBV.RecursiveScannerProductCompiler
+import MacroPeg.CBV.RecursiveScannerProductHelpers
+import MacroPeg.CBV.RecursiveScannerProductHeader
+import MacroPeg.CBV.RecursiveScannerProductCorrespondence
+import MacroPeg.CBV.RecursiveScannerProductExamples

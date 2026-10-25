@@ -11,6 +11,7 @@ frontier. Queries need no termination condition. Calls may have any arity. -/
 def check {n : Nat} (M : StatefulScanner.Machine n) (size : Nat) : MExp → Bool
   | .eps | .notP _ | .param _ => true
   | .lit w => wordCheck M w
+  | .chr c => wordCheck M [c]
   | .seq a b | .alt a b => check M size a && check M size b
   | .star a => check M size a
   | .call i args => decide (i<size) && args.attach.all (fun a => check M size a.val)
@@ -147,6 +148,16 @@ theorem suffix_shape {n : Nat} (M : Machine n)
     have hw := wordCheck_sound M w (by simpa only [Safe,check] using hw)
     obtain ⟨hq,hs⟩ := literal_shape g x s T E w p q hp h
     exact ⟨hq,w,hw,hs⟩
+  | .chr c, hc, p, q, hp, h => by
+    have hw := wordCheck_sound M [c] (by simpa only [Safe,check] using hc)
+    have hl : evV g x s T E (.lit [c]) p=some (some q) := by
+      cases hs : sfx x p with
+      | nil => simp [evV,hs] at h
+      | cons d rest =>
+        cases hb : Shallot.beqChar c d <;>
+          simpa [evV,hs,Shallot.stripPrefix?,hb] using h
+    obtain ⟨hq,hs⟩ := literal_shape g x s T E [c] p q hp hl
+    exact ⟨hq,[c],hw,hs⟩
   | .param k, _, p, q, hp, h => by
     cases hw : E[k]? with
     | none => simp [evV,hw] at h
@@ -240,7 +251,7 @@ theorem suffix_shape {n : Nat} (M : Machine n)
               simp only [hv] at h
               exact hRows i hi W (par_arguments M g x s T E args hArgShape p hp W hv) p q hp h
       · simp [evV,hr,hn] at h
-  | .chr _, h, _, _, _, _ | .any, h, _, _, _, _ | .range _ _, h, _, _, _, _
+  | .any, h, _, _, _, _ | .range _ _, h, _, _, _, _
   | .dbg _, h, _, _, _, _ | .lam _ _, h, _, _, _, _
   | .callParam _ _, h, _, _, _, _ | .invoke _ _ _, h, _, _, _, _ => by simp only [Safe,check,Bool.false_eq_true] at h
 termination_by e => sizeOf e
@@ -315,6 +326,75 @@ theorem frozen_capture {n : Nat} (M : Machine n) (g : MGrammar)
     Total M (pre x p q) ∧ sfx x p=pre x p q++sfx x q :=
   capture_of_shape M x p q hp (suffix_shape M g x s _ E hE g.rules.length
     (frozen_rows M g (grammarCheck_sound M g hg) x s pick floor k) e he p q hp h)
+
+/-- Only rules callable on a consuming argument path need certification.
+Later user rules may consume outside the scanner, and may still occur in
+queries inside certified arguments. -/
+def componentCheck {n : Nat} (M : Machine n) (g : MGrammar) (size : Nat) : Bool :=
+  (g.rules.take size).all (fun r => check M size r.body)
+
+theorem componentCheck_sound {n : Nat} (M : Machine n) (g : MGrammar) (size : Nat)
+    (h : componentCheck M g size=true) (i : Nat) (hi : i<size) (r : MRule)
+    (hr : ruleAtM g.rules i=some r) : Safe M size r.body := by
+  rw [ruleAtM_eq_getElem?] at hr
+  have ht : (g.rules.take size)[i]?=some r := by simpa [List.getElem?_take,hi] using hr
+  exact (List.all_eq_true.mp h) r (List.mem_of_getElem? ht)
+
+theorem component_physical_rows {n : Nat} (M : Machine n) (g : MGrammar) (size : Nat)
+    (hg : componentCheck M g size=true) (x : List Char) (s : Strategy) (k : Nat) :
+    Rows M size x (tblV g x s k) := by
+  induction k with
+  | zero => intro i hi E hE p q hp h; simp [tblV,valAt_nil] at h
+  | succ k ih =>
+    intro i hi E hE p q hp h
+    cases hr : ruleAtM g.rules i with
+    | none => simp [tblV,hr,valAt_nil] at h
+    | some r =>
+      rw [valAt_tblV_succ hr E hp] at h
+      exact suffix_shape M g x s _ E hE size ih r.body
+        (componentCheck_sound M g size hg i hi r hr) p q hp h
+
+theorem component_frozen_rows {n : Nat} (M : Machine n) (g : MGrammar) (size : Nat)
+    (hg : componentCheck M g size=true) (x : List Char) (s : Strategy) (pick : Nat → Bool)
+    (floor k : Nat) : Rows M size x (ClockFreezing.frozen g x s pick floor k) := by
+  induction k with
+  | zero =>
+    intro i hi E hE p q hp h
+    by_cases hb : pick i=true
+    · simp only [ClockFreezing.frozen,hb,if_true] at h
+      exact component_physical_rows M g size hg x s floor i hi E hE p q hp h
+    · simp only [ClockFreezing.frozen,hb,Bool.false_eq_true,if_false,valAt_nil] at h
+      cases h
+  | succ k ih =>
+    intro i hi E hE p q hp h
+    by_cases hb : pick i=true
+    · rw [ClockFreezing.frozen_rows g x s pick floor (k+1) i hb E] at h
+      exact component_physical_rows M g size hg x s floor i hi E hE p q hp h
+    · simp only [ClockFreezing.frozen,hb,Bool.false_eq_true,if_false,ClockFreezing.step] at h
+      cases hr : ruleAtM g.rules i with
+      | none => simp [hr,valAt_nil] at h
+      | some r =>
+        simp only [hr,valAt_rangeMap,if_pos hp] at h
+        exact suffix_shape M g x s _ E hE size ih r.body
+          (componentCheck_sound M g size hg i hi r hr) p q hp h
+
+theorem component_capture {n : Nat} (M : Machine n) (g : MGrammar) (size : Nat)
+    (hg : componentCheck M g size=true) (x : List Char) (s : Strategy) (k : Nat)
+    (E : List (List Char)) (hE : Environment M E) (e : MExp) (he : check M size e=true)
+    (p q : Nat) (hp : p≤x.length)
+    (h : evV g x s (tblV g x s k) E e p=some (some q)) :
+    Total M (pre x p q) ∧ sfx x p=pre x p q++sfx x q :=
+  capture_of_shape M x p q hp (suffix_shape M g x s _ E hE size
+    (component_physical_rows M g size hg x s k) e he p q hp h)
+
+theorem component_frozen_capture {n : Nat} (M : Machine n) (g : MGrammar) (size : Nat)
+    (hg : componentCheck M g size=true) (x : List Char) (s : Strategy) (pick : Nat → Bool)
+    (floor k : Nat) (E : List (List Char)) (hE : Environment M E) (e : MExp)
+    (he : check M size e=true) (p q : Nat) (hp : p≤x.length)
+    (h : evV g x s (ClockFreezing.frozen g x s pick floor k) E e p=some (some q)) :
+    Total M (pre x p q) ∧ sfx x p=pre x p q++sfx x q :=
+  capture_of_shape M x p q hp (suffix_shape M g x s _ E hE size
+    (component_frozen_rows M g size hg x s pick floor k) e he p q hp h)
 
 /-- A finite actual grammar check derives safety for a parameterized
 capture and advances both real scanner and total observer across it. -/

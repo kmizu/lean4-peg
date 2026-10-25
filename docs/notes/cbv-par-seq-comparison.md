@@ -8439,3 +8439,68 @@ show that arbitrary scanner-prefix user bodies satisfy those checks.
 General PEG prefixes, mixed-fragment integration, independent multiple
 captures in the translation, and unrestricted first-order Par/Seq class
 equality or separation remain unresolved.
+
+
+## Simultaneous plain/product translation for scanner-prefix users
+
+`RecursiveScannerProductCompiler` and `RecursiveScannerProductCorrespondence`
+close the Par-to-Seq scanner-prefix row correspondence left open above.
+The source has unary user rules `scan(M,q); body`, where `body` and every
+actual argument may contain literals, retained parameters, sequence,
+prioritized choice, negative queries, stars, and structurally nested unary
+user calls. All users share the same partial scanner and initial state.
+The compiler creates both ordinary translated user rows and their observer
+products, indexed by user number, the complete transition profile of the
+actual captured word, and an optional observer entry/exit pair.
+
+Plain scanner blocks and relocated scanner/observer blocks form a common
+closed helper prefix. `RecursiveScannerProductHelpers` proves their actual
+lookups, frozen/physical stability, and capture-endpoint resumption.
+`RecursiveScannerProductHeader` resumes the scanner after the real argument
+capture and advances the observer through that whole capture. Structural
+induction on arguments and induction on user rounds then close the ordinary
+and product row relations simultaneously. The source row is evaluated at
+the original caller position; its translated Seq row starts at the actual
+capture endpoint and retains the complete captured word. No recursive row,
+argument-success, termination, capture-shape, or metadata oracle is assumed.
+
+The finite checks are substantive restrictions. A designated initial
+component of source rules must pass `ParameterizedCaptureSafety.componentCheck`.
+That component includes the closed scanner helpers and any user rules called
+on a consuming path inside an argument. Successful consuming calls must
+remain in that component, and their arguments must also pass the check.
+Queries consume no characters and may call later, uncertified users;
+the separate compiler check still checks the argument structure inside
+those queries. The capture checker now handles the scanner helpers' `.chr`
+syntax by proving safety for the corresponding singleton word.
+
+Checking the installed helpers requires each consumed arc character to be
+defined from every scanner state. Thus this construction does not
+unconditionally cover arbitrary partial scanners, nor does it subsume all
+previous scanner families. Later uncertified user tails can consume
+characters outside the scanner alphabet. Safe retained values are required
+for the open-environment evaluator theorem and are derived for every actual
+new capture; the root language theorem starts with an empty environment.
+
+`observations_iff` preserves all finite observations, including failure,
+on every unchanged original input. `language_translation` supplies one fixed
+first-order Seq grammar and root for the entire source language.
+`defined_iff` and `undefined_iff` connect the ordinary physical tables,
+allowing different physical clocks. Helper stabilization removes the frozen
+analysis clocks from these public results.
+
+Examples use an actual positive parameterized user parser inside arguments
+and a mutually recursive query into an uncertified !/? consumer. Captures
+ab and aab change the scanner resumption states and are reused after child
+return. Another child argument is assembled from its caller's retained ab
+and a fresh b, passed through the parameterized parser, captured as abb,
+and followed by reuse of the parent's ab. Short copies are rejected;
+an argument choice that first succeeds empty is not retried after a later
+query failure. Actual clock-zero argument failure and all-input/all-clock
+nullable-argument divergence are preserved.
+
+This closes the previously missing positive parameterized-user argument
+translation within the checked scanner-prefix family. Arbitrary PEG
+prefixes, integration with the mixed-fragment compilers, independently
+captured multiple source arguments, and unrestricted first-order Par/Seq
+class equality or separation remain unresolved.
