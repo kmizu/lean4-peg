@@ -16,6 +16,49 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 原点へ戻る空引数calleeをSeqへ接続
+
+`ZeroResetOrigin` / `ZeroResetCorrespondence` は、下記の正倍率compilerが拒否した
+倍率0の具体例を、同じ元文字列言語のSeq文法へ変換する。sourceは既存の
+`MultiplyingPrefixCompiler.Spec` の規則族
+`F_i(w) := (F_next(w^m_i); B_i(w)) / (w; C_i(w))` である。
+有限検査`check`は、head calleeが存在する規則について、倍率0と
+`ReplayFallbackFusion.Closed B_i`（親parameterに依存しない構文）を要求する。
+calleeが存在しなければheadは有限失敗するため、倍率とtailを制限しない。
+全source規則と開始式が一階であること以外に、fallbackや新しい動的PEG引数を
+制限せず、再帰・相互再帰も許す。
+
+存在する空引数calleeの本体を一段だけ`subst [lit []]`で展開し、その後のClosed tailと
+合わせて原点独立の分岐にする。calleeのparameter scopeはこの代入で固定される。
+その分岐と元の`w; C_i(w)`分岐を、既存の`ReplayControlFusion`へ渡す。
+従って新しいtargetは2n個の0/1引数規則からなる固定一階Seq文法であり、入力の
+符号化、有限捕捉語集合、アルファベット制限、実行時の規則生成を使わない。
+開始呼出しでは引数のpreflightを保持し、その失敗・未定義も保存する。
+
+`physical_bounds`は任意の実source/target tblVに対してsource clock k ≤ Seq clock k、
+Seq clock k ≤ source clock 2kを証明する。`observations_iff`、`undefined_iff`、
+`language_translation`は展開前sourceの全残余・有限失敗・全clock未定義と、元文字列の
+全消費言語を保存する。これは両方式を別々に保つ空捕捉specializationから進み、
+実際のPar→Seq変換になっている。
+
+`ZeroResetExamples`は、旧compilerで`a!`の末尾`!`が残る例の新target受理、
+3文字捕捉後に2文字だけ消費する原点分岐、preflight省略の誤受理、nullable引数の
+未定義をkernel検証する。相互再帰で`a!`を消費し、新しい`c*`を渡し、さらに
+別の親呼出しへ`x`を渡してfallbackで再利用するsource/targetも直接実行する。
+空引数自己再帰の全入力・全clock未定義も証明する。
+倍率0の後続が親の保持値に依存する場合と、一般のPar→Seq変換は未解決である。
+
+## 異なる本体が混在する実文法で選択的にforwarding headを正規化
+
+`SelectedForwardingContext`から`SelectedForwardingNormalization`は、正倍率head展開を
+任意の一階実文法の選択した規則へ適用する。有限`check`は実arity/bodyとmetadataの
+一致、factor-1 successorの選択集合内への閉包を検査する。非選択規則は任意の本体・
+arityを保ち、そのmetadataは本体を記述する必要がない。補題のtableはすべて実文法の
+tblVであり、metadataから作った別文法の行対応を仮定しない。
+原点独立分岐と正倍率headの相互呼出しを含む例、選択したcycleと非選択0引数規則の
+共存、元のarity・観測・全clock未定義の保存を検証する。
+これは混合文法のPar→Par正規化であり、混合文法全体のSeq compilerはまだ構成していない。
+
 ## 空捕捉の実呼出しを任意の一階文法で0引数化
 
 `EmptyArgumentSpecialization` は、任意の一階文法について、有限構文検査`zeroCheck`を通る
