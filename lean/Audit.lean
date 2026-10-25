@@ -1,3 +1,10 @@
+import MacroPeg.CBV.ForwardingSeqCompiler
+import MacroPeg.CBV.ForwardingSeqEvaluation
+import MacroPeg.CBV.ForwardingSeqCalls
+import MacroPeg.CBV.ForwardingSeqHead
+import MacroPeg.CBV.ForwardingSeqCorrespondence
+import MacroPeg.CBV.ForwardingSeqExamples
+import MacroPeg.CBV.ForwardingSeqUndefined
 import MacroPeg.CBV.WordExpansionRefinement
 import MacroPeg.CBV.FiniteBodyRewrite
 import MacroPeg.CBV.ForwardingHeadExpansion
@@ -26458,3 +26465,221 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.ForwardingHeadExamples.committed_choice' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ForwardingHeadExamples.committed_choice
+
+-- Fixed Seq compilation for mixed positive multiplication and forwarding heads.
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqCompiler.raw_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqCompiler.raw_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqCompiler.source_firstOrder' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqCompiler.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqCompiler.mode_positive' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqCompiler.mode_positive
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqCompiler.rebound_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqCompiler.rebound_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqCompiler.leaf_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqCompiler.leaf_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqCompiler.code_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqCompiler.code_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqCompiler.target_firstOrder' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqCompiler.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqCompiler.block_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqCompiler.block_length
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqCompiler.blocks_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqCompiler.blocks_length
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqCompiler.rule_count' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqCompiler.rule_count
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqCompiler.blocks_rule' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqCompiler.blocks_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqCompiler.source_rule' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqCompiler.source_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqCompiler.target_rule' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqCompiler.target_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqEvaluation.evaluator' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqEvaluation.evaluator
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqEvaluation.view_evaluator' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqEvaluation.view_evaluator
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqCalls.prefix_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqCalls.prefix_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqHead.frame_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqHead.frame_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqHead.evaluator' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqHead.evaluator
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqCorrespondence.tables_rows' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqCorrespondence.tables_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqCorrespondence.evaluator_eq' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqCorrespondence.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqCorrespondence.physical_bounds' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqCorrespondence.physical_bounds
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqCorrespondence.decide_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqCorrespondence.decide_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqCorrespondence.normalized_observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqCorrespondence.normalized_observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqCorrespondence.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqCorrespondence.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqCorrespondence.undefined_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqCorrespondence.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqCorrespondence.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqCorrespondence.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqExamples.chain_valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqExamples.chain_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqExamples.returning_valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqExamples.returning_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqExamples.cycles_valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqExamples.cycles_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqExamples.committed_valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqExamples.committed_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqExamples.chain_target' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqExamples.chain_target
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqExamples.returning_target' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqExamples.returning_target
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqExamples.closed_cycle' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqExamples.closed_cycle
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqExamples.failed_argument' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqExamples.failed_argument
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqExamples.missing_callee' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqExamples.missing_callee
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqExamples.committed_target' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqExamples.committed_target
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqExamples.clock_difference' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqExamples.clock_difference
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqExamples.original_language' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqExamples.original_language
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqExamples.fresh_valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqExamples.fresh_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqExamples.fresh_source' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqExamples.fresh_source
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqExamples.fresh_target' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqExamples.fresh_target
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqExamples.private_parameters_valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqExamples.private_parameters_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqExamples.private_parameters' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqExamples.private_parameters
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqExamples.zero_factor_rejected' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqExamples.zero_factor_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqExamples.zero_factor_counterexample' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqExamples.zero_factor_counterexample
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqExamples.unit_cycle_valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqExamples.unit_cycle_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqExamples.unit_cycle_closed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqExamples.unit_cycle_closed
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqExamples.empty_source' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqExamples.empty_source
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqExamples.empty_target' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardingSeqExamples.empty_target
