@@ -16,6 +16,44 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 別アルファベットへのコピーを、具体的な分離候補として固定する
+
+`RenamedCopy.Language`は、元の5文字a,b,A,B,#上の
+`{ w # uppercase(w) | w in {a,b}* }`である。例えば`ab#AB`を受理し、
+`ab#BA`は受理しない。任意のSeq文法で認識不能とは証明していない。
+一般Par=Pの機械compilerを経由せず、この候補のPar所属を直接証明した。
+
+固定2規則の`RenamedCopy.grammar`は、二つの元入力prefix u,vを位置counterとして使う。
+全callは元入力の原点で実行し、uの直後がaかつvの直後がA、またはb/Bであることを
+先読みしてから、実引数`u;any`と`v;any`を同じ原点で評価する。
+実際の捕捉値は、それぞれ1文字伸びた元入力prefixである。
+uの直後が#、かつvが入力末尾まで達したときだけ比較を完了する。
+別の1規則が最初の#を探してvを初期化し、rootは成功後に元入力全体を消費する。
+文字列の合成・大文字化を実行するprimitive、入力の書換え、paddingは使用しない。
+
+`compare_test`と`seek_test`は実際のPar導出を構成し、`start_observation`は
+全Unicode入力で有限成功又は有限失敗することを示す。
+`recognizes`は全入力での言語一致、`recognizes_slice`は任意の左wordと任意の右入力での
+正確な受理条件を証明する。空word、余分な文字、長さ違い、区切り欠落も含む。
+`Shallot.PegSeparation.renamed_copy_isPar`で元の言語クラス定義へ接続した。
+
+`old_values_dead`と`no_flat_interface`は、左fieldと区切りだけから作った固定上限個の値、
+及び左fieldだけで選ぶ有限状態では、右fieldへ入った後にこの言語を認識できないと示す。
+残り入力のA/Bはa/b/#と別なので非空の旧値が再照合不能になる。
+任意の再帰的なtarget文法と、target内部での新しい捕捉も許す。
+ただし入口に残る無制限のcaller stackは含まない。従ってこれは引継ぎ方式の障害であり、
+Seq非所属の証明ではない。任意Seq文法のstack・先読み・新捕捉を含む構成又は下界が残る。
+
+計算量による別経路との関係も確認した。既存の
+`original_reverse_requires_P_linear_space`から、一般一致はPの線形空間包含を含意する。
+[MITの講義資料（2008年、Lecture 12）](https://ocw.mit.edu/courses/6-080-great-ideas-in-theoretical-computer-science-spring-2008/6a28fe89bb2e34cc97abe80af66155f6_lec12.pdf)
+もPとLINSPACEの包含方向を未解決として説明している。
+今回の候補では、単純な左右の文字比較に対する文法の表現力を直接調べる。
+一般一致・分離も、この候補のSeq所属・非所属も未解決で、新規性の確定は主張しない。
+
+検証: `lake build`（Audit込み）1,409 jobs成功。今回追加17定理の依存は標準Lean公理
+又は無公理で、すべてguard付き。PR71全体では3新規Lean module・23新規guard。
+
 ## 消費前の情報を有限個の捕捉へ平坦化する方式の限界
 
 `FiniteCaptureInterface` は、独立prefixの残余を「prefixだけから選んだ有限状態と、

@@ -83,15 +83,15 @@ even with arbitrary prefix-dependent finite control and arbitrary recursive
 target rules. Empty values, duplication, and arbitrary dead payloads are
 allowed. Only the bound on the number of slots is fixed; string lengths
 and the actual number of slots may vary with the prefix. -/
-theorem no_bounded_dead_interface (g : MGrammar) (hg : g.FirstOrder)
+theorem no_bounded_dead_equality (g : MGrammar) (hg : g.FirstOrder)
     (s : Strategy) (hs : s ≠ .callByName) (K R : Nat)
     (body : Fin K → MExp) (hbody : ∀ q, (body q).FirstOrder)
-    (state : Nat → Fin K) (capture : Nat → List (List Char))
+    (input : Nat → List Char) (state : Nat → Fin K) (capture : Nat → List (List Char))
     (hlen : ∀ n, (capture n).length ≤ R)
-    (hdead : ∀ n m w, w ∈ capture n → w ≠ [] → Unreplayable (suffix m) w) :
+    (hdead : ∀ n m w, w ∈ capture n → w ≠ [] → Unreplayable (input m) w) :
     ¬ ∀ n m,
       SObs g s (MExp.subst ((capture n).map MExp.lit) (body (state n)))
-        (suffix m) (some []) ↔ n = m := by
+        (input m) (some []) ↔ n = m := by
   intro hspec
   let masks := (List.range (R + 1)).flatMap shapes
   let codes := (List.finRange K).flatMap (fun q => masks.map (q, ·))
@@ -111,6 +111,17 @@ theorem no_bounded_dead_interface (g : MGrammar) (hg : g.FirstOrder)
     have hnext := (observations_iff hg hs henv (body (state n)) (hbody _) (some [])).mp hstart
     rw [hstate] at hnext
     exact ((hspec k n).mp hnext).symm
+
+theorem no_bounded_dead_interface (g : MGrammar) (hg : g.FirstOrder)
+    (s : Strategy) (hs : s ≠ .callByName) (K R : Nat)
+    (body : Fin K → MExp) (hbody : ∀ q, (body q).FirstOrder)
+    (state : Nat → Fin K) (capture : Nat → List (List Char))
+    (hlen : ∀ n, (capture n).length ≤ R)
+    (hdead : ∀ n m w, w ∈ capture n → w ≠ [] → Unreplayable (suffix m) w) :
+    ¬ ∀ n m,
+      SObs g s (MExp.subst ((capture n).map MExp.lit) (body (state n)))
+        (suffix m) (some []) ↔ n = m :=
+  no_bounded_dead_equality g hg s hs K R body hbody suffix state capture hlen hdead
 
 def PrefixAlphabet (E : List (List Char)) : Prop :=
   ∀ w ∈ E, ∀ c ∈ w, c = 'a' ∨ c = 'b'
