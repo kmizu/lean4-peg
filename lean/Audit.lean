@@ -1,3 +1,8 @@
+import MacroPeg.CBV.TypedFieldTransfer
+import MacroPeg.CBV.TypedFieldSyntax
+import MacroPeg.CBV.TypedFieldCorrespondence
+import MacroPeg.CBV.TypedFieldCompiler
+import MacroPeg.CBV.TypedFieldExamples
 import MacroPeg.CBV.CaptureAlphabetEffects
 import MacroPeg.CBV.NestedFieldProducer
 import MacroPeg.CBV.NestedFieldProducerProofs
@@ -38487,3 +38492,258 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.NestedFieldProducerProofs.actual_output_is_not_the_par_call_output' depends on axioms: [propext] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.NestedFieldProducerProofs.actual_output_is_not_the_par_call_output
+
+-- Heterogeneous typed-field family compiler.
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldTransfer.physical_retaining' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldTransfer.physical_retaining
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldTransfer.physical_empty_retaining' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldTransfer.physical_empty_retaining
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldSyntax.header_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldSyntax.header_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldSyntax.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldSyntax.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldSyntax.args_length' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldSyntax.args_length
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldSyntax.args_effect' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldSyntax.args_effect
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldSyntax.args_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldSyntax.args_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldSyntax.environment_length' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldSyntax.environment_length
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldSyntax.environment_free' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldSyntax.environment_free
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldSyntax.source_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldSyntax.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldSyntax.args_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldSyntax.args_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldSyntax.emit_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldSyntax.emit_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldSyntax.emitArgs_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldSyntax.emitArgs_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldSyntax.emitArgs_length' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldSyntax.emitArgs_length
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldSyntax.emitArgs_get' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldSyntax.emitArgs_get
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldSyntax.signature_at' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldSyntax.signature_at
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldSyntax.source_row' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldSyntax.source_row
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldSyntax.target_block' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldSyntax.target_block
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldSyntax.target_rows' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldSyntax.target_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldSyntax.source_firstOrder_grammar' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldSyntax.source_firstOrder_grammar
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldSyntax.target_firstOrder_grammar' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldSyntax.target_firstOrder_grammar
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldSyntax.rule_count' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldSyntax.rule_count
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldCorrespondence.expression_of_bodies' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldCorrespondence.expression_of_bodies
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldCorrespondence.arguments_physical' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldCorrespondence.arguments_physical
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldCorrespondence.physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldCorrespondence.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldCompiler.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldCompiler.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldCompiler.firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldCompiler.firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldCompiler.physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldCompiler.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldCompiler.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldCompiler.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldCompiler.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldCompiler.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldCompiler.undefined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldCompiler.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldExamples.nested_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.nested_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldExamples.nested_is_the_generated_grammar' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.nested_is_the_generated_grammar
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldExamples.nested_physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.nested_physical
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldExamples.generated_nested_all_lengths_and_depths' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.generated_nested_all_lengths_and_depths
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldExamples.mutual_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.mutual_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldExamples.differing_delimiters_arities_and_partial_cover' depends on axioms: [propext,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.differing_delimiters_arities_and_partial_cover
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldExamples.mutual_physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.mutual_physical
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldExamples.mutual_language' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.mutual_language
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldExamples.direct_mutual_runs' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.direct_mutual_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldExamples.bad_actual_alphabet_rejected' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.bad_actual_alphabet_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldExamples.uncovered_parameter_rejected' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.uncovered_parameter_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldExamples.delimiter_in_parameter_alphabet_rejected' depends on axioms: [propext,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.delimiter_in_parameter_alphabet_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldExamples.incorrect_raw_declarations_rejected' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.incorrect_raw_declarations_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldExamples.unused_undefined_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.unused_undefined_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldExamples.unused_argument_undefinedness' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.unused_argument_undefinedness
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldExamples.empty_anchor_cycle_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.empty_anchor_cycle_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldExamples.empty_anchor_cycle_undefined' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.empty_anchor_cycle_undefined
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldExamples.three_positive_capture_levels_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.three_positive_capture_levels_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldExamples.direct_three_level_runs' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.direct_three_level_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldExamples.three_level_language' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.three_level_language
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldExamples.unused_actual_preflight_matters' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.unused_actual_preflight_matters
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldExamples.output_annotations_are_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.output_annotations_are_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldExamples.independently_live_typed_fields_checked' depends on axioms: [propext,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.independently_live_typed_fields_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldExamples.independently_live_fields_language' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.independently_live_fields_language
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldExamples.independently_live_fields_direct_runs' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.independently_live_fields_direct_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldExamples.independent_field_failures' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.independent_field_failures
+
+/-- info: 'Shallot.MacroPeg.CBV.TypedFieldExamples.omitted_delimiter_check_changes_the_language' depends on axioms: [propext,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TypedFieldExamples.omitted_delimiter_check_changes_the_language

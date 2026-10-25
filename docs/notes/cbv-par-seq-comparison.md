@@ -16,6 +16,55 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 規則別の区切りと型を持つ、任意個のheader群を生成Seq文法へ
+
+`TypedFieldSyntax/Correspondence/Compiler` は、直下の二段構成を任意個の有限header群へ
+一般化する。各headerは引数slot別のalphabet、戻り値alphabet、自分の区切り文字、
+再照合pattern、生の本体を持つ。arityはheaderごとに異なってよく、nullary headerも
+許可する。helperの別扱いは不要で、nullary/空patternとして同じ相互再帰表で扱う。
+
+actual内の正のproducer callを構文で禁止せず、そのcalleeの実戻り値effectを使って
+次のcalleeの引数alphabetを検査する。parameterはcallerのslot型で扱うので、
+親に依存するactualも許可する。headerの戻り値effectは、宣言されたsource本体に対する
+`CaptureAlphabetEffects.grammarCheck`で検証する。単に注釈を信用する条件ではない。
+source各規則は`sourceBody delimiter pattern body`と一致し、startも宣言rootと一致する
+ことを有限検査する。実行結果やruntimeの語は検査器へ渡さない。
+
+`TypedFieldTransfer.physical_retaining/physical_empty_retaining` は、実actual捕捉が
+満たす任意の不変条件Qを本体へ渡す。compilerではQをcalleeのslot別alphabet環境と
+する。`TypedFieldCorrespondence.physical`は実physical clockに強帰納し、型つきの
+全header・全ての新捕捉・親復帰を同時に扱って、本体同値の仮定を全て外す。
+seq/alt/not/starとactual内の再帰呼出しへ対応し、全actualのpreflightを元順に残す。
+
+`TypedFieldCompiler.physical/observations_iff/language_translation/undefined_iff` は、
+有限検査だけから、全元入力・全physical clock・全有限観測・元文字列言語・
+全clock未定義の保存を証明する。生成規則数は`Σ_i(arity_i+1)`で、入力と保持語に
+依存しない。再照合する値は継続が構文上読むslotだけでよく、何も読まない場合には
+空patternを許可する。元入力への符号化やpaddingはない。
+
+`TypedFieldExamples`は、前の二段例をこのcompilerへ入力すると、以前と全く同じ
+固定Seq文法が生成されることを証明する。前の全n/depthの受理族もこの生成文法へ
+そのまま接続した。別の実相互呼出し例はsource arity `[1,2,0]`、生成先
+`[1,2,1,1,2,0]`、delimiter `#/@/$`。PはQをpredicate内で呼び、QはPをpredicate内で
+呼びつつ、rootのactualでPの正の戻り値全体を捕捉する。使用されない第二slotも保持し、
+nullaryの左再帰は全入力全clock未定義のままである。
+
+三段の正のproducer捕捉、及びproducer全体と別の短い値を独立に再利用する二slotの
+生成先`[1,2,1,1,4]`を直接kernel評価した。異なるslotの戻り順序、空入力側のactual失敗、
+使わないactualの有限失敗と全入力全clock未定義、偽の戻り値effect、欠けたcover、範囲外の
+pattern/規則/arity、raw宣言/rootの不一致を検証する。区切り条件を省くとproducerの
+内部でscannerが止まり、元sourceが受理した同じ入力を生成先が拒否する反例も固定した。
+
+これは**型検査された再照合header群のcompiler**である。すべてのslot alphabetは
+callee自身の区切りを含まないことが必要で、実際に読む値は先頭patternから再捕捉する。
+正の出力effect検査の構文制約も残る。任意の一階Par文法をこの形に正規化できる証明、
+live値を再照合なしで任意位置へ引き継ぐ一般変換、Par/Seq全言語クラスの一致・分離は
+依然未解決である。
+
+今回 5 新 modules・58 新 guard。全 1,396 jobs/Audit と関連 3,814 公開依存
+（標準 Lean 公理 3,730、無公理 84）を検証。PR70は新 Lean 8 modules・97 guard。
+新しい sorry/axiom/native_decide はない。
+
 ## 異なる区切りを持つ、再帰producer全体の新しい捕捉
 
 `CaptureAlphabetEffects` は、規則ごとの戻り値 alphabet と、引数 slot ごとの
@@ -61,7 +110,7 @@ P の入力 alphabet は `a`、出力は `a/#/!`、Q の入力は `a/#/!`、出�
 異なる slot の alphabet を交換する誤代入、不正な戻り値 effect の拒否も検証した。
 
 これは**具体的な二段の固定文法の変換**であり、任意個の異種 header を生成する
-一般 compiler はまだ実装していない。旧 `MutualFieldCompiler` の構文検査も
+compilerへの接続は、上記TypedFieldCompilerで追加した。旧 `MutualFieldCompiler` の構文検査も
 そのままである。一般の Par 文法をこの形へ正規化する証明、再照合 anchor を必要としない
 live 値の引継ぎ、および Par/Seq 全言語クラスの一致・分離は引き続き未解決である。
 

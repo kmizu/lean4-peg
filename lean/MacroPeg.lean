@@ -1,3 +1,8 @@
+import MacroPeg.CBV.TypedFieldTransfer
+import MacroPeg.CBV.TypedFieldSyntax
+import MacroPeg.CBV.TypedFieldCorrespondence
+import MacroPeg.CBV.TypedFieldCompiler
+import MacroPeg.CBV.TypedFieldExamples
 import MacroPeg.CBV.CaptureAlphabetEffects
 import MacroPeg.CBV.NestedFieldProducer
 import MacroPeg.CBV.NestedFieldProducerProofs
