@@ -1,3 +1,7 @@
+import MacroPeg.CBV.FrontierArgumentNormalization
+import MacroPeg.CBV.FrontierArgumentCompiler
+import MacroPeg.CBV.FrontierCaptureCompiler
+import MacroPeg.CBV.FrontierCaptureExamples
 import MacroPeg.CBV.ProducedPrefixFamilyCompiler
 import MacroPeg.CBV.ProducedPrefixFamilyExamples
 import MacroPeg.CBV.SelectedProducerNormalization

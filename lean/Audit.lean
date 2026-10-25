@@ -1,3 +1,7 @@
+import MacroPeg.CBV.FrontierArgumentNormalization
+import MacroPeg.CBV.FrontierArgumentCompiler
+import MacroPeg.CBV.FrontierCaptureCompiler
+import MacroPeg.CBV.FrontierCaptureExamples
 import MacroPeg.CBV.ProducedPrefixFamilyCompiler
 import MacroPeg.CBV.ProducedPrefixFamilyExamples
 import MacroPeg.CBV.SelectedProducerNormalization
@@ -29834,3 +29838,255 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ProducedPrefixFamilyExamples.nullable_target
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierArgumentNormalization.safe_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierArgumentNormalization.safe_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierArgumentNormalization.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierArgumentNormalization.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierArgumentNormalization.success_endpoint' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierArgumentNormalization.success_endpoint
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierArgumentNormalization.preflight_eval' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierArgumentNormalization.preflight_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierArgumentNormalization.successful_arguments' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierArgumentNormalization.successful_arguments
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierArgumentNormalization.call_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierArgumentNormalization.call_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierArgumentCompiler.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierArgumentCompiler.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierArgumentCompiler.ready_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierArgumentCompiler.ready_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierArgumentCompiler.preflight_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierArgumentCompiler.preflight_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierArgumentCompiler.scans_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierArgumentCompiler.scans_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierArgumentCompiler.render_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierArgumentCompiler.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierArgumentCompiler.target_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierArgumentCompiler.target_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierArgumentCompiler.target_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierArgumentCompiler.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierArgumentCompiler.evaluator' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierArgumentCompiler.evaluator
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierArgumentCompiler.related' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierArgumentCompiler.related
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierArgumentCompiler.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierArgumentCompiler.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierArgumentCompiler.undefined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierArgumentCompiler.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureCompiler.choiceAlphabet_sound' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureCompiler.choiceAlphabet_sound
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureCompiler.alphabets_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureCompiler.alphabets_sound
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureCompiler.nested_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureCompiler.nested_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureCompiler.supported_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureCompiler.supported_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureCompiler.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureCompiler.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureCompiler.undefined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureCompiler.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureCompiler.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureCompiler.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.root_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.root_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.small_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.small_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.large_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.large_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.independent_source_arguments' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.independent_source_arguments
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.target_layout' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.target_layout
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.source_simple' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.source_simple
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.target_simple' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.target_simple
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.source_nested' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.source_nested
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.target_nested' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.target_nested
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.unbalanced_source' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.unbalanced_source
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.unbalanced_target' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.unbalanced_target
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.omitting_preflight_accepts_unbalanced' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.omitting_preflight_accepts_unbalanced
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.observations' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.observations
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.first_rule' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.first_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.second_rule' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.second_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.value_succ' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.value_succ
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.balanced_capture' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.balanced_capture
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.choice_failure' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.choice_failure
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.actual_parallel_captures' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.actual_parallel_captures
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.unbounded_source_values' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.unbounded_source_values
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.choice_success' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.choice_success
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.scan_capture' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.scan_capture
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.prepend_literal' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.prepend_literal
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.source_all_lengths' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.source_all_lengths
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.target_all_lengths' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.target_all_lengths
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.nullable_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.nullable_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.nullable_root_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.nullable_root_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.nullable_source' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.nullable_source
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.nullable_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.nullable_target
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.rejecting_unsafe_consumption' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.rejecting_unsafe_consumption
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.rejecting_incorrect_helper_layout' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.rejecting_incorrect_helper_layout
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.missing_frontier_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.missing_frontier_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.FrontierCaptureExamples.ordered_preflight' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrontierCaptureExamples.ordered_preflight

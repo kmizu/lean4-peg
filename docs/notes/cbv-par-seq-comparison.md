@@ -16,6 +16,28 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 独立した再帰引数を入口の実検査とscanner捕捉に分ける
+
+`FrontierArgumentNormalization`は、各実引数を独立した再帰parserとして書ける入口を追加した。
+引数は`P;!choice(A)`であり、Pと実nullary helperの消費経路が文字集合Aの中だけにあることを
+有限検査する。成功すればAの最大runと終端が一致することを、元文法の実テーブルから導く。
+`F(arg0,...,argN)`を、元の引数を同じ入口で順に先読みしてからscanner実引数を渡す呼出しへ
+変換する。元の順序で失敗・未定義を保存し、成功時は全捕捉tupleが同じになる。
+helperの意味や成功終端は仮定として渡さない。
+
+`FrontierArgumentCompiler`は全bodyと開始式を変換し、実再帰文法の観測を保存する。
+`FrontierCaptureCompiler`は、その先を選択producer正規化と既存`NestedScannerFusion`へ有限AST検査で
+接続し、固定した一階Seq文法で元文字列言語・失敗・全clock未定義を保存する。
+具体例では、別々のparserが`a^n b`と`a^n b c^n`を同じ入口から捕捉し、Seqは`a^n b`と`c^n`を
+順に捕捉して復元する。後者のhelperは`R ← a R c / b`という実再帰規則である。
+3規則arity `[0,0,2]`で、全nと全suffixの実捕捉・正例の受理を証明し、異なる親子値を実行した。
+先読みを省くと`a b c c`を誤受理するkernel反例もある。
+
+連続chunkによる復元自体は既存のnested scanner backendを再利用する。
+新しい接続は、累積構文やscannerそのものではない、部分的な再帰実引数の入口検査を保存するもの。
+捕捉終端が文字集合の最大runと一致する条件と、scanner集合の包含順序が必要である。
+任意の独立したPar引数から差分parserを生成する一般構成と、クラス全体の一致・分離は未解決。
+
 ## 実producerと複数の累積捕捉をSeqへ
 
 `SelectedProducerNormalization`を、選択規則の任意の正のarityへ拡張した。
@@ -10121,3 +10143,72 @@ and a matching closed last-argument producer. Arbitrarily specified Par
 argument parsers, arbitrary successful endpoint orders, parameter-dependent
 producers, other body shapes, and the unrestricted language-class question
 remain unresolved.
+
+
+## Independently specified recursive arguments at scanner frontiers
+
+FrontierArgumentNormalization adds a source argument frontend rather than
+a new scanner-difference algorithm. Each descriptor names a finite alphabet
+A, an actual nullary helper prefix, and a parser P. Its real argument is
+P;!choice(A). A finite syntax check validates the actual helper arities and
+bodies and their consuming paths, together with P, using the existing
+ScannerAbsorption safety invariant. Negative queries retain their real
+semantics. Recursive parsers need not be total. A successful actual argument
+must end exactly at the maximal A-run: the safety invariant preserves the
+scanner remainder, and the actual negative frontier query stops the scanner.
+This is proved on original physical tables for arbitrary caller environments.
+
+For any fixed-arity call with checked argument descriptors, the original
+argument tuple is replaced by an ordered sequence of lookaheads followed by
+a call with the corresponding scanner arguments. The original arguments are
+all evaluated from the original position, in their original order. A finite
+failure or undefined argument prevents the scanner call from running. On
+full success, the canonical scanner argument tuple is exactly the original
+tuple. Neither a successful-evaluation premise nor an endpoint-equivalence
+oracle is part of the compiler input. The local call equality holds at the
+same physical clock.
+
+FrontierArgumentCompiler applies this rewrite to matching calls throughout
+actual source rule bodies, alternatives, negations and stars; calls whose
+argument ASTs do not match remain intact. It preserves every declaration
+arity, and closes a BoundedBodyRewrite over the real recursive tables.
+Observation and all-clock undefinedness correspondence include a transformed
+root. The global finite source check includes first-order bodies. The
+framework does not accept the final language correspondence as a certificate.
+
+FrontierCaptureCompiler then composes this ordinary-grammar normalization
+with selected closed-producer normalization and the existing nested-scanner
+compiler. Finite AST equality checks the entire emitted grammar, arities
+included, and the prepared root. A finite scan recognizer and alphabet
+inclusion check validate every backend template call. The final grammar and
+root are fixed before the input, with the original input alphabet and string
+unchanged. The final observations theorem preserves all residuals, finite
+failure and hence language recognition; all-clock undefinedness is proved
+explicitly.
+
+The actual source example has two independently written argument parsers:
+a recursive a-star followed by b, and the actual recursive rule R <- a R c / b.
+Frontier tests use alphabets {a,b} and {a,b,c}. For every n and every suffix
+after !, actual DerivesArgsPar judgments capture a^n b and a^n b c^n. Both
+source values have unbounded length. The generated Seq grammar has three
+rules of arities [0,0,2] and captures adjacent a^n b and c^n chunks; the body
+observes the original tuple through prefix views. The original body begins
+with a real alphabet scanner, which the selected producer frontend replaces
+with the replay of the last captured value before backend fusion. Source
+and target acceptance of the entire positive family, with every suffix, are
+proved through actual derivations and the general correspondence, not just
+finite tests. Direct executions cover n=0,1,2,4 and nested distinct parent/child
+values. Unbalanced counts are rejected on both sides. Omitting the original
+preflight accepts a b c c and its copy payload incorrectly. A nullable first
+argument remains undefined on all inputs and clocks in both grammars.
+Checks reject unsafe helper consumption, incorrect actual helper layout and
+a root missing its frontier queries. A finite failure before an unresolved
+helper call is distinguished from the reversed, undefined order.
+
+The new frontend removes the requirement to write these arguments themselves
+as cumulative parser expressions or as greedy scanners. It does not remove
+the canonical scanner endpoint restriction, nested alphabet order, checked
+closed-producer body shape or backend control syntax. In particular, it does
+not derive residual parsers for arbitrary differently stopping Par arguments.
+Unrestricted Par/Seq class equality or a genuine language separation remains
+open.
