@@ -1,3 +1,4 @@
+import MacroPeg.CBV.SelectedCaptureSafety
 import MacroPeg.Syntax
 import MacroPeg.PegEmbed
 import MacroPeg.CallGraph

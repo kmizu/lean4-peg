@@ -1,3 +1,4 @@
+import MacroPeg.CBV.SelectedCaptureSafety
 import MacroPeg.CBV.RecursiveScannerProductCompiler
 import MacroPeg.CBV.RecursiveScannerProductHelpers
 import MacroPeg.CBV.RecursiveScannerProductHeader
@@ -20404,6 +20405,30 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 #print axioms Shallot.MacroPeg.CBV.SequentialRecursiveScannerExamples.nullable_before_scan
 
 
+/-- info: 'Shallot.MacroPeg.CBV.SelectedCaptureSafety.suffix_shape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedCaptureSafety.suffix_shape
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedCaptureSafety.grammarCheck_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedCaptureSafety.grammarCheck_sound
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedCaptureSafety.physical_rows' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedCaptureSafety.physical_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedCaptureSafety.frozen_rows' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedCaptureSafety.frozen_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedCaptureSafety.capture' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedCaptureSafety.capture
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedCaptureSafety.frozen_capture' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedCaptureSafety.frozen_capture
+
 /-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductCompiler.check_sound' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductCompiler.check_sound
@@ -20427,6 +20452,16 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductCompiler.filter_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductCompiler.scannerBody_firstOrder' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductCompiler.scannerBody_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductCompiler.sourceHeader_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductCompiler.sourceHeader_firstOrder
 
 /-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductCompiler.targetBody_firstOrder' depends on axioms: [propext,
  Classical.choice,
@@ -20563,6 +20598,24 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductHeader.product_body
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductHeader.replay_prefix' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductHeader.replay_prefix
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductHeader.entry_plain_body' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductHeader.entry_plain_body
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductHeader.entry_product_body' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductHeader.entry_product_body
 
 /-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductCorrespondence.source_sound' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
@@ -20751,6 +20804,74 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductExamples.retained_target
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductExamples.mixed_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductExamples.mixed_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductExamples.mixed_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductExamples.mixed_source
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductExamples.mixed_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductExamples.mixed_target
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductExamples.mixed_language' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductExamples.mixed_language
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductExamples.mixed_resumption' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductExamples.mixed_resumption
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductExamples.mixed_short_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductExamples.mixed_short_source
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductExamples.mixed_short_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductExamples.mixed_short_target
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductExamples.partial_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductExamples.partial_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductExamples.partial_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductExamples.partial_source
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductExamples.partial_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductExamples.partial_target
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductExamples.partial_language' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductExamples.partial_language
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductExamples.partial_state_matters' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductExamples.partial_state_matters
 
 /-- info: 'Shallot.MacroPeg.CBV.ParameterizedCaptureSafety.componentCheck_sound' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in

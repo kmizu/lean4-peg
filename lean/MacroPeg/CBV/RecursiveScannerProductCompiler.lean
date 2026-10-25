@@ -1,3 +1,4 @@
+import MacroPeg.CBV.SelectedCaptureSafety
 import MacroPeg.CBV.SequentialRecursiveScanner
 import MacroPeg.CBV.RecursiveScannerHelpers
 
@@ -8,6 +9,13 @@ open CaptureTransitionProfile (profile profiles)
 open SequentialRecursiveScanner (state)
 open StatefulScannerProduct (right)
 abbrev Arg := SequentialRecursiveObserver.Expr
+/-- Each user either scans from its own state or replays its retained value. -/
+abbrev Entries (n : Nat) := Nat → Option (Fin n)
+
+def sourceHeader {n : Nat} : Option (Fin n) → MExp
+  | none => .param 0
+  | some q => .call q.val []
+
 abbrev Mode := Option (Nat × Nat)
 abbrev valid {n : Nat} (M : Machine n) := DynamicScannerCapture.observer_valid M
 
@@ -66,15 +74,15 @@ mutual
     | .notP a, q, r => .seq (.notP (plain M bodies S a)) (if some q=some r then .eps else MExp.failAlways)
 end
 
-def sourceRules {n : Nat} (M : Machine n) (q : Fin n) (bodies : List Arg) : List MRule :=
-  bodies.map (fun b => ⟨1,.seq (.call q.val []) (sourceExpr M b)⟩)
+def sourceRules {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg) : List MRule :=
+  bodies.zipIdx.map (fun (b,i) => ⟨1,.seq (sourceHeader (entries i)) (sourceExpr M b)⟩)
 
-def source {n : Nat} (M : Machine n) (q : Fin n) (bodies : List Arg) : MGrammar :=
-  ⟨helpers M++sourceRules M q bodies⟩
+def source {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg) : MGrammar :=
+  ⟨helpers M++sourceRules M entries bodies⟩
 
 /-- A product row describes the source row from its original entry, even
 though the generated Seq row begins at the actual argument endpoint. -/
-def targetBody {n : Nat} (M : Machine n) (q : Fin n) (bodies : List Arg)
+def scannerBody {n : Nat} (M : Machine n) (q : Fin n) (bodies : List Arg)
     (P : List Nat) (mode : Mode) (b : Arg) : MExp :=
   match DynamicScannerBinding.resume P q with
   | none => MExp.failAlways
@@ -85,15 +93,36 @@ def targetBody {n : Nat} (M : Machine n) (q : Fin n) (bodies : List Arg)
           (fun t => filter M bodies [P] b (right (valid M).1 t).val z)
       else MExp.failAlways
 
-def targetRules {n : Nat} (M : Machine n) (q : Fin n) (bodies : List Arg) : List MRule :=
-  (keys M bodies).map (fun (i,P,mode) => ⟨1,match bodies[i]? with
-    | none => MExp.failAlways | some b => targetBody M q bodies P mode b⟩)
+/-- A replay row removes exactly the captured prefix; a scanner row
+resumes from the state determined by that same complete capture. -/
+def targetBody {n : Nat} (M : Machine n) (entry : Option (Fin n)) (bodies : List Arg)
+    (P : List Nat) (mode : Mode) (b : Arg) : MExp :=
+  match entry with
+  | some q => scannerBody M q bodies P mode b
+  | none => match mode with
+    | none => plain M bodies [P] b
+    | some (a,z) => if ha : a<(observer M).width then
+        filter M bodies [P] b (state M P ⟨a,ha⟩).val z
+      else MExp.failAlways
 
-def target {n : Nat} (M : Machine n) (q : Fin n) (bodies : List Arg) : MGrammar :=
-  ⟨helpers M++targetRules M q bodies⟩
+def targetRules {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg) : List MRule :=
+  (keys M bodies).map (fun (i,P,mode) => ⟨1,match bodies[i]? with
+    | none => MExp.failAlways | some b => targetBody M (entries i) bodies P mode b⟩)
+
+def target {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg) : MGrammar :=
+  ⟨helpers M++targetRules M entries bodies⟩
+
+/-- Closed helper rows are certified only when their consumed words are
+safe from every scanner state. Otherwise they remain available to ordinary
+users and queries but are excluded from consuming argument paths. -/
+def helperSafe {n : Nat} (M : Machine n) : Bool :=
+  (helpers M).all (fun r => ParameterizedCaptureSafety.check M (offset M) r.body)
+
+def selected {n : Nat} (M : Machine n) (safeUsers : Nat) (i : Nat) : Bool :=
+  if i<offset M then helperSafe M else decide (i<offset M+safeUsers)
 
 def argumentCheck {n : Nat} (M : Machine n) (safeUsers : Nat) : Arg → Bool :=
-  fun a => ParameterizedCaptureSafety.check M (offset M+safeUsers) (sourceExpr M a)
+  fun a => SelectedCaptureSafety.check M (selected M safeUsers) (sourceExpr M a)
 
 /-- Only positive calls on a consuming argument path require a certified
 source component. Calls inside queries retain their ordinary semantics. -/
@@ -103,9 +132,9 @@ def check {n : Nat} (M : Machine n) (bodies : List Arg) (safeUsers : Nat) : Arg 
   | .star a | .notP a => check M bodies safeUsers a
   | _ => true
 
-def sourceSafe {n : Nat} (M : Machine n) (q : Fin n) (bodies : List Arg) (safeUsers : Nat) : Bool :=
+def sourceSafe {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg) (safeUsers : Nat) : Bool :=
   decide (safeUsers≤bodies.length) &&
-    ParameterizedCaptureSafety.componentCheck M (source M q bodies) (offset M+safeUsers)
+    SelectedCaptureSafety.grammarCheck M (source M entries bodies) (selected M safeUsers)
 
 def Valid {n : Nat} (M : Machine n) (bodies : List Arg) (safeUsers : Nat) : Arg → Prop
   | .user i a => i<bodies.length ∧ argumentCheck M safeUsers a=true ∧ Valid M bodies safeUsers a
@@ -123,10 +152,10 @@ theorem check_sound {n : Nat} (M : Machine n) (bodies : List Arg) (safeUsers : N
   | .star a, h | .notP a, h => check_sound M bodies safeUsers a h
   | .lit _, _ | .param _, _ => True.intro
 
-abbrev sourceTable {n : Nat} (M : Machine n) (q : Fin n) (bodies : List Arg) (x : List Char) (k : Nat) :=
-  RecursiveParserStability.frozen (helperBodies M) (source M q bodies) x .callByValuePar k
-abbrev targetTable {n : Nat} (M : Machine n) (q : Fin n) (bodies : List Arg) (x : List Char) (k : Nat) :=
-  RecursiveParserStability.frozen (helperBodies M) (target M q bodies) x .callByValueSeq k
+abbrev sourceTable {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg) (x : List Char) (k : Nat) :=
+  RecursiveParserStability.frozen (helperBodies M) (source M entries bodies) x .callByValuePar k
+abbrev targetTable {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg) (x : List Char) (k : Nat) :=
+  RecursiveParserStability.frozen (helperBodies M) (target M entries bodies) x .callByValueSeq k
 
 theorem helpers_length {n : Nat} (M : Machine n) : offset M=n+(n*(observer M).width)*(n*(observer M).width) := by
   simp [offset,helpers,StatefulScanner.block_length,ObservedScannerDispatch.length]
@@ -164,9 +193,9 @@ mutual
     | .notP a, q, r => by simp only [filter]; split <;> exact ⟨plain_firstOrder M bodies S a,True.intro⟩
 end
 
-theorem targetBody_firstOrder {n : Nat} (M : Machine n) (q : Fin n) (bodies : List Arg)
-    (P : List Nat) (mode : Mode) (b : Arg) : (targetBody M q bodies P mode b).FirstOrder := by
-  unfold targetBody
+theorem scannerBody_firstOrder {n : Nat} (M : Machine n) (q : Fin n) (bodies : List Arg)
+    (P : List Nat) (mode : Mode) (b : Arg) : (scannerBody M q bodies P mode b).FirstOrder := by
+  unfold scannerBody
   cases DynamicScannerBinding.resume P q with
   | none => trivial
   | some r => cases mode with
@@ -178,22 +207,39 @@ theorem targetBody_firstOrder {n : Nat} (M : Machine n) (q : Fin n) (bodies : Li
       · exact ObservedScannerDispatch.dispatch_firstOrder _ _ _ _ (fun t => filter_firstOrder M bodies [P] b _ _)
       · trivial
 
+theorem sourceHeader_firstOrder {n : Nat} (entry : Option (Fin n)) :
+    (sourceHeader entry).FirstOrder := by cases entry <;> trivial
+
+theorem targetBody_firstOrder {n : Nat} (M : Machine n) (entry : Option (Fin n)) (bodies : List Arg)
+    (P : List Nat) (mode : Mode) (b : Arg) : (targetBody M entry bodies P mode b).FirstOrder := by
+  cases entry with
+  | some q => exact scannerBody_firstOrder M q bodies P mode b
+  | none =>
+    cases mode with
+    | none => exact plain_firstOrder M bodies [P] b
+    | some pair =>
+      obtain ⟨a,z⟩ := pair
+      simp only [targetBody]
+      split
+      · exact filter_firstOrder M bodies [P] b _ _
+      · trivial
+
 theorem helpers_firstOrder {n : Nat} (M : Machine n) : ∀ r∈helpers M, r.body.FirstOrder := by
   intro r hr
   rcases List.mem_append.mp hr with hr | hr
   · exact StatefulScanner.block_firstOrder M (fun _ => true) 0 r hr
   · exact ObservedScannerDispatch.firstOrder M (observer M) (valid M) n r hr
 
-theorem source_firstOrder {n : Nat} (M : Machine n) (q : Fin n) (bodies : List Arg) :
-    (source M q bodies).FirstOrder := by
+theorem source_firstOrder {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg) :
+    (source M entries bodies).FirstOrder := by
   intro r hr
   rcases List.mem_append.mp hr with hr | hr
   · exact helpers_firstOrder M r hr
-  · obtain ⟨b,_,rfl⟩ := List.mem_map.mp hr
-    exact ⟨True.intro,sourceExpr_firstOrder M b⟩
+  · obtain ⟨⟨b,i⟩,_,rfl⟩ := List.mem_map.mp hr
+    exact ⟨sourceHeader_firstOrder (entries i),sourceExpr_firstOrder M b⟩
 
-theorem target_firstOrder {n : Nat} (M : Machine n) (q : Fin n) (bodies : List Arg) :
-    (target M q bodies).FirstOrder := by
+theorem target_firstOrder {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg) :
+    (target M entries bodies).FirstOrder := by
   intro r hr
   rcases List.mem_append.mp hr with hr | hr
   · exact helpers_firstOrder M r hr
@@ -201,7 +247,7 @@ theorem target_firstOrder {n : Nat} (M : Machine n) (q : Fin n) (bodies : List A
     dsimp only []
     cases bodies[i]? with
     | none => trivial
-    | some b => exact targetBody_firstOrder M q bodies P mode b
+    | some b => exact targetBody_firstOrder M (entries i) bodies P mode b
 
 theorem mode_plain_mem {n : Nat} (M : Machine n) : none∈modes M := by simp [modes]
 theorem mode_filter_mem {n : Nat} (M : Machine n) (q r : Nat)
@@ -213,15 +259,15 @@ theorem key_mem {n : Nat} (M : Machine n) (bodies : List Arg) (i : Nat) (hi : i<
     (P : List Nat) (hP : P∈profiles (observer M)) (mode : Mode) (hm : mode∈modes M) : (i,P,mode)∈keys M bodies :=
   List.mem_flatMap.mpr ⟨i,List.mem_range.mpr hi,List.mem_flatMap.mpr ⟨P,hP,List.mem_map.mpr ⟨mode,hm,rfl⟩⟩⟩
 
-theorem source_rule {n : Nat} (M : Machine n) (q : Fin n) (bodies : List Arg) (i : Nat) (b : Arg)
-    (hi : bodies[i]?=some b) : ruleAtM (source M q bodies).rules (offset M+i)=some ⟨1,.seq (.call q.val []) (sourceExpr M b)⟩ := by
+theorem source_rule {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg) (i : Nat) (b : Arg)
+    (hi : bodies[i]?=some b) : ruleAtM (source M entries bodies).rules (offset M+i)=some ⟨1,.seq (sourceHeader (entries i)) (sourceExpr M b)⟩ := by
   simp only [source,offset,ruleAtM_eq_getElem?]
   rw [List.getElem?_append_right (by omega)]
-  simp only [Nat.add_sub_cancel_left,sourceRules,List.getElem?_map,hi,Option.map_some]
+  simp only [Nat.add_sub_cancel_left,sourceRules,List.getElem?_map,List.getElem?_zipIdx,hi,Option.map_some,Nat.zero_add]
 
-theorem target_rule {n : Nat} (M : Machine n) (q : Fin n) (bodies : List Arg) (i : Nat) (b : Arg)
+theorem target_rule {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg) (i : Nat) (b : Arg)
     (hi : bodies[i]?=some b) (P : List Nat) (hP : P∈profiles (observer M)) (mode : Mode) (hm : mode∈modes M) :
-    ruleAtM (target M q bodies).rules (address M bodies i P mode)=some ⟨1,targetBody M q bodies P mode b⟩ := by
+    ruleAtM (target M entries bodies).rules (address M bodies i P mode)=some ⟨1,targetBody M (entries i) bodies P mode b⟩ := by
   have hk := DependentProfileCall.index_correct (i,P,mode) (keys M bodies)
     (key_mem M bodies i (List.getElem?_eq_some_iff.mp hi).1 P hP mode hm)
   simp only [target,address,offset,ruleAtM_eq_getElem?]
