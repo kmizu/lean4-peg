@@ -1,3 +1,5 @@
+import MacroPeg.CBV.ScannerFrontierValues
+import MacroPeg.CBV.NestedCapturedOriginExamples
 import MacroPeg.CBV.CapturedOriginQuery
 import MacroPeg.CBV.CapturedOriginNormalization
 import MacroPeg.CBV.CapturedOriginCompiler

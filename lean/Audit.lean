@@ -1,3 +1,5 @@
+import MacroPeg.CBV.ScannerFrontierValues
+import MacroPeg.CBV.NestedCapturedOriginExamples
 import MacroPeg.CBV.CapturedOriginQuery
 import MacroPeg.CBV.CapturedOriginNormalization
 import MacroPeg.CBV.CapturedOriginCompiler
@@ -30991,3 +30993,234 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.CapturedOriginExamples.skipping_argument_preflight_accepts' depends on axioms: [propext] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.CapturedOriginExamples.skipping_argument_preflight_accepts
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontierValues.word_empty_iff' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontierValues.word_empty_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontierValues.pre_word' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontierValues.pre_word
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontierValues.values_words' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontierValues.values_words
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontierValues.empty_remainder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontierValues.empty_remainder
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontierValues.probe_eval' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontierValues.probe_eval
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontierValues.strip_origin_prefix' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontierValues.strip_origin_prefix
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontierValues.strip_at_frontier' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontierValues.strip_at_frontier
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontierValues.frontier_parameter' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontierValues.frontier_parameter
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerFrontierValues.scanner_argument' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerFrontierValues.scanner_argument
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.root_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.root_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.source_both_orders' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.source_both_orders
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.target_both_orders' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.target_both_orders
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.same_origin_is_essential' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.same_origin_is_essential
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.recursive_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.recursive_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.recursive_root_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.recursive_root_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.recursive_source' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.recursive_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.recursive_target' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.recursive_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.observations' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.observations
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.empty_cases_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.empty_cases_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.empty_root_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.empty_root_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.empty_cases_source' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.empty_cases_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.empty_cases_target' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.empty_cases_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.nested_empty_branch_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.nested_empty_branch_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.nested_empty_branch_target' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.nested_empty_branch_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.nested_empty_branch_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.nested_empty_branch_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.canonical_probe_eval' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.canonical_probe_eval
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.nullable_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.nullable_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.nullable_root_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.nullable_root_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.star_fails_to_progress' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.star_fails_to_progress
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.star_stops_when_both_nonempty' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.star_stops_when_both_nonempty
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.scan_preflight' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.scan_preflight
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.nullable_closed_rows' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.nullable_closed_rows
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.nullable_source_all_clocks' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.nullable_source_all_clocks
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.nullable_target_all_clocks' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.nullable_target_all_clocks
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.diverging_tail_checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.diverging_tail_checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.nonempty_replay_fails_before_diverging_tail' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.nonempty_replay_fails_before_diverging_tail
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.empty_replay_enters_diverging_tail' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.empty_replay_enters_diverging_tail
+
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.stateful_frontier_can_replay' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedCapturedOriginExamples.stateful_frontier_can_replay
+
+
+/-- info: 'Shallot.MacroPeg.CBV.CapturedOriginQuery.render_choose' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CapturedOriginQuery.render_choose
+
+
+/-- info: 'Shallot.MacroPeg.CBV.CapturedOriginQuery.choose_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CapturedOriginQuery.choose_eval
+
+
+/-- info: 'Shallot.MacroPeg.CBV.CapturedOriginQuery.render_andP_origin' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CapturedOriginQuery.render_andP_origin
+
+
+/-- info: 'Shallot.MacroPeg.CBV.CapturedOriginQuery.frontier_aligned' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CapturedOriginQuery.frontier_aligned

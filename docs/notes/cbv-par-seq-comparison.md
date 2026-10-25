@@ -16,6 +16,29 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 再照合後に別の保持値も読む入れ子検査
+
+`CapturedOriginQuery.Plan.follow`は`&(param_k;plan)`を追加し、再照合後のplanでも
+他の保持値を再照合できるようにした。従来のafter leafのclosed後続条件は維持するが、
+入れ子のplan自体は親の両保持値を参照してよい。
+
+新しい`ScannerFrontierValues`は、非空の最大文字集合scannerを読んだ終端では、
+同じ原点からの非空捕捉は先頭文字が一致せず再照合できないと証明する。
+他方の捕捉がscanner由来でなくても、元入力のprefixであれば同じ局所性質が成り立つ。
+空の値だけはその場で再照合できる。入口の2ビットの空/非空検査から後続planを特殊化し、
+最初の値が空の場合は原点に留まる通常のquery変換へ戻す。
+seq/alt/not/starと再帰するclosed queryを含む既存の実テーブル対応・元文字列言語変換へ接続した。
+
+元とSeqで両停止順序、親子順序反転、片方だけ空・両方空、空の値から非空の値へ進む
+二段の再照合を検証した。`star(&(param0;&(param1;eps)))`は、片方でも空なら全clock未定義で、
+両方非空なら本体の有限失敗でstarを抜ける。この条件を任意入力と実表で証明した。
+二つとも非空なら後続のnullableな式へ入る前に再照合が失敗し、他方が空なら後続で未定義になる例も検証した。
+
+この終端分類はstatelessな文字集合scannerの現在位置についてのもの。
+状態が変わるscannerでは保持したabが終端の残りabへ再照合できる反例があり、
+この規則を一般finite-state scannerや全ての後続位置へ拡張することはできない。
+最大scanner終端・指定消費head・planの零幅制御という条件と、クラス全体の一致/分離は未解決。
+
 ## 保持値を再照合した先の検査を入口へ
 
 `CapturedOriginQuery`は、元位置から`&(param0;C)`または`&(param1;C)`を実行する検査を扱う。
@@ -10537,3 +10560,62 @@ continuation after replay, arbitrary capture endpoints or arbitrary consuming
 body prefixes. Maximal scanner-frontier arguments and the designated actual
 maximum-scanner head remain required; the full language-class comparison
 is still unresolved.
+
+
+## Nested tests of other retained values after replay
+
+Plan.follow k q compiles the original query &(param_k;q), where q is
+another query plan rather than an arbitrary closed expression. It may
+therefore inspect either old retained value after the first replay, and
+may nest further replays. The existing test and after leaves keep their
+closed-expression checks. Every plan component still restores its starting
+position, including partial stars, so parent-dependent tests do not drift
+through arbitrary consuming continuations.
+
+ScannerFrontierValues proves the semantic condition behind the new compiler.
+After a nonempty maximal run of a stateless character-set scanner, every
+nonempty prefix captured from the same origin starts with a character that
+the current frontier cannot match. An empty word remains replayable. The
+other word need not itself be a scanner capture for this local prefix lemma.
+For the compiler's two actual scanner arguments, exact capture/word equations
+identify their empty bits with the source's first-character membership tests.
+No finite enumeration of possible captured strings is used.
+
+A canonical follow query branches at the original position on those two
+empty bits. If the selected capture is empty, replay consumes nothing and
+translation continues at the original position. If it is nonempty, the
+corresponding scanner advances to its actual frontier, where nonempty old
+parameter replays specialize to failure and empty ones to zero success.
+Closed query leaves retain their actual computations. Structural induction
+includes seq, ordered choice, negation, nested follow and nullable star;
+source and canonical results agree at the same clock. The existing actual
+recursive-table normalization and guarded Seq header compiler then preserve
+original observations/language and the k-to-2k / k-to-k bounds without changes
+to their public input assumptions. The target remains twelve fixed rules.
+
+NestedCapturedOriginExamples verifies both nonempty captures in either order
+at n=1,2,4, recursive parent/child order reversal, and current-parent value
+restoration. Scanner-argument variants check first-only, second-only and both
+empty captures, including a nested query that first replays an empty value
+and then a nonempty one. On the same input, changing actual ab/a captures to
+foreign a/b values changes the nested query result; the compiler's same-origin
+capture invariant is essential and is proved rather than assumed.
+
+For &(param0;&(param1;eps)), a symbolic evaluator theorem on every input and
+table gives failure exactly when both original captures are nonempty, and
+zero success otherwise. Its star therefore remains undefined at every clock
+on every input with at least one empty scanner capture, in the full original
+scanner-argument program and generated Seq grammar. A both-nonempty input
+instead exits the star through finite failure and is accepted. Replacing the
+innermost eps by eps-star checks that a nonempty second replay fails before
+entering the divergent continuation, while an empty second replay enters it
+and stays undefined.
+
+The current-frontier limitation is explicit: the state-changing scanner
+with transitions a from its initial state and then b-star consumes ab from
+abab and stops before another ab, which the retained value can replay.
+This kernel counterexample rules out applying the stateless empty-bit
+specialization to general stateful scanner frontiers. It also does not claim
+that nonempty values remain dead at all later input positions. Arbitrary
+consuming dependent continuations, arbitrary capture endpoints and the full
+Par/Seq language-class equality or separation remain unresolved.
