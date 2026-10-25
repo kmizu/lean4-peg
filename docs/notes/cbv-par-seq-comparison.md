@@ -16,6 +16,26 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 実scannerを前半に持つ二捕捉bodyをSeqへ
+
+`ScannedPairFusion`は、元の二引数bodyが保持値を先頭再照合する条件を外した。
+元bodyは`maxScanner(A,B);tail`で始まる。maxScannerは入力から停止順序を選び、
+長い方の文字集合scannerを実際に走査するclosed parserで、保持値paramを読まない。
+nullary helperと二捕捉userの実テーブル対応を、実引数から得た終端に限って同時帰納する。
+生成Seqは前回と同じ二つのchunkを捕捉し、元の両値を復元して同じtailへ入る。
+
+`ProducedFrontierPairCompiler`は、独立再帰引数の元の左順検査を残す準備から、
+この新しい元bodyへ全grammar/rootの有限AST一致検査で接続する。
+全入力の残余・失敗・元文字列言語・全clock未定義を保存し、元の先頭replayは要求しない。
+例では両停止順序、親子で長短が逆になる再帰、空捕捉の子、親二値復元を元/Seqで検証した。
+二つの文字集合の和を走査すると長い方の終端まで越える`abc!ab:a`の反例を確認し、
+そのheadを誤って通す構文検査ではないことも検証した。
+同じ元文法をそのままSeqで動かす例は2文字を残すが、生成文法は全消費する。
+これは文法変換の必要性を示す例であり、クラス分離の主張ではない。
+
+最大scanner終端という実引数条件と、そこまで読む指定closed headは残る。
+任意PEG前半・任意停止位置への一般変換とPar/Seqクラス全体の一致/分離は未解決。
+
 ## 独立した二つの再帰捕捉の順序を入力から選ぶ
 
 `MaskedScannerAbsorption`は文字集合ごとに消費経路の安全なhelper候補を計算し、
@@ -10292,3 +10312,60 @@ This removes uniform helper-alphabet and static endpoint-order conditions
 for this two-capture frontend. Maximal scanner-frontier success endpoints,
 two source captures and the replay-shaped body remain required. The
 unrestricted Par/Seq language-class question remains unresolved.
+
+
+## An actual consuming head instead of longest-value replay
+
+ScannedPairFusion uses the same mixed helper/user entry data and the same
+fixed Seq target as MixedScannerPairFusion, but changes the source pair body.
+It begins with maxScanner(A,B);tail. maxScanner branches on the existing
+closed stopping-order query, then actually runs scan B or scan A from the
+source position. It contains no retained parameter and reaches the longer
+actual scanner endpoint for every input, table and environment.
+
+The source-to-target row invariant is now restricted to actual scanner
+argument values and their actual endpoints. The earlier replay-shaped row
+relation, which allowed arbitrary hypothetically aligned values and suffixes,
+would not justify replacing a real parser by a parameter. The new invariant
+relates the real reconstructed source tuple at p to the two target chunks at
+the actual finalPos. Nullary helper rows and these pair rows close together
+at every physical clock. The structural evaluator proof and fixed-point
+observations theorem then preserve both captured values and all residuals.
+No actual row behavior or successful capture assumption is accepted from
+outside the proof.
+
+ProducedFrontierPairCompiler connects original independent recursive
+arguments to this source by the existing ordered preflight normalization
+and a finite equality check of the entire emitted grammar, including helper
+arities, plus a checked rendered root. The language theorem uses one fixed
+first-order Seq grammar on the unchanged original strings. Finite failure
+and all-clock undefinedness are preserved explicitly. This closes the
+leading-replay restriction for these specified actual consuming heads;
+it does not infer arbitrary prefix/body rewrites.
+
+ProducedFrontierPairExamples keeps the a-star, balanced a/b and balanced a/c
+actual recursive helpers. The original pair user consumes its head by the
+closed maxScanner before observing either retained parameter. Direct source
+and target executions cover n=1,2,4 in both stopping orders, parent/child
+order reversal in both directions, restoration of the parent's two values,
+and an empty-capture child. All-input observations are instantiated for the
+ordinary and recursively calling variants. A general all-input correspondence
+with the earlier replay-shaped original is also derived through their shared
+fixed Seq target. A nullable first argument stays undefined on every input
+and clock in both new original and target.
+
+The union of scanner alphabets is not a valid implementation of the maximum
+endpoint: on abc!ab:a the {a,b}/{a,c} source captures ab and a, so its real
+maximum head stops before c and the continuation fails. A union scanner
+incorrectly consumes abc and accepts the remaining payload. Both behaviors
+and rejection of the wrong source head by the finite grammar check are
+kernel verified. Running the unmodified new source under Seq on the n=2
+b sample leaves two characters, while the generated Seq target consumes all;
+this is an operational distinction used to validate the translation, not
+language-class separation.
+
+The actual consuming head must still be this closed maximum-scanner parser,
+and successful original arguments must end at their certified scanner
+frontiers. Arbitrary PEG prefixes, other body entry endpoints, general
+independent argument differences and the full Par/Seq class question remain
+unresolved.
