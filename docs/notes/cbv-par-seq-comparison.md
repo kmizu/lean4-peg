@@ -102,6 +102,33 @@ abc 引数が ab 上で失敗すると本体 a は実行されず、nullable 引
 非依存 leaf には capture 終点以後の制約がなくなったが、旧値を使う消費 leaf の
 指定入口形式、unary、共通 machine、成功する有限 profile 注釈は引き続き制約である。
 
+固定 shift の捕捉にも、可読性による事前制限を弱めた。
+`ScannerReplayResidual.completeCheck` は、ラベル付き状態がラベル先頭文字の遷移を
+実際に持つことを有限検査する。従来の `check` は存在する全 arc の回転だけを検査し、
+必要な arc がない場合も通るので、二つの検査を区別する。実入力の捕捉 prefix w と
+入口の成功から `w ++ tail = u ++ w ++ rest` が得られ、二つの有限検査により
+その w の全体が実 residual machine に可読だと帰納できる。従って非可読なら
+実元入口 `lit u; param0` は、任意の文法・実 table・clock で有限失敗する。
+
+profile 経路の `entryCheck M` は shift について、従来の実 profile 可読性または
+この機械の完全性を受け入れる。可読時は従来の回転、非可読時は実入口の有限失敗を
+導き、既存の失敗を生成する targetHeader/shiftedBody へ接続した。plain/product 行、
+選択を確定する header 制御、caller の元位置 Plan、有限 grammar/body/root 検査と
+全入力 SObs・固定 Seq 元文字列言語・physical 定義未定義の定理にそのまま合成する。
+元の actual 引数評価は残り、未定義が失敗に置き換わることはない。
+
+`UncheckedShiftCaptureExamples` の一つの実引数は `(ab)*;c` と従来の非有界引数を選ぶ。
+前者の `abababc` は実 unary call で捕捉に成功するが、ab 残余周期には非可読であり、
+旧可読性検査は false、新入口検査は true となる。shift 呼出しは有限失敗し、その負の
+query を通る別 user は元位置で a を一文字だけ消費する。後者の枝では既存の
+親・子の全捕捉を再利用する再帰が成功する。両方を生成 Seq の物理実行と全入力言語へ
+接続し、nullable 実引数は全入力全 clock で未定義を保つ。必要 arc を欠く一状態機械は
+旧 sound-label 検査に通っても、実 a 捕捉から a 再照合に成功し得る。この機械を
+completeCheck と弱化後の入口検査が拒否する反例も kernel で確認する。
+完全な residual machine の shift では捕捉の可読性制約が不要になった。
+任意の捕捉依存 PEG prefix、独立複数捕捉、一般 Par/Seq 一致・分離は未解決である。
+
+
 
 `ParSimulation.translate source start` は元の文法と開始式だけから一つの固定文法を作る。
 `translate_recognizes` は、全ての元の文字列 `x : List Char` について、

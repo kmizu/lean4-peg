@@ -1,3 +1,4 @@
+import MacroPeg.CBV.UncheckedShiftCaptureExamples
 import MacroPeg.CBV.CaptureIndependentOriginExamples
 import MacroPeg.CBV.ScannerOriginControl
 import MacroPeg.CBV.ScannerOriginControlExamples
@@ -21765,3 +21766,99 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.CaptureIndependentOriginExamples.short_language
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerReplayResidual.readable_of_overlap' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerReplayResidual.readable_of_overlap
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerReplayResidual.replay_unreadable' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerReplayResidual.replay_unreadable
+
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveScannerProductHeader.shift_complete_of_unreadable' depends on axioms: [propext,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveScannerProductHeader.shift_complete_of_unreadable
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UncheckedShiftCaptureExamples.checked' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UncheckedShiftCaptureExamples.checked
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UncheckedShiftCaptureExamples.all_shift_profiles' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UncheckedShiftCaptureExamples.all_shift_profiles
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UncheckedShiftCaptureExamples.actual_unreadable_capture' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UncheckedShiftCaptureExamples.actual_unreadable_capture
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UncheckedShiftCaptureExamples.unreadable_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UncheckedShiftCaptureExamples.unreadable_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UncheckedShiftCaptureExamples.unreadable_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UncheckedShiftCaptureExamples.unreadable_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UncheckedShiftCaptureExamples.readable_recursive_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UncheckedShiftCaptureExamples.readable_recursive_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UncheckedShiftCaptureExamples.readable_recursive_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UncheckedShiftCaptureExamples.readable_recursive_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UncheckedShiftCaptureExamples.language' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UncheckedShiftCaptureExamples.language
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UncheckedShiftCaptureExamples.guarded_language' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UncheckedShiftCaptureExamples.guarded_language
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UncheckedShiftCaptureExamples.nullable_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UncheckedShiftCaptureExamples.nullable_source
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UncheckedShiftCaptureExamples.nullable_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UncheckedShiftCaptureExamples.nullable_target
+
+
+/-- info: 'Shallot.MacroPeg.CBV.UncheckedShiftCaptureExamples.missing_arc_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.UncheckedShiftCaptureExamples.missing_arc_rejected

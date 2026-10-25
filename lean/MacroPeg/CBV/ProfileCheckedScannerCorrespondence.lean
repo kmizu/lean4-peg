@@ -15,13 +15,13 @@ open RecursiveCaptureProfiles (Summary ScannerSummary effects scopeCheck scope_s
 
 abbrev Inputs := Nat → List (List Nat)
 
-def inputCheck {n : Nat} (entries : Entries n) (A : Inputs) (i : Nat) (P : List Nat) : Bool :=
-  (A i).contains P && RecursiveScannerProductHeader.entryCheck (entries i) P
+def inputCheck {n : Nat} (M : Machine n) (entries : Entries n) (A : Inputs) (i : Nat) (P : List Nat) : Bool :=
+  (A i).contains P && RecursiveScannerProductHeader.entryCheck M (entries i) P
 
 def check {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
     (C : Summary) (A : Inputs) (S : List (List Nat)) : Arg → Bool
   | .user i a => decide (i<bodies.length) &&
-      ((effects M C S a).all (inputCheck entries A i) && check M entries bodies C A S a)
+      ((effects M C S a).all (inputCheck M entries A i) && check M entries bodies C A S a)
   | .seq a b | .alt a b => check M entries bodies C A S a && check M entries bodies C A S b
   | .notP a | .star a => check M entries bodies C A S a
   | _ => true
@@ -29,7 +29,7 @@ def check {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
 def Valid {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
     (C : Summary) (A : Inputs) (S : List (List Nat)) : Arg → Prop
   | .user i a => i<bodies.length ∧
-      (effects M C S a).all (inputCheck entries A i)=true ∧ Valid M entries bodies C A S a
+      (effects M C S a).all (inputCheck M entries A i)=true ∧ Valid M entries bodies C A S a
   | .seq a b | .alt a b => Valid M entries bodies C A S a ∧ Valid M entries bodies C A S b
   | .notP a | .star a => Valid M entries bodies C A S a
   | _ => True
@@ -53,12 +53,12 @@ theorem valid_scoped {n : Nat} (M : Machine n) (entries : Entries n) (bodies : L
 
 def bodiesCheck {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg) (C : Summary) (A : Inputs) : Bool :=
   entriesCheck M entries bodies && bodies.zipIdx.all (fun (b,i) => (profiles (observer M)).all (fun P =>
-    !inputCheck entries A i P || check M entries bodies C A [P] b))
+    !inputCheck M entries A i P || check M entries bodies C A [P] b))
 
 theorem body_checked {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg)
     (C : Summary) (A : Inputs) (h : bodiesCheck M entries bodies C A=true) (i : Nat) (b : Arg)
     (hi : bodies[i]?=some b) (P : List Nat) (hP : P∈profiles (observer M))
-    (hp : inputCheck entries A i P=true) : check M entries bodies C A [P] b=true := by
+    (hp : inputCheck M entries A i P=true) : check M entries bodies C A [P] b=true := by
   have hm : (b,i)∈bodies.zipIdx := List.mem_of_getElem? (show bodies.zipIdx[i]?=some (b,i) from by
     simp [List.getElem?_zipIdx,hi])
   have hh := (List.all_eq_true.mp ((List.all_eq_true.mp (Bool.and_eq_true_iff.mp h).2) (b,i) hm)) P hP
@@ -66,7 +66,7 @@ theorem body_checked {n : Nat} (M : Machine n) (entries : Entries n) (bodies : L
 
 def Rows {n : Nat} (M : Machine n) (entries : Entries n) (bodies : List Arg) (A : Inputs) (x : List Char) (k : Nat) : Prop :=
   ∀ i b, bodies[i]?=some b → ∀ w p j, p≤x.length → j≤x.length → sfx x p=w++sfx x j →
-    (inputCheck entries A i (profile (observer M) w)=true) →
+    (inputCheck M entries A i (profile (observer M) w)=true) →
     (valAt (sourceTable M entries bodies x k (offset M+i) [w]) p=
       valAt (targetTable M entries bodies x k (address M bodies i (profile (observer M) w) none) [w]) j) ∧
     (∀ q t, q<(observer M).width → t<(observer M).width →
@@ -81,7 +81,7 @@ theorem user_correct {n : Nat} (M : Machine n) (entries : Entries n) (bodies : L
     (a : Arg) (S : List (List Nat)) (E : List (List Char))
     (hS : DependentCaptureFilter.Accurate (observer M) S E)
     (hScoped : RecursiveCaptureProfiles.Scoped bodies a)
-    (ha : (effects M C S a).all (inputCheck entries A i)=true) (p : Nat) (hp : p≤x.length)
+    (ha : (effects M C S a).all (inputCheck M entries A i)=true) (p : Nat) (hp : p≤x.length)
     (hplain : evV (target M entries bodies) x .callByValueSeq (targetTable M entries bodies x k) E (plain M bodies S a) p=
       evV (source M entries bodies) x .callByValuePar (sourceTable M entries bodies x k) E (sourceExpr M a) p)
     (hfilter : ∀ q r, q<(observer M).width → r<(observer M).width →
@@ -110,7 +110,7 @@ theorem user_correct {n : Nat} (M : Machine n) (entries : Entries n) (bodies : L
         obtain ⟨hjp,w,hwprofile,hs⟩ := hShape
         have hpre : pre x p j=w := by
           simpa only [length_sfx x hp,length_sfx x (Nat.le_trans hjp hp)] using pre_eq (sfx_is_suffix x p) hs
-        have hw : inputCheck entries A i (profile (observer M) (pre x p j))=true :=
+        have hw : inputCheck M entries A i (profile (observer M) (pre x p j))=true :=
           (List.all_eq_true.mp ha) _ (hpre.symm ▸ hwprofile)
         exact (hRows i b hi _ p j hp hj hcap hw).1.symm
   · intro q r hq hr
@@ -129,7 +129,7 @@ theorem user_correct {n : Nat} (M : Machine n) (entries : Entries n) (bodies : L
         obtain ⟨hjp,w,hwprofile,hs⟩ := hShape
         have hpre : pre x p j=w := by
           simpa only [length_sfx x hp,length_sfx x (Nat.le_trans hjp hp)] using pre_eq (sfx_is_suffix x p) hs
-        have hw : inputCheck entries A i (profile (observer M) (pre x p j))=true :=
+        have hw : inputCheck M entries A i (profile (observer M) (pre x p j))=true :=
           (List.all_eq_true.mp ha) _ (hpre.symm ▸ hwprofile)
         exact (hRows i b hi _ p j hp hj hcap hw).2 q r hq hr
 

@@ -1,3 +1,4 @@
+import MacroPeg.CBV.UncheckedShiftCaptureExamples
 import MacroPeg.CBV.CaptureIndependentOriginExamples
 import MacroPeg.CBV.ScannerOriginControl
 import MacroPeg.CBV.ScannerOriginControlExamples
