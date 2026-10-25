@@ -263,7 +263,9 @@ shift/replay leaf で元位置から検査する。選択の test は継続前�
 実構文で検査する。続いて既存の元位置変換と自動 profile 検査へ合成する。
 任意 table・環境・strategy で CPS の全 partial 対応を証明し、実元規則を書き換えて
 全入力 SObs・固定一階 Seq 元文字列言語・定義／全 clock 未定義へ接続した。
-source の unary 呼出しの実 Arg は引き続き任意の連結・反復・query・user 再帰を許す。
+source の unary 呼出しの実 Arg は引き続き任意の連結・反復・query・user 呼出しの入れ子を許す。
+この新しい raw prefix 本体には消費する user 呼出しがなく、非有界の再帰継続を
+CPS の終端へ接続する frontend はまだ実装していない。
 
 `FinitePrefixControlExamples` の実元規則は `(aa / a); &param0` そのものである。
 aaa から aa を捕捉すると、aa の選択後に全コピー query が失敗する。正しい生成先も拒否し、
