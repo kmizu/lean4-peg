@@ -856,3 +856,12 @@ import MacroPeg.CBV.FiniteSuffixRecursiveSelection
 import MacroPeg.CBV.FiniteSuffixRecursiveSyntax
 
 import MacroPeg.CBV.FiniteSuffixDependentView
+
+import MacroPeg.CBV.FiniteSuffixObservedAtoms
+import MacroPeg.CBV.FiniteSuffixObservedCompiler
+import MacroPeg.CBV.FiniteSuffixObservedCorrespondence
+import MacroPeg.CBV.FiniteSuffixObservedDeclarations
+import MacroPeg.CBV.FiniteSuffixObservedDispatch
+import MacroPeg.CBV.FiniteSuffixObservedEvaluation
+import MacroPeg.CBV.FiniteSuffixObservedExamples
+import MacroPeg.CBV.FiniteSuffixObservedSyntax

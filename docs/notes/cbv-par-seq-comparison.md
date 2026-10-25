@@ -16,6 +16,47 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 親依存actualの出力観測を含む有限suffix文法の全体変換
+
+`FiniteSuffixObservedSyntax/Declarations/Atoms/Dispatch/Evaluation/Correspondence/Compiler`は、
+保持値の直接参照が`guard(R);param_k`である一般の一階Par文法を、固定の全nullary Seq文法へ変換する。
+userの個数・arityは任意で混在でき、規則本体と実引数はともに任意のseq/alt/not/star、
+文字・範囲・any・literal、同じguard付き保持値参照、相互再帰user呼出しで組み立てる。
+**実引数の独立helper条件を外し、親依存actualとactual内のparameterized user呼出しを含めた。**
+元のparameterized callee表は生成文法に残さない。
+入力の符号化、入力・捕捉長やアルファベットの制限、scanner frontier、停止性仮定は使わない。
+
+各規則のarityに応じた候補語／その他viewと、通常結果または候補語ごとのDFA状態対をキーとして
+固定nullary規則を列挙する。候補語ごとのstrict exact-word機械は、候補を読み終えた後の余分な文字を
+sinkへ送る。各実引数について、まず元の通常結果を先読みし、その実捕捉語の等値queryから新しい
+viewを選んでから次の実引数へ進む。選んだ継続が失敗・未定義でも別のviewへ落ちない。
+すべての生成callは引数なしで、bodyは元のPar呼出し位置から始まる。
+親のviewは継続に構文的に残るので、子から戻っても失われない。
+
+通常行と全DFA出力行を同時に帰納し、**実際のPar/Seq表を同じphysical clockで対応**させる。
+前のhelper固定backendと異なり、helperの安定化を待つ段数変換は不要。
+seqは全DFA中間状態（sinkを含む）を扱い、選択は元の優先順位を維持し、starは既存の
+`GeneralStarFilter`へ接続する。`any`/rangeの出力行は次の実文字による機械遷移を生成し、
+候補語にない文字も扱う。有限アルファベットの列挙や全Unicode文字の展開はしない。
+実引数の失敗・未定義の順序、不正arity/範囲外callで実引数を評価しない動作も保存する。
+
+`FiniteSuffixObservedCompiler.check`は元の全宣言と開始式を有限AST一致で確認する。
+全入力・全残余・有限失敗・有限実行存在・全clock未定義と、同じ元文字列上の受理言語を保存する。
+外部から実引数の意味、出力profile、文法変換の正しさを仮定として渡さない。
+
+主例の元文法は5規則・arity `[2,2,1,1,0]`、生成Seqは固定1,230規則・全nullary。
+親の`a`/`ab`を調べる実引数内でparameterized wrapperを呼び、wrapperが実再帰balanced parserから
+新たに`ab`を捕捉する。子は逆順`ab`/`a`を保持し、親子相互再帰から戻ったouterは自身の`ab`を実消費する。
+深さ0/1/2を元・生成とも同じclock8で直接kernel実行し、実依存引数の捕捉列、
+子のview漏出の拒否、balanced捕捉n=1/2/4も確認した。
+候補外`X`のany/star・range/star実引数の受理、親の空保持値を非空suffix `ab`上で反復する
+依存actualの全clock未定義、actual内user循環の全入力全clock未定義、
+引数の失敗と未定義の順序、不正callの評価省略、guard欠落の検査拒否も検証した。
+
+このbackendは**有限の残りsuffix guardを引き続き要求する**。
+その条件なしで任意の保持語を任意位置で再照合する全体変換、または一般の言語クラス分離は未解決。
+以下の共有表による有限view同一視と独立helper版はこの全体変換の前段である。
+
 ## 親依存actualを含む有限view同一視
 
 `FiniteSuffixDependentView`は、有限suffix guardを残した一般の式構文で、
@@ -35,8 +76,8 @@ Par実引数列の**実捕捉語列全体**と、Seq実引数列の実捕捉語�
 
 **これはcallee表を共有する式とsource行の同一視であり、生成Seq文法の定理ではない。**
 新たに捕捉した語のviewを、独立helper以外の実引数についても固定の生成規則で観測し、
-共有したparameterized表への依存を消すことが次の接続点である。
-下記の全体変換の実引数条件はまだ独立helperのままで、一般のPar/Seq一致・分離も未解決。
+共有したparameterized表への依存を消す部分は、上記`FiniteSuffixObserved`で接続した。
+この補題単独はその全体変換とは区別する。下記の旧backendは独立helperに限られ、一般のPar/Seq一致・分離は未解決。
 
 ## 有限suffix再照合を持つ異なるarityのuser相互再帰
 
@@ -67,8 +108,8 @@ preflight省略の誤った有限失敗、guard欠落の検査拒否、不正ari
 
 この拡張でuser本体の相互再帰という制限は外れたが、親依存actualおよびactual内のuser呼出しは未対応。
 EOF backendはそれらを既に扱える一方、直接参照にEOFを要求する。
-両方の長所を合わせる一般の有限内容観測、任意位置での無guard再照合、
-Par/Seq言語クラスの一般一致・分離は依然として未解決である。
+両方の長所を合わせる有限内容観測は上記`FiniteSuffixObserved`へ接続した。
+任意位置での無guard再照合と、Par/Seq言語クラスの一般一致・分離は依然として未解決である。
 
 ## 有限suffix領域で実内容を保つ捕捉再照合
 
@@ -10969,8 +11010,43 @@ Direct executions check a parent-dependent negative query, a user inside an actu
 subsequent replay, and a different result when an other-view parent becomes the candidate ab.
 Two distinct other-view parents have symbolically equal results at all clocks.
 
-This is not yet a nullary Seq grammar translation: it still shares the original parameterized
-callee table. The next missing construction is a generated observer for the fresh captured words
-of arbitrary dependent actuals, followed by elimination of that table. The complete finite-suffix
-compiler above continues to require independent helper actuals. The unrestricted class question
-remains open.
+This lemma alone shares the original parameterized callee table. The generated observer for fresh
+captures of arbitrary dependent actuals and elimination of that table are now supplied by
+FiniteSuffixObserved below. The earlier FiniteSuffixRecursive compiler itself continues to require
+independent helper actuals. The unrestricted class question remains open.
+
+
+## Whole-grammar finite-suffix translation with dependent recursive actuals
+
+The FiniteSuffixObserved modules connect the shared-table finite-view lemma to a complete fixed
+nullary Seq grammar. Source users may have arbitrary/mixed arities and mutually recursive bodies
+and actuals. Any actual may inspect parent retained values and call parameterized users inside
+actuals. Control includes sequence, prioritized choice, negation, partial star, literals, characters,
+ranges and any. Every direct retained replay still has the explicit finite remaining-suffix guard.
+No independent-helper, scanner-frontier, captured-length, input-alphabet or termination premise
+is needed; the original parameterized table is absent from the generated grammar.
+
+Rows are indexed by user, exact candidate/other tuple, and either normal mode or a state pair of
+one strict candidate-word DFA. Normal lookahead precedes exact output probes for each actual;
+committed branches preserve its real output even when later continuations fail or diverge.
+All calls are nullary, so the selected body starts at the original Par origin. Parent views remain
+lexical in the caller continuation. Simultaneous normal/filter induction gives equality at every
+same physical tblV clock. GeneralStarFilter handles arbitrary partial repetition, all intermediate
+DFA states include sinks, and character/range filters handle arbitrary outside-candidate characters
+without enumerating Unicode. Invalid calls skip their actuals as in the original semantics.
+Finite raw-declaration/root equality checks yield all original-string observations, accepted languages,
+residuals, finite failure, finite-run existence and all-clock undefinedness.
+
+The five-rule source has arities [2,2,1,1,0], and its fixed Seq grammar has 1,230 nullary rules.
+Direct source and generated executions at clock8 check nesting depths 0/1/2, actual parent-dependent
+child tuples, an argument containing a parameterized wrapper with a real recursive balanced producer,
+reversed a/ab and ab/a views, return to the parent, and actual consumption of the outer retained ab.
+Leaked child views reject. Balanced actual captures are checked at n=1/2/4. Other evidence includes
+any/star and range/star captures of X outside the candidate alphabet, an actual repeating the parent's
+empty retained word at nonempty suffix ab remaining undefined at all clocks, all-input/all-clock
+undefined cycles through user calls inside actuals, ordered failure/divergence, malformed-call
+argument skipping, and rejection of omitted guards. The same unchanged source under Seq fails
+on a source-accepted example; this remains an operational contrast, not language-class separation.
+
+The finite remaining-suffix replay guard is still essential to this construction. Unrestricted
+retained-word replay and the general Par/Seq class equality or separation remain unresolved.
