@@ -16,6 +16,35 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## コピー検査へ戻る相互再帰と、実引数内部のコピー呼出し
+
+`DelimitedCopyCallTransfer` と `RecursiveCopySyntax/Correspondence/Compiler` は、下記の区切り付き
+二語コピー変換から、**nullary library の独立性条件を外す**。元の client 本体も Seq 用へ変換し、
+client → コピー規則 → 実引数内の client → コピー規則という相互再帰を許す。
+閉じた実引数の先読みへコピー呼出しを直接入れることもできる。
+実際の元・生成表の client 行を一斉に physical clock で帰納し、停止性や固定された helper 表を仮定せず、
+全入力・全残余の成功、有限失敗、実行存在、全 clock 未定義と元文字列言語を保存する。
+元の全宣言・開始式の AST 一致、参照範囲、各コピー実引数の消費 alphabet を有限検査する。
+
+`RecursiveCopyExamples` は source arity `[0,0,0,0,0,2]` から固定 Seq
+`[0,0,0,0,0,1,1]` を生成する。`u=a^n b`, `v=a^n b c^n` の捕捉前に、現在の
+`v#u#v#` を先読みで飛ばし、その次のブロックへ同じコピー client を再帰呼出しする。
+後続が不正なら現在の実引数も失敗するため、独立した実引数 library への変形では扱えない。
+旧独立性検査がこの実宣言を拒否し、新検査が受理することも kernel で確認した。
+`RecursiveCopyStreamProofs.source_block_and_actuals` は任意の n と任意の後続ブロック長リストについて、
+実捕捉列 `[u,v]` と現在ブロック消費後の残余を導出する。
+`source_and_target_all_streams` は任意個・任意長のこのブロック列の双方での受理を証明する。
+長さやブロック数に固定上限は置かない。
+
+成功する前進再帰に加え、同じ位置へ戻るコピー client/actual の循環は任意入力・全 clock で未定義のまま対応する。
+後の実引数が循環する場合も、元の実引数順の preflight を省くと有限失敗へ変わる反例を検証した。
+実引数内コピーの直接実行、後続不正ブロックの拒否、不正参照・実宣言の拒否も確認した。
+
+残る条件は nullary clients、closed actuals、区切りを消費しない実捕捉、固定の二保持値本体
+`param_1;d;param_0;d;param_1;d` である。先読み内部は区切りを読めるが、
+区切りを含む内側コピーの正の出力を、同じ区切りを使う外側コピーの実捕捉にはできない。
+親の保持 parameter に依存する actual、任意の二保持値本体、および一般の Par/Seq 一致・分離は未解決である。
+
 ## 二つの無制限捕捉を原点からの独立検査へ分ける
 
 `DelimitedCopyProjection/DelimiterTemplate/DelimitedCopyTemplates/CaptureDelimiterSafety/DelimitedCopySyntax/Evaluation/Compiler`は、
@@ -59,7 +88,8 @@ n=0/1/2/4の双方clock12直接実行、二種類のコピー違いと初回bala
 prefixだけから選んだ有限状態を渡すインターフェースの不可能性である。
 今回のコピー言語は後で元の語が再出現し、上記の検査は入力原点からparserを実行する。
 その不可能性定理を破ったとも、今回の言語がSeqを分離するとも主張しない。
-一般の独立actualの差分生成、任意の二保持値本体・parameter依存actual・libraryからのcallbackへの一般化と、
+旧独立library版に対して、上記 RecursiveCopy は nullary callback を扱う。一般の独立actualの差分生成、
+任意の二保持値本体・parameter依存actualへの一般化と、
 Par/Seq言語クラス全体の一致・分離は引き続き未解決である。
 
 ## 一つの無制限保持語と他の有限viewを同時に運ぶ全体変換

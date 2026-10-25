@@ -1,3 +1,9 @@
+import MacroPeg.CBV.DelimitedCopyCallTransfer
+import MacroPeg.CBV.RecursiveCopySyntax
+import MacroPeg.CBV.RecursiveCopyCorrespondence
+import MacroPeg.CBV.RecursiveCopyCompiler
+import MacroPeg.CBV.RecursiveCopyExamples
+import MacroPeg.CBV.RecursiveCopyStreamProofs
 import MacroPeg.CBV.DelimitedCopyCompiler
 import MacroPeg.CBV.DelimitedCopyEvaluation
 import MacroPeg.CBV.DelimitedCopyExamples
@@ -33758,3 +33764,257 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.CaptureDelimiterSafety.captured_free' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.CaptureDelimiterSafety.captured_free
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyCallTransfer.source_row' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyCallTransfer.source_row
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyCallTransfer.short_row' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyCallTransfer.short_row
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyCallTransfer.long_row' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyCallTransfer.long_row
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyCallTransfer.short_call' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyCallTransfer.short_call
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyCallTransfer.long_call' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyCallTransfer.long_call
+
+/-- info: 'Shallot.MacroPeg.CBV.DelimitedCopyCallTransfer.physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DelimitedCopyCallTransfer.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopySyntax.render_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopySyntax.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopySyntax.render_closed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopySyntax.render_closed
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopySyntax.source_installed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopySyntax.source_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopySyntax.source_user' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopySyntax.source_user
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopySyntax.target_user' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopySyntax.target_user
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopySyntax.source_copy' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopySyntax.source_copy
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopySyntax.target_short' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopySyntax.target_short
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopySyntax.target_long' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopySyntax.target_long
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopySyntax.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopySyntax.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopySyntax.target_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopySyntax.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopySyntax.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopySyntax.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyCorrespondence.expression_physical' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyCorrespondence.expression_physical
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyCorrespondence.tables_related' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyCorrespondence.tables_related
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyCorrespondence.physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyCorrespondence.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyCorrespondence.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyCorrespondence.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyCorrespondence.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyCorrespondence.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyCorrespondence.defined_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyCorrespondence.defined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyCorrespondence.undefined_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyCorrespondence.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyCompiler.checked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyCompiler.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyCompiler.firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyCompiler.firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyCompiler.physical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyCompiler.physical
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyCompiler.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyCompiler.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyCompiler.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyCompiler.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyCompiler.defined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyCompiler.defined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyCompiler.undefined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyCompiler.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyExamples.checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyExamples.checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyExamples.grammar_layout' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyExamples.grammar_layout
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyExamples.actual_callback_tuples' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyExamples.actual_callback_tuples
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyExamples.source_streams' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyExamples.source_streams
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyExamples.target_streams' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyExamples.target_streams
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyExamples.callback_preserves_actual_residual' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyExamples.callback_preserves_actual_residual
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyExamples.later_bad_block_changes_first_actual' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyExamples.later_bad_block_changes_first_actual
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyExamples.nested_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyExamples.nested_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyExamples.direct_copy_inside_actual' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyExamples.direct_copy_inside_actual
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyExamples.actual_client_body_is_transformed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyExamples.actual_client_body_is_transformed
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyExamples.independent_library_check_rejects_callbacks' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyExamples.independent_library_check_rejects_callbacks
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyExamples.same_physical_clock' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyExamples.same_physical_clock
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyExamples.original_language' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyExamples.original_language
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyExamples.loop_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyExamples.loop_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyExamples.callback_loop_rows' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyExamples.callback_loop_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyExamples.callback_loop_source' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyExamples.callback_loop_source
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyExamples.callback_loop_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyExamples.callback_loop_target
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyExamples.later_loop_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyExamples.later_loop_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyExamples.later_loop_source' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyExamples.later_loop_source
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyExamples.later_loop_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyExamples.later_loop_target
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyExamples.preflight_remains_necessary' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyExamples.preflight_remains_necessary
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyExamples.delimiter_producing_actual_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyExamples.delimiter_producing_actual_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyExamples.changed_callback_declaration_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyExamples.changed_callback_declaration_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyExamples.out_of_scope_client_rejected' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyExamples.out_of_scope_client_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyStreamProofs.source_block_and_actuals' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyStreamProofs.source_block_and_actuals
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCopyStreamProofs.source_and_target_all_streams' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCopyStreamProofs.source_and_target_all_streams
