@@ -1,3 +1,7 @@
+import MacroPeg.CBV.EmptyArgumentSpecialization
+import MacroPeg.CBV.EmptyArgumentEvaluation
+import MacroPeg.CBV.EmptyArgumentCorrespondence
+import MacroPeg.CBV.EmptyArgumentExamples
 import MacroPeg.CBV.ForwardingSeqCompiler
 import MacroPeg.CBV.ForwardingSeqEvaluation
 import MacroPeg.CBV.ForwardingSeqCalls
@@ -26683,3 +26687,181 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.ForwardingSeqExamples.empty_target' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ForwardingSeqExamples.empty_target
+
+-- General guarded specialization of empty-capture calls for both CBV strategies.
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentSpecialization.zero_success' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentSpecialization.zero_success
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentSpecialization.arguments_length' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentSpecialization.arguments_length
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentSpecialization.render_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentSpecialization.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentSpecialization.arguments_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentSpecialization.arguments_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentSpecialization.target_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentSpecialization.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentSpecialization.rule_count' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentSpecialization.rule_count
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentSpecialization.original_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentSpecialization.original_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentSpecialization.clone_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentSpecialization.clone_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentEvaluation.sequential_bound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentEvaluation.sequential_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentEvaluation.ordinary_call' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentEvaluation.ordinary_call
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentEvaluation.zero_call' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentEvaluation.zero_call
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentEvaluation.evaluator' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentEvaluation.evaluator
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentEvaluation.parallel' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentEvaluation.parallel
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentEvaluation.sequential' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentEvaluation.sequential
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentCorrespondence.tables_rows' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentCorrespondence.tables_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentCorrespondence.evaluator_eq' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentCorrespondence.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentCorrespondence.zero_call_eq' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentCorrespondence.zero_call_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentCorrespondence.clone_body_eq' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentCorrespondence.clone_body_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentCorrespondence.clone_environment' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentCorrespondence.clone_environment
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentCorrespondence.decide_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentCorrespondence.decide_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentCorrespondence.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentCorrespondence.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentCorrespondence.undefined_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentCorrespondence.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentCorrespondence.language_preservation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentCorrespondence.language_preservation
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentExamples.firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentExamples.firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentExamples.layout' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentExamples.layout
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentExamples.zero_queries' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentExamples.zero_queries
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentExamples.query_success' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentExamples.query_success
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentExamples.query_guard_required' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentExamples.query_guard_required
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentExamples.nullable_argument' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentExamples.nullable_argument
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentExamples.arity_preflight' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentExamples.arity_preflight
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentExamples.private_helper' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentExamples.private_helper
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentExamples.dynamic_arguments' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentExamples.dynamic_arguments
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentExamples.other_arities' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentExamples.other_arities
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentExamples.clone_scope' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentExamples.clone_scope
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentExamples.reset_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentExamples.reset_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentExamples.actual_reset' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentExamples.actual_reset
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentExamples.reset_observations' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentExamples.reset_observations
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentExamples.empty_cycle_source' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentExamples.empty_cycle_source
+
+/-- info: 'Shallot.MacroPeg.CBV.EmptyArgumentExamples.empty_cycle_target' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.EmptyArgumentExamples.empty_cycle_target

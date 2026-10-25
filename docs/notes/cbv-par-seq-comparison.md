@@ -16,6 +16,37 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 空捕捉の実呼出しを任意の一階文法で0引数化
+
+`EmptyArgumentSpecialization` は、任意の一階文法について、有限構文検査`zeroCheck`を通る
+単一引数呼出しをguardとnullary cloneへ写す。検査は成功時の捕捉が空語になることを保証する。同じ方式のまま行う正規化であり、
+Par/Seqのいずれについても元文字列上の全有限観測・有限失敗・全clock未定義を保存する。
+残る実引数をliteral/parameterだけへ制限せず、入力依存の任意PEG引数と他のarityを許す。
+文法は原規則の通常版と0引数版からなり、規則数はちょうど2nである。
+
+`zeroCheck` はepsilon・空literal・任意の否定query・それらのsequence/choice/starを調べる。
+`zero_success` は、成功時の終点が必ず元の位置と一致することを任意の表で証明する。
+入力依存の失敗や未定義を消さないため、`F(A)` は
+`render(A); F_empty()` とし、Aの判定を省略しない。Aがnullableな反復なら非消費成功による
+未定義もguardの側で保持する。calleeの存在とarityはguard評価前に調べる。
+
+clone本体には`subst [empty]`を施す。元calleeのparam0は空語、範囲外parameterは失敗へ
+写り、親の保持値へ漏れない。通常規則の全動的環境とcloneの空語環境について、
+`EmptyArgumentCorrespondence.tables_rows` が実source/target tblVの対応を同時帰納で閉じる。
+実行結果は同clockで一致する。cloneの表がcaller環境に依存しないことも証明する。
+意味論的行oracle、入力の注釈、捕捉値全体の有限palette制約はない。
+
+kernel実行は、入力依存lookaheadの成功/失敗、guard省略による誤受理、nullableなquery反復、
+arity不一致時に未定義引数を評価しないこと、helper番号の非公開化、c*の動的引数、
+二引数規則、cloneのparameter scope、空呼出し再帰の全入力全clock未定義を確認する。
+倍率0のa!反例も、Parの受理とSeqの拒否を、それぞれ元位置のまま正確に保存する。
+
+この変換だけではParからSeqへの移行を証明していない。空語calleeの実行を元の位置で
+nullary処理へ分離できたが、親の非空captureの後のSeq位置からその処理へ戻る問題は残る。
+独立prefixと保持値依存継続の接続、独立複数捕捉、および一般Par/Seq一致・分離は未解決である。
+検証は全1135 jobs（Auditを含む）、関連1255定理の標準Lean公理／公理なしの依存検査、
+新規39guard（PR66計260guard）。
+
 ## 保持値転送と正の倍率更新を同じSeq文法へ接続
 
 `ForwardingSeqCompiler` は各規則が
