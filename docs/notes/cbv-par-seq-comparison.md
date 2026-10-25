@@ -16,6 +16,45 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 正倍率headからorigin規則への直接呼出しを展開
+
+`OriginHeadInlining`は、選択した1本の正倍率headがorigin entryを直接呼ぶ場合を扱う。
+親のtailは`Closed`、factorは1以上とし、子はclosed/replay part上の任意のPlanでよい。
+親fallback、子part、開始式、新しい呼出し引数は任意の一階式を許し、子のpartから親へ
+戻る実再帰も許す。残りの文法と展開後の有限検査が既存混合backendに適合することを要求する。
+
+子へ実際に渡した`w^m`をWord代入で子のscopeへ固定する。replay partは親の先頭`w`を
+照合したあと、残りm-1個を読み、子本体のparam0を`w^m`へ置き換えて実行する。
+closed partは原点から実行する。caller側のguardは、closed分岐を実行する場合にも
+`w^m`全体の引数preflightを先に検査する。親の元のwと子の新しい`w^m`は混同しない。
+
+後続を子の選択へ単純に分配すると、子の成功後に後続が失敗したとき、子の別分岐を
+再試行してしまう。`OriginHeadPlan.after`は、選択した側の成否をguardとnotPで固定して
+から後続を実行する。任意の有限Planと任意の部分的な後続結果について、この変換が
+成功・有限失敗・未定義を正確に保つことを証明する。子のguard/notPにも対応する。
+
+`OriginHeadParts`は元のpartsを保ち、scopeを変えたparts、後続付きparts、tail、
+preflight、fallbackを有限に生成する。元のorigin Planのleaf範囲も検査し、追加された
+partsが元の範囲外leafに誤って見えることを防ぐ。対象のhead以外の規則とarityは保持する。
+一段の実call展開の後、既存`MixedForwardingCompiler`へ渡し、同じ元文字列言語と全残余、
+有限失敗、全clock未定義を保存する。n規則・b partsならtargetはn(n+1)+3b+3規則で固定され、
+元の混合source clock k ≤ Seq clock k ≤ source clock 2((n+2)k)を満たす。
+
+`OriginHeadRawCompiler`は元の`MultiplyingPrefixCompiler.source rs`からの接続も行う。
+空引数headのPar展開を、旧backendのcallee種別検査と分離し、その後に選択headを展開する。
+これにより、旧backendが拒否した「正倍率headから倍率0のorigin規則を直接呼ぶ」元文法を
+同じ言語のSeq文法へ変換できる。元sourceの一階性、実entryの有限lookup、有限check以外に
+意味的なcallee行の仮定を要求しない。
+
+`OriginHeadExamples`の元文法は、親wから子へ`w^3`を渡す。子のclosed分岐が捕捉終端より
+手前へ返る例と、子のreplay分岐が`w^3`を照合し、新しいxを親へ渡して戻ったあとに再び
+`w^3`を照合する例を、33規則の生成Seqで直接検証する。`c*;d`の新捕捉長0/1/4、
+preflight省略の誤受理、子選択の誤った再試行、親fallback、nullable引数、短い子値、
+helper privacyも確認する。全入力に対する言語・観測の一般定理をこの元文法に適用する。
+
+親tailが保持値に依存する場合、複数のheadを閉包まで自動展開する手順、一般PEG prefix、
+独立複数捕捉、一般のPar/Seq一致・分離は未解決である。
+
 ## factor-1の経路と循環も混合Seq compilerへ接続
 
 `MixedForwardingCompiler`から`MixedForwardingCorrespondence`は、下記の混合compilerを
@@ -51,7 +90,8 @@ source一階性と有限`check`から、n(n+3)規則の固定Seq文法、元文�
 相互callbackも検証する。factor-1循環の空引数呼出しは全入力全clockでsource/targetとも
 未定義である。preflight失敗、同clockのsource/target差、committed choice、helper privacyも確認する。
 
-正倍率headからorigin entryへの直接呼出し、親保持値に依存するreset後続、独立複数捕捉、
+正倍率headからorigin entryへの直接呼出しは、上記で親tailがClosedの場合に対応した。
+親保持値に依存する後続、独立複数捕捉、
 一般のPar/Seq一致・分離は未解決である。
 
 ## 成長headと原点分岐を同じ再帰文法からSeqへ変換
@@ -87,7 +127,8 @@ source clock k ≤ Seq clock k ≤ source clock 2k、全観測と全clock未定�
 長さ0/1/4の新捕捉、親値を短く取り違えた入力の拒否、preflightの失敗・nullable未定義、
 reset fallback、helper privacy、全入力全clockの空引数自己再帰未定義をkernel検証する。
 
-factor-1 forwardingを含む混合sourceは上記の拡張で対応した。成長headから原点calleeへの直接呼出し、
+factor-1 forwardingを含む混合sourceは上記の拡張で対応した。Closed tailを持つ選択headから
+原点calleeへの直接呼出しもさらに上の前段で対応する。
 親保持値に依存するreset後続、独立複数捕捉、一般のPar/Seq一致・分離は未解決である。
 
 ## 原点へ戻る空引数calleeをSeqへ接続
