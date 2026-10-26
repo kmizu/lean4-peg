@@ -16,6 +16,50 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 実callだけをキャッシュしても総row数は線形にならない
+
+`SequentialProbeTrace`は有限clockのSeq評価器へ規則queryの記録を加える。
+成功した実引数の後にcalleeの規則番号・数値捕捉環境・cursorを記録し、引数内やcallee内の
+queryも順序どおり残す。述語は内部の記録を捨てず、starの最後の失敗した試行も残す。
+不正な規則番号・arityのpreflightでは実引数を評価せず、calleeのqueryも発行しない。
+`eval_erase/args_erase/query_erase/run_correct`で記録を消すと既存の評価と正確に一致する。
+文法や式の終了性、incoming環境の隣接性を仮定しない。
+
+`SequentialProbeTriangle`は一つの固定した一階2規則文法を与える。
+`A`を`a*`、`&`を二重否定と書くと、構成は次のとおり。
+
+```text
+S    <- (&F(A) 'a')* '#' A '#'
+F(w) <- '#' (&T(w,A) 'a')* A '#'
+T(u,v) <- epsilon
+```
+
+戦略はSeqで、文法は入力長に依存しない。入力`a^n#a^n#`の全消費成功を
+`source_accepts`で証明した。clockは全nについて2で足りる。
+`run_formula/targets_eq_triangle`は、Tへの実query列が、mをnから0へ降順に、
+各mでrをn-mから0へ降順にした全組であることを証明する。
+実際の保持値は`a^m`と`a^r`であり、callee位置は全て1（最後の`#`の位置）。
+数値区間は`[(m+r+1,r+1),(r+1,1)]`となる。
+
+`targets_nodup/targets_word_keys_nodup`により、数値requestとしても、規則番号・
+実word値tuple・callee位置のキーとしても重複しない。
+`targets_count`の正確な式は`2 * targets.length = (n+1)*(n+2)`、
+`input_length`は`input.length = 2*n+2`。
+`no_linear_cache_bound`は任意の定数Cについて、実query数が`C*(input.length+1)`を超える
+入力があることを証明する。したがって、少数の固定規則・固定clock・各rowを一回だけ
+計算するmemoizationから、source全体の線形row予算は従わない。
+
+これは**sourceの実queryを個別に実行・保持する方式**に対する反例である。
+Tの本体はepsilonなので、文法の意味を利用するcompilerにはinline等の最適化の余地がある。
+同じ言語を認識する全ての文法・評価器の下界ではなく、任意の前処理やrow間の圧縮も
+否定していない。総query数の二次増加から、local serializationの各更新blockの下界を
+主張することもしない。一般cell-probe bridgeに必要なのは、こうしたsource依存の多くの
+queryを一括して扱う量的な構成、又は別の一般的な下界である。
+Par→Seq一般翻訳とクラスの一致・分離は引き続き未解決。
+
+検証: `lake build`（Audit込み）1,421 jobs成功。今回の2 modules・21 public reportsを
+全てAudit guardへ統合し、標準Lean公理のみ。PR72全体では6新規modules・44新規guard。
+
 ## 任意の一階Seqの有限表を数値番地で直接引く
 
 `SequentialRowAddress`は区切り位置列を基数`n+1`の数として符号化する。

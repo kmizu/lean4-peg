@@ -1,3 +1,5 @@
+import MacroPeg.CBV.SequentialProbeTrace
+import MacroPeg.CBV.SequentialProbeTriangle
 import MacroPeg.CBV.SequentialRowAddress
 import MacroPeg.CBV.SequentialSpanWindows
 import MacroPeg.CBV.SequentialAddressedEvaluator

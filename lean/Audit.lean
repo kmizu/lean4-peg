@@ -1,3 +1,5 @@
+import MacroPeg.CBV.SequentialProbeTrace
+import MacroPeg.CBV.SequentialProbeTriangle
 import MacroPeg.CBV.SequentialRowAddress
 import MacroPeg.CBV.SequentialSpanWindows
 import MacroPeg.CBV.SequentialAddressedEvaluator
@@ -39538,3 +39540,97 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SequentialAddressedExamples.invalid_call_preflight' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialAddressedExamples.invalid_call_preflight
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialProbeTrace.star_step' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialProbeTrace.star_step
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialProbeTrace.star_fail' depends on axioms: [Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialProbeTrace.star_fail
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialProbeTrace.star_erase' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialProbeTrace.star_erase
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialProbeTrace.eval_erase' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialProbeTrace.eval_erase
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialProbeTrace.args_erase' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialProbeTrace.args_erase
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialProbeTrace.query_erase' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialProbeTrace.query_erase
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialProbeTrace.run_correct' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialProbeTrace.run_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialProbeTriangle.run_formula' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialProbeTriangle.run_formula
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialProbeTriangle.targets_eq_triangle' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialProbeTriangle.targets_eq_triangle
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialProbeTriangle.request_injective' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialProbeTriangle.request_injective
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialProbeTriangle.targets_nodup' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialProbeTriangle.targets_nodup
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialProbeTriangle.targets_count' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialProbeTriangle.targets_count
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialProbeTriangle.targets_mem' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialProbeTriangle.targets_mem
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialProbeTriangle.input_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialProbeTriangle.input_length
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialProbeTriangle.no_linear_cache_bound' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialProbeTriangle.no_linear_cache_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialProbeTriangle.request_words' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialProbeTriangle.request_words
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialProbeTriangle.targets_word_keys_nodup' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialProbeTriangle.targets_word_keys_nodup
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialProbeTriangle.targets_one_cursor' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialProbeTriangle.targets_one_cursor
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialProbeTriangle.grammar_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialProbeTriangle.grammar_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialProbeTriangle.start_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialProbeTriangle.start_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialProbeTriangle.source_accepts' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialProbeTriangle.source_accepts
