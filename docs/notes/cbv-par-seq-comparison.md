@@ -16,6 +16,49 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 読まれない捕捉を、実引数評価後のrow keyから除く
+
+`CaptureReadSupport`はraw式から、直接又は実引数・述語内で読むparameter番号を計算する。
+`expression/parallel/sequential`は、その番号の値だけ一致する二つの環境で、任意の
+同じ`evV` tableに対する評価が一致することを証明する。sourceの構文や実引数を変更しない。
+呼出し先が値を読まなくても、その値を使って実引数を評価するcaller側の参照は残す。
+
+`canonical body E`は、読まれる数値区間だけを保ち、他のslotを`(0,0)`へ置く。
+slot数とscopeは変わらず、有効な区間環境を保つ。結果は冪等である。
+`row_canonical`は、任意の文法・任意のphysical clockで、その規則の元rowと
+canonical環境のrowが一致すると証明する。これは同じ入力・同じtable layerでの同一視であり、
+異なる入力やclockのrowを同一視する主張ではない。
+
+`SequentialCanonicalQueries`は、この同一視を実際に各規則入口で使う、別の数値評価器である。
+元の実引数の左順評価・消費・失敗・未定義とrule/arity preflightを保ち、calleeへ入った後の
+保持環境だけを正規化する。再帰queryも同じ正規化を行う。
+`query_eq/run_correct`は、任意の有効incoming区間環境・raw式・全physical clockについて
+元の`evV/tblV`と一致する。一階文法・開始式なら全入力の残余観測・有限失敗・
+全clock未定義と元文字列言語を保存する。
+`key_sound/query_key_agree`は、同じgrammar/input/clockでcanonical keyが同じ二つの
+queryについて、元rowも新しい実queryも同じ結果となることを保証する。
+
+`CanonicalQueryExamples`は下記の三角形状query例へ接続する。
+元の実word値キーは`(n+1)(n+2)/2`個あるが、Tの本体はepsilonなので、全て
+`(rule=1, [(0,0),(0,0)], cursor=1)`という一つのkeyになる。
+F側の`n+1`個も含め、全source traceのqueryを覆う重複のないkey listを実際に作り、
+長さが`n+2`であることを全nで証明した。例のF/Tは非循環なので、使うlayerはそれぞれ2/1。
+この結果は、前のsource traceの二次個のrowが意味的にも個別に必要とはいえないことを、
+具体的な一般正規化で示す。
+
+独立のkernel例では、3引数の真ん中だけを消し、親a/bと子aa/bbを保った実再帰を検証した。
+真ん中の実引数の~/?消費も残る。unused actualの不一致と成功残余の違い、
+nullable actualの任意入力・全clock未定義、invalid callのpreflightも保存する。
+calleeがunusedでも、実引数内のparameter参照を消すと消費位置が変わる反例を固定した。
+
+この正規化queryは、数値番地のdense array実装とは別の評価器である。
+ここではmemoizationの実装、既存array全体の圧縮、総呼出し回数・総probe数・更新時間の
+改善は主張しない。実際に読まれる複数の保持値は残る。
+Par→Seqの一般文法変換でもなく、クラスの一致・分離は依然未解決。
+
+検証: `lake build`（Audit込み）1,424 jobs成功。今回の3 modules・28 public reportsを
+全てAudit guardへ統合し、標準Lean公理のみ。PR72全体は9新規modules・72新規guard。
+
 ## 実callだけをキャッシュしても総row数は線形にならない
 
 `SequentialProbeTrace`は有限clockのSeq評価器へ規則queryの記録を加える。

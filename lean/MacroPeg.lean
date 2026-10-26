@@ -1,3 +1,6 @@
+import MacroPeg.CBV.CaptureReadSupport
+import MacroPeg.CBV.SequentialCanonicalQueries
+import MacroPeg.CBV.CanonicalQueryExamples
 import MacroPeg.CBV.SequentialProbeTrace
 import MacroPeg.CBV.SequentialProbeTriangle
 import MacroPeg.CBV.SequentialRowAddress
