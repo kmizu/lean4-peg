@@ -16,6 +16,34 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 外部のPEG非所属witnessを、Seqの結論へ移す前の監査
+
+[Kim–Park, Sections 4.3–4.5](https://arxiv.org/html/2608.29592v1#S4.SS3)のwitnessを
+再確認した。record-first側Cではkeyを逆順、payloadを逆順の内積で比較し、その反転
+L=C^Rは線形CFLだが通常PEGでは認識不能とする。Lの入力順はquery、update vector、
+reversed recordsである。通常PEGの非所属は、捕捉を持つSeqの非所属ではない。
+既存の`pel_subset_firstOrder_cbv`はPEGからSeqへの包含であり、逆向きには使えない。
+この外部結果だけからPar/Seqの分離を結論する経路はない。
+
+正の方向の試案も区別する。query keyを先にSeqで捕捉し、payloadの再帰的比較へ
+その値を無消費で引き継げばよさそうに見えるが、実際の`P(param 0)`は引数として
+現在位置でparam 0を再照合する。値をそのまま転送するprimitiveではない。
+この注意はParにも当てはまり、Parの一般機械compilerが原点のprefix counterを
+再照合することとも矛盾しない。nullaryな子規則からcallerの保持環境を読むことも
+この一階の束縛規則では許されない。これは試案の未実装箇所であり、別のSeq文法の
+存在を否定する証明ではない。キーを同じ向きに書き換えるだけでも、上記witnessと
+別の言語になるため、元の非所属定理を流用できない。
+
+また、更新の前へquery keyのコピーを挿入して引継ぎを容易にすると、その部分が
+未公開queryに依存する。論文の前処理・各更新・queryをそれぞれ局所的に符号化する
+三段階モデルとは別のencodingになる。文法上の便利さだけでそのコピーを加えては
+元のcell-probe転送条件を満たしたことにならない。
+
+多頭pushdown等の一般結果も、headの復帰・複製、再照合、優先選択、束縛scopeを
+実装する意味対応なしには移せない。今回の調査では、その対応を与える既存定理は
+確認できなかった。新規のSeq所属/非所属、一般一致・分離、又は新しい機械上界を
+証明したとは扱わない。この監査のためのLeanコードや外部公理は追加しない。
+
 ## liveな保持値のprofileでも、元の全呼出しキーは線形個に収まらない
 
 `SequentialLiveProbeTriangle`は、前のunused/deadなtargetを変更した固定二規則の一階Seqである。
