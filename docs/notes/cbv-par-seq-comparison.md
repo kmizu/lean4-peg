@@ -16,6 +16,37 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 隣接性と全live化だけでは、全環境表の次数は固定できない
+
+`SequentialAdjacentProfiles`は、arity r・各field長0..nに対して、長さ2*(r+1)*nの
+一つのaだけの入力と、共通の残り長b=(r+1)*nを構成する。
+任意の長さtuple dsから、連続する実区間`spans b ds`を作る。
+`spans_window`はそれらが一つの消費区間を分割するWindowであると証明する。
+`literal_actuals`はdsに対応する有限literal引数列の実Seq評価が、正確にa^dの列を捕捉し
+bで終わると証明する。開始位置はb+sum(ds)。候補ごとにこの引数列は異なる。
+
+`window_profile`は、同じ入力の同じ残り位置で、全fieldがliveでありprofileが
+[some a^d_0,...,some a^d_(r-1)]になることを証明する。
+重複なし候補listの正確な長さは(n+1)^r。
+`no_uniform_enumeration_degree`は∀d ∃r ∀C ∃nという順で、候補数が
+C*(入力長+1)^dを超えると証明する。rを固定した後でも係数Cは自由に選べる。
+従って、隣接区間だけを残し、dead値を潰した上で全可能環境を列挙する方式から、
+arityに依存しない次数は出てこない。
+
+これは**許容される環境族の個数**である。全候補を一つの固定文法のrunが実際に
+要求するという主張ではなく、言語認識の時間下界でもない。tupleを少数の位置情報で
+表すこと、body専用の同一視、因数分解、再計算等は排除しない。
+前節の共通次数からの条件付き分離に必要な、Seq全体の上界は未証明のままである。
+
+関連モデルも区別した。[Kallmeyer–Maier, IWPT 2009](https://aclanthology.org/W09-3808/)
+のordered simple RCGは、変数の左右各一回の出現等の制限を持つ。
+Seq actualsの区間が隣接することだけでは、再照合・束縛・再帰を保ってこの構文へ
+移したことにならない。今回、意味保存compilerや新しい共通時間上界は構成していない。
+
+検証: `lake build`（Audit込み）1,436 jobs成功。8新規public reportsは全て標準公理のみ。
+PR72全体は21新規modules・177新規guard（175標準・2無公理）。一般Par→Seqと、
+無条件の言語クラス一致・分離は未解決。
+
 ## 文法に依存しない時間次数から分離へつなぐ、条件付きの別経路
 
 `Shallot.PegSeparation.CBVUniformDegree`は、既存の実TM上の対角言語PolyDiag dを

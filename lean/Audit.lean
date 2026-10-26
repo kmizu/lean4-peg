@@ -1,3 +1,4 @@
+import MacroPeg.CBV.SequentialAdjacentProfiles
 import Shallot.Peg.Separation.CBVUniformDegree
 import MacroPeg.CBV.SequentialLiveProbeTriangle
 import MacroPeg.CBV.SequentialIndexedReplay
@@ -40250,3 +40251,41 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.PegSeparation.original_reverse_requires_unbounded_degrees
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAdjacentProfiles.spans_window' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAdjacentProfiles.spans_window
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAdjacentProfiles.spans_decode' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAdjacentProfiles.spans_decode
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAdjacentProfiles.literal_actuals' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAdjacentProfiles.literal_actuals
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAdjacentProfiles.profile_injective' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAdjacentProfiles.profile_injective
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAdjacentProfiles.window_profile' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAdjacentProfiles.window_profile
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAdjacentProfiles.candidates_nodup' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAdjacentProfiles.candidates_nodup
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAdjacentProfiles.candidates_count' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAdjacentProfiles.candidates_count
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAdjacentProfiles.no_uniform_enumeration_degree' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAdjacentProfiles.no_uniform_enumeration_degree

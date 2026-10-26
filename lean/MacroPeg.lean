@@ -1,3 +1,4 @@
+import MacroPeg.CBV.SequentialAdjacentProfiles
 import MacroPeg.CBV.SequentialLiveProbeTriangle
 import MacroPeg.CBV.SequentialIndexedReplay
 import MacroPeg.CBV.RightmostCaptureIndex
