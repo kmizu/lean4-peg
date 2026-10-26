@@ -16,6 +16,46 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 任意の一階Seqを、隣接捕捉の区切り位置で有限表にする
+
+`SequentialTupleKeys/SequentialFiniteRows/SequentialFiniteEvaluator`は、制限付き文法templateを
+要求しない一般のSeq評価器である。実際の成功したSeq引数tupleが、一つの消費区間の
+隣接した分割になることを、任意の保持環境とdescending rule tableに対して証明する。
+arity rのtupleをr+1個の区切り位置で復元し、最後の位置をcallee cursorとする。
+空捕捉は同じ位置を繰り返して表現する。
+
+固定入力長nのキーは規則番号と区切り位置列だけで、入力文字の内容には依存しない。
+全ての位置列を列挙するため、不正な位置順序や同じword値になる重複列も含む安全な過大近似である。
+`covered`が実際のcall tupleを必ず含むと証明する。1層のcell数は正確に
+`sum_i (n+1)^(arity_i+1)`で、`|rules|*(n+1)^(arityBudget+1)`以下。
+捕捉wordの有限paletteや、独立substringの直積は列挙しない。
+
+`cells`は前の有限cell listだけから次のlistを構築する。
+cellにはkeyとResだけを保存し、文字列は元入力とkeyから復元する。
+`compute`はこの前層のlistから作るtableを実際に使い、元評価器のrowや意味oracleを読まない。
+`run_correct`は、全physical clock・全有効位置・任意の保持環境・任意のraw開始式について、
+元の`evV/tblV`との一致を証明する。文法と開始式が一階なら、全入力の残余観測、有限失敗、
+全clock未定義まで保存する。nullable反復や再帰にも終了性の仮定を置かない。
+
+最終評価に使うrule-table layer数は既存のSeq clock上界から`(|rules|+1)*(n+1)`。
+`producedCells_eq`はstage 0を含む全層で作るcell数を`(m+1)*keys.length`と数える。
+これはrule-table依存の層数であり、cell内の式評価をBoolean gateと数えた回路depthではない。
+
+`SequentialFiniteExamples`は、aab#ba上の独立保持値a/bを逆順に読む実行をkernel計算する。
+同じcallee位置3にあるa/bとaa/bは、どちらも非空tupleだが結果が違い、有限表がこれを保つ。
+この入力で各層は343 cells。一方、元入力原点の非空保持値のように実際のSeq callで生じない
+queryは元の無制限tableと異なり得ることも、具体的な反例で固定した。
+`run_correct`の任意incoming環境と、任意query tupleの全row実装を混同しない。
+
+この有限表は新しいSeq文法compilerでも、低probe数のデータ構造でもない。
+現実装のlookupはlist内のword値比較であり、多項式個のcellを物理的に作る。
+既存の線形空間TM上界を改善する主張、cell-probe予算、Boolean回路上界は付けていない。
+次に必要なのは、元の正確な言語意味を保ったまま、この環境依存の表を暗黙に扱う方法か、
+別の一般下界である。Par→Seqの一般翻訳及び言語クラスの一致・分離は未解決。
+
+検証: `lake build`（Audit込み）1,415 jobs成功。新規25 public theorem reportsは標準Lean公理又は無公理のみで、
+全てAudit guard付き。PR71全体は9新規Lean library modules・54新規guard。
+
 ## Cell-probe下界という別経路の調査（2026-10-26）
 
 [Kim–Park, arXiv:2608.29592v1](https://arxiv.org/html/2608.29592v1)は、

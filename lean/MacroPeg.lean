@@ -1,3 +1,7 @@
+import MacroPeg.CBV.SequentialTupleKeys
+import MacroPeg.CBV.SequentialFiniteRows
+import MacroPeg.CBV.SequentialFiniteEvaluator
+import MacroPeg.CBV.SequentialFiniteExamples
 import MacroPeg.CBV.RenamedCopyFIFO
 import MacroPeg.CBV.RenamedCopy
 import MacroPeg.CBV.FiniteCaptureInterface
