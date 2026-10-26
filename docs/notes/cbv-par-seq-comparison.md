@@ -16,6 +16,31 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## liveな保持値のprofileでも、元の全呼出しキーは線形個に収まらない
+
+`SequentialLiveProbeTriangle`は、前のunused/deadなtargetを変更した固定二規則の一階Seqである。
+入力はa^n#a^n#a^n（長さ3n+2）。targetは#を消費してから、両方のparameterを実際に
+先読みする。実捕捉はa^mとa^r（m+r≤n）、target入口の残り入力は#a^nなので、
+両方ともliveであり、`target_reads_both`によって単純なunused-field除去でも落ちない。
+
+`run_formula`は全nで実clock2の成功と完全なcall traceを証明し、`source_accepts`は
+元の同じ入力の全消費SObsへ接続する。target呼出しはちょうど(m+r≤n)の三角形で、
+重複なく(n+1)(n+2)/2個。`request_profiles`は各呼出しの全継続profileが
+[some a^m,some a^r]であり、`profile_keys_nodup`はそれらも重複しないと証明する。
+`no_linear_profile_cache_bound`は、任意の定数Cについて、このdistinct key数が
+C*(入力長+1)を超えるnを構成する。
+
+従って、元の全callを保存するliteral cacheにunused-field除去と全継続profileの
+同一視を施すだけでは、線形個の総keyでの模倣は得られない。これは当該cache方式の障害である。
+**固定body専用のさらに粗い意味同一視、call除去、evictionと再計算、別の認識文法、
+preprocessingや総probe時間の下界は排除しない。** このsource自体も別の最適化で
+簡約できる可能性があり、Seq言語クラスの非所属や一般Par/Seq分離ではない。
+右端indexのmetadata参照数と、全評価のquery総量を区別する必要がある。
+
+検証: `lake build`（Audit込み）1,434 jobs成功。18新規public reportsは全て標準公理のみ。
+PR72全体は19新規modules・164新規guard（162標準・2無公理）。全nをkernelで証明し、
+固定サイズの実験から一般化したものではない。一般Par→Seqとクラスの一致・分離は未解決。
+
 ## 右端コピーを共有する、入力全体の数値index
 
 `RightmostCaptureIndex.locate_clip`は、元の保持語の入力全体での右端コピーを選ぶと、

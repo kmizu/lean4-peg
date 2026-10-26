@@ -1,3 +1,4 @@
+import MacroPeg.CBV.SequentialLiveProbeTriangle
 import MacroPeg.CBV.SequentialIndexedReplay
 import MacroPeg.CBV.RightmostCaptureIndex
 import MacroPeg.CBV.SequentialIndexedFutureQueries
@@ -40126,3 +40127,101 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.RightmostCaptureExamples.nullable_star_stays_undefined
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.prefix_formula' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.prefix_formula
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.run_formula' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.run_formula
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.targets_eq_triangle' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.targets_eq_triangle
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.request_injective' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.request_injective
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.targets_nodup' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.targets_nodup
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.targets_count' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.targets_count
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.targets_mem' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.targets_mem
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.input_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.input_length
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.no_linear_cache_bound' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.no_linear_cache_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.request_decode' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.request_decode
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.live_profile' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.live_profile
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.request_profiles' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.request_profiles
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.profile_keys_nodup' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.profile_keys_nodup
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.target_reads_both' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.target_reads_both
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.no_linear_profile_cache_bound' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.no_linear_profile_cache_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.grammar_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.grammar_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.start_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.start_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.source_accepts' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.source_accepts
