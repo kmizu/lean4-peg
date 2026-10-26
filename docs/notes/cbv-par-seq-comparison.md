@@ -16,6 +16,171 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 任意の一階Seqを、隣接捕捉の区切り位置で有限表にする
+
+`SequentialTupleKeys/SequentialFiniteRows/SequentialFiniteEvaluator`は、制限付き文法templateを
+要求しない一般のSeq評価器である。実際の成功したSeq引数tupleが、一つの消費区間の
+隣接した分割になることを、任意の保持環境とdescending rule tableに対して証明する。
+arity rのtupleをr+1個の区切り位置で復元し、最後の位置をcallee cursorとする。
+空捕捉は同じ位置を繰り返して表現する。
+
+固定入力長nのキーは規則番号と区切り位置列だけで、入力文字の内容には依存しない。
+全ての位置列を列挙するため、不正な位置順序や同じword値になる重複列も含む安全な過大近似である。
+`covered`が実際のcall tupleを必ず含むと証明する。1層のcell数は正確に
+`sum_i (n+1)^(arity_i+1)`で、`|rules|*(n+1)^(arityBudget+1)`以下。
+捕捉wordの有限paletteや、独立substringの直積は列挙しない。
+
+`cells`は前の有限cell listだけから次のlistを構築する。
+cellにはkeyとResだけを保存し、文字列は元入力とkeyから復元する。
+`compute`はこの前層のlistから作るtableを実際に使い、元評価器のrowや意味oracleを読まない。
+`run_correct`は、全physical clock・全有効位置・任意の保持環境・任意のraw開始式について、
+元の`evV/tblV`との一致を証明する。文法と開始式が一階なら、全入力の残余観測、有限失敗、
+全clock未定義まで保存する。nullable反復や再帰にも終了性の仮定を置かない。
+
+最終評価に使うrule-table layer数は既存のSeq clock上界から`(|rules|+1)*(n+1)`。
+`producedCells_eq`はstage 0を含む全層で作るcell数を`(m+1)*keys.length`と数える。
+これはrule-table依存の層数であり、cell内の式評価をBoolean gateと数えた回路depthではない。
+
+`SequentialFiniteExamples`は、aab#ba上の独立保持値a/bを逆順に読む実行をkernel計算する。
+同じcallee位置3にあるa/bとaa/bは、どちらも非空tupleだが結果が違い、有限表がこれを保つ。
+この入力で各層は343 cells。一方、元入力原点の非空保持値のように実際のSeq callで生じない
+queryは元の無制限tableと異なり得ることも、具体的な反例で固定した。
+`run_correct`の任意incoming環境と、任意query tupleの全row実装を混同しない。
+
+この有限表は新しいSeq文法compilerでも、低probe数のデータ構造でもない。
+現実装のlookupはlist内のword値比較であり、多項式個のcellを物理的に作る。
+既存の線形空間TM上界を改善する主張、cell-probe予算、Boolean回路上界は付けていない。
+次に必要なのは、元の正確な言語意味を保ったまま、この環境依存の表を暗黙に扱う方法か、
+別の一般下界である。Par→Seqの一般翻訳及び言語クラスの一致・分離は未解決。
+
+検証: `lake build`（Audit込み）1,415 jobs成功。新規25 public theorem reportsは標準Lean公理又は無公理のみで、
+全てAudit guard付き。PR71全体は9新規Lean library modules・54新規guard。
+
+## Cell-probe下界という別経路の調査（2026-10-26）
+
+[Kim–Park, arXiv:2608.29592v1](https://arxiv.org/html/2608.29592v1)は、
+通常のPEGに対する一般の非所属証明を、scaffolding automata（SCA）からcell-probe
+データ構造への変換で与えている。Theorem 3.5の要点は、固定degree/radiusの局所遷移を
+定数回のmemory probeで模倣し、短い更新blockと照会suffixの長さをそれぞれのprobe予算へ
+移すことにある。論文の対象は通常PEGで、捕捉付きCBV-Seqではない。
+
+[公開Lean成果物 v0.1.0](https://doi.org/10.5281/zenodo.22099762)を別の一時directoryへ
+展開し、pinned Lean 4.31.0 / mathlib fabf563a7c95a166b8d7b6efca11c8b4dc9d911fを使用した。
+main entryの負の結論にはKo下界の追加公理が含まれる一方、optionalな
+`InternalLowerBoundMain`は内部の下界証明を提供する。内部証明を
+`ExternalAssumptions.ko2026MultiphaseIPLowerBound`へ入れてから`final_separation`へ接続する
+独立[audit driver](cbv-cell-probe-audit.lean)を作成した。
+成果物の両entryのビルド（8,666 jobs）とdriverの実行が成功し、最終分離定理と
+一般transfer theoremの公理依存が標準3公理のみであることを確認した。
+このrepoへ外部公理や成果物の定義をimportしていない。成果物の負の定理は
+`RecognizedByTotalPEG`についてであり、こちらの部分的CBV観測とのモデル対応も別途必要になる。
+
+この経路をPar/Seqの分離へ使うには、任意の固定一階Seq文法について、正確な言語意味を保つ
+データ構造を構成し、更新と照会のprobe数を証明する必要がある。
+`SequentialClock.position_stable`や`SequentialLocalCorrectness.saturated_eq_source`は
+この証明ではない。後者が固定個数のclosureへ減らすのは同位置の空引数callであり、
+小さい位置の行は依然として任意の捕捉tuple Wで索引されている。
+線形なphysical clockだけから、各入力文字あたり定数回のアクセスは従わない。
+`RenamedCopy.no_flat_interface`も入口の未消化caller stackを対象にしないので、この橋を埋めない。
+
+完全なSeq→通常PEG変換より弱い予算でも足りる可能性がある。
+[Ko, arXiv:2603.25914v2, Theorem 1.1](https://arxiv.org/html/2603.25914v2)の式からの推論として、
+更新に`O(log(n)^a)`、照会に`O(log(n)^(1+a))`のprobeを要する橋でも、固定`0≤a<1`なら
+下界`Ω(log(n)^2/loglog(n)^2)`と衝突する。必要なのは適切なlocal serialization上での
+`O(log n)` word size・多項式memoryと正確なworst-case budgetであり、
+単に多項式時間で認識できるという上界では足りない。
+この予算を満たすSeqシミュレーションはまだ構成していない。
+
+このcell-probe調査自体から、新たなSeq非所属定理や一般Par/Seqの一致・分離は
+主張しない。次の非所属経路の課題を、捕捉環境を含む量的なシミュレーションへ
+具体化した調査結果である。コピー言語についての正の経路は次節で扱う。
+
+## 別アルファベットコピーの認識と、分離候補としての再評価
+
+`RenamedCopy.Language`は、元の5文字a,b,A,B,#上の
+`{ w # uppercase(w) | w in {a,b}* }`である。例えば`ab#AB`を受理し、
+`ab#BA`は受理しない。任意のSeq文法で認識不能とは証明していない。
+一般Par=Pの機械compilerを経由せず、この候補のPar所属を直接証明した。
+
+固定2規則の`RenamedCopy.grammar`は、二つの元入力prefix u,vを位置counterとして使う。
+全callは元入力の原点で実行し、uの直後がaかつvの直後がA、またはb/Bであることを
+先読みしてから、実引数`u;any`と`v;any`を同じ原点で評価する。
+実際の捕捉値は、それぞれ1文字伸びた元入力prefixである。
+uの直後が#、かつvが入力末尾まで達したときだけ比較を完了する。
+別の1規則が最初の#を探してvを初期化し、rootは成功後に元入力全体を消費する。
+文字列の合成・大文字化を実行するprimitive、入力の書換え、paddingは使用しない。
+
+`compare_test`と`seek_test`は実際のPar導出を構成し、`start_observation`は
+全Unicode入力で有限成功又は有限失敗することを示す。
+`recognizes`は全入力での言語一致、`recognizes_slice`は任意の左wordと任意の右入力での
+正確な受理条件を証明する。空word、余分な文字、長さ違い、区切り欠落も含む。
+`Shallot.PegSeparation.renamed_copy_isPar`で元の言語クラス定義へ接続した。
+
+`old_values_dead`と`no_flat_interface`は、左fieldと区切りだけから作った固定上限個の値、
+及び左fieldだけで選ぶ有限状態では、右fieldへ入った後にこの言語を認識できないと示す。
+残り入力のA/Bはa/b/#と別なので非空の旧値が再照合不能になる。
+任意の再帰的なtarget文法と、target内部での新しい捕捉も許す。
+ただし入口に残る無制限のcaller stackは含まない。従ってこれは引継ぎ方式の障害であり、
+Seq非所属の証明ではない。以下のFIFOによる経路は、まさに有限tupleへ平坦化しない
+構成を調べる必要があることを示す。
+
+`RenamedCopyFIFO.accepts_iff`は、左のbitをFIFOへenqueueし、右の文字を大文字の
+対応表と比較しながらdequeueするモデルの全入力での正確な認識を証明する。
+`acceptsReverse_iff`は、有限な文字判定だけを取り替えて反転言語も認識する。
+このコードのListはqueue内容の仕様であり、List.appendの定数時間性は主張しない。
+
+[Leong–Seiferas（JACM 1981）, Theorem 4.1 / Corollary 4.2](https://www.cs.bu.edu/faculty/gacs/courses/cs535/papers/heads_vs_tapes_ub.pdf)
+は、dequeやmultihead tape unitを、入力commandを追加せず実時間でsingle-head tape群へ
+模倣する。FIFO認識をこの既知のsimulationへ入れ、反転言語の実時間TMを得てから、
+監査した実時間TM→SCA→通常PEGの経路へ入れる正の方法がある。
+上の外部audit driverの`realTimeReverseToPEG`は、その後半の一般変換を証明し、
+標準3公理のみで検証した。`Shallot.PegSeparation.pel_subset_firstOrder_cbv`は、
+このrepoの任意の通常PEGを、同じ元の文字列言語を持つ一階Seq（及び他の戦略）へ移す。
+
+したがって、この単純コピー言語は非所属の本命として追わない。
+これは文献上の構成を組み合わせる判断であり、このrepoに`renamed_copy_isSeq`という
+kernel定理を追加したという意味ではない。FIFOから具体的なmultitape TMへの実装と、
+外部PEGモデルからこのrepoのPEGモデルへの意味対応はまだLeanで接続していない。
+FIFO・各一般compiler・通常PEGからSeqへの埋込みの検証範囲を区別する。
+
+計算量による別経路との関係も確認した。既存の
+`original_reverse_requires_P_linear_space`から、一般一致はPの線形空間包含を含意する。
+[MITの講義資料（2008年、Lecture 12）](https://ocw.mit.edu/courses/6-080-great-ideas-in-theoretical-computer-science-spring-2008/6a28fe89bb2e34cc97abe80af66155f6_lec12.pdf)
+もPとLINSPACEの包含方向を未解決として説明している。
+この例では、単純な左右の文字比較に対する文法の表現力を直接調べた。
+一般Par/Seqの一致・分離は未解決で、この言語の形式的Seq所属への接続も未完了である。
+新規性の確定は主張しない。
+
+検証: `lake build`（Audit込み）1,411 jobs成功。今回追加6定理の依存はpropext/Quot.soundのみで、
+すべてAudit guard付き。PR71全体は5新規Lean library module・29新規guard。
+別環境の正のcompilerは8,579 jobs成功し、外部audit driverにも標準公理依存のguardを追加した。
+
+## 消費前の情報を有限個の捕捉へ平坦化する方式の限界
+
+`FiniteCaptureInterface` は、独立prefixの残余を「prefixだけから選んだ有限状態と、
+固定上限個の捕捉値」へ渡す方式を退ける。旧`FiniteResidualControl`の単一捕捉の場合を、
+空文字・複製・分割・prefixに応じた個数変更を許す任意のtupleへ拡張した。
+各値の長さには上限を置かない。値の生成や状態選択の計算可能性も仮定しない。
+
+`shape_agree` は、非空値が残り入力の全suffixで再照合不能なら、tupleの各slotは
+空か非空かだけで観測が決まると示す。任意の一階再帰文法・両CBV戦略について、
+既存の`CaptureObservability.observations_iff`へ接続する。
+`no_bounded_dead_interface` は、この有限signatureと有限状態の組から、全n,mに対する
+残り入力c^m上の「n=mなら全入力受理」を再現する継続が存在しないと証明する。
+
+`no_balanced_factorization` は実際のmacro-free規則`B <- 'a' B 'c' / 'b'`へ適用する。
+a^n bを消費してc^mへ入ったあと、任意個数上限のa/b文字列を保持しても、
+Bの全入力受理を再現できない。分割した捕捉や複数の古い値を追加するだけでは、
+一般のprefix残余問題を解決しない。
+
+これは言語クラスの分離ではない。B自身がSeqでも動き、継続中の無制限の呼出しstackや、
+残り入力も調べて選ぶ入口状態、消費前の原点で独立計算を完了する方式は排除していない。
+次の一般変換では、この有限tupleだけの境界分解を仮定せず、そのような計算構造を扱う
+必要がある。一般Par/Seqの一致・分離は未解決。
+
+検証: `lake build`（Audit込み）1,407 jobs成功。新規6定理の公理依存は
+標準Lean公理のみで、すべてAuditにguardを追加した。
+
 ## 消費した分岐の後続を、束縛済みの保持環境へ融合する
 
 `RetainedContinuationSyntax/Algebra/Compiler` は、`(P.exp leaves); C`という元headerを
