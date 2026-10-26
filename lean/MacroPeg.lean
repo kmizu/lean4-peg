@@ -1,3 +1,7 @@
+import MacroPeg.CBV.SequentialRowAddress
+import MacroPeg.CBV.SequentialSpanWindows
+import MacroPeg.CBV.SequentialAddressedEvaluator
+import MacroPeg.CBV.SequentialAddressedExamples
 import MacroPeg.CBV.SequentialTupleKeys
 import MacroPeg.CBV.SequentialFiniteRows
 import MacroPeg.CBV.SequentialFiniteEvaluator

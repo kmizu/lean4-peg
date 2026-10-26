@@ -1,3 +1,7 @@
+import MacroPeg.CBV.SequentialRowAddress
+import MacroPeg.CBV.SequentialSpanWindows
+import MacroPeg.CBV.SequentialAddressedEvaluator
+import MacroPeg.CBV.SequentialAddressedExamples
 import MacroPeg.CBV.SequentialTupleKeys
 import MacroPeg.CBV.SequentialFiniteRows
 import MacroPeg.CBV.SequentialFiniteEvaluator
@@ -39430,3 +39434,107 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialFiniteExamples.arbitrary_nonadjacent_query_is_not_a_stored_row
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialRowAddress.rank_lt' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialRowAddress.rank_lt
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialRowAddress.paths_get_rank' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialRowAddress.paths_get_rank
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialRowAddress.keys_get_address' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialRowAddress.keys_get_address
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialRowAddress.address_lt' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialRowAddress.address_lt
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSpanWindows.eval_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSpanWindows.eval_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSpanWindows.args_spec' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSpanWindows.args_spec
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAddressedEvaluator.decode_spans' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAddressedEvaluator.decode_spans
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAddressedEvaluator.spans_cuts' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAddressedEvaluator.spans_cuts
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAddressedEvaluator.window_origin' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAddressedEvaluator.window_origin
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAddressedEvaluator.query_agree' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAddressedEvaluator.query_agree
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAddressedEvaluator.rows_correct' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAddressedEvaluator.rows_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAddressedEvaluator.run_correct' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAddressedEvaluator.run_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAddressedEvaluator.decide_eq_standard' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAddressedEvaluator.decide_eq_standard
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAddressedEvaluator.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAddressedEvaluator.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAddressedEvaluator.undefined_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAddressedEvaluator.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAddressedEvaluator.rows_size' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAddressedEvaluator.rows_size
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAddressedEvaluator.query_address_lt' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAddressedEvaluator.query_address_lt
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAddressedEvaluator.rows_size_le' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAddressedEvaluator.rows_size_le
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAddressedExamples.independent_values_at_one_position' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAddressedExamples.independent_values_at_one_position
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAddressedExamples.new_captures_and_parent_return' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAddressedExamples.new_captures_and_parent_return
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAddressedExamples.empty_actuals_keep_repeated_endpoints' depends on axioms: [propext,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAddressedExamples.empty_actuals_keep_repeated_endpoints
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAddressedExamples.nullable_star_stays_undefined' depends on axioms: [propext,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAddressedExamples.nullable_star_stays_undefined
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAddressedExamples.invalid_call_preflight' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAddressedExamples.invalid_call_preflight

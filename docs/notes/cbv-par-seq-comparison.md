@@ -16,6 +16,47 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 任意の一階Seqの有限表を数値番地で直接引く
+
+`SequentialRowAddress`は区切り位置列を基数`n+1`の数として符号化する。
+規則ごとのoffsetはarityから計算し、区切り位置列を列挙したり入力文字を比較したりしない。
+`keys_get_address`は、規則のarityと座標の範囲を満たす列について、従来の`keys`の
+計算した番地に、その規則番号と区切り位置列が正確に入っていることを証明する。
+
+`SequentialSpanWindows`は数値区間評価器の意味保存を強める。queryが実装すべきなのは、
+実在する規則・正しいarity・隣接した引数区間の組だけでよい。
+任意の有効な区間環境について全rowを提供するという仮定は置かない。
+相互帰納の`args_spec`は、実引数評価が作る数値区間自体の`Window`とarityも保存する。
+外側の保持環境は隣接していなくてもよいが、各区間が元入力内にある必要がある。
+
+`SequentialAddressedEvaluator`はこの結果を使う独立した有限評価器である。
+各層はkey順の`Array Res`だけを持ち、queryは引数の区間から番地を計算して
+`Array.getElem?`を一回実行する。`query_address_lt`により、実callでは必ず範囲内になる。
+空引数の場合はcallee位置を、非空引数の場合は最初の区間の始点を区切り位置列の先頭とする。
+空捕捉は座標の重複のまま扱う。
+層を作る`compute`も元入力の数値区間と前層の同じqueryを使い、捕捉文字列の生成、
+word値を比較する行検索、元の`tblV`や旧有限表への実行時fallbackは使わない。
+無効な区間列には`none`を置く安全な過大近似であり、任意の不正queryの全row実装は主張しない。
+
+`rows_correct/run_correct`は全physical clock・全raw式・全有効位置で元の評価と一致する。
+一階文法・開始式については、元の全入力の残余観測・有限失敗・全clock未定義と一致する。
+入口の保持環境が空である言語認識に追加の制限はない。
+row数は以前と同じ`sum_i (n+1)^(arity_i+1)`で、clockも既存の線形上界を使う。
+
+kernel計算で、同じcallee位置の独立値a/bとaa/bの区別、子が新たに捕捉したaa/bbを
+照合した後の親a/bへの復帰、空捕捉、誤った規則番号・arityのpreflightを確認した。
+nullable starは任意入力・全clockで未定義のままと証明した。
+
+この一回のarray readは**一つの規則rowを取り出す処理**についての事実である。
+式評価全体のrow読出し回数、保持値照合の入力読出し回数、表の構築・入力更新の処理量、
+TM上のアドレス算術・array accessの時間を定数とは主張しない。
+特に、各層の多項式個のrowを作り直す現構成は、cell-probe下界に必要な
+短い更新blockあたりの小さい更新予算を満たす証明ではない。
+Par→Seq一般翻訳・クラスの一致又は真包含は引き続き未解決。
+
+検証: `lake build`（Audit込み）1,419 jobs成功。4新規Lean modulesの23 public reportsを
+全てAudit guardへ統合し、22 reportsは標準Lean公理のみ、1 reportは無公理。
+
 ## 任意の一階Seqを、隣接捕捉の区切り位置で有限表にする
 
 `SequentialTupleKeys/SequentialFiniteRows/SequentialFiniteEvaluator`は、制限付き文法templateを
