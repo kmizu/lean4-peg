@@ -1,3 +1,7 @@
+import MacroPeg.CBV.SequentialIndexedReplay
+import MacroPeg.CBV.RightmostCaptureIndex
+import MacroPeg.CBV.SequentialIndexedFutureQueries
+import MacroPeg.CBV.RightmostCaptureExamples
 import MacroPeg.CBV.FutureSpanRepresentatives
 import MacroPeg.CBV.SequentialFutureQueries
 import MacroPeg.CBV.FutureSpanExamples

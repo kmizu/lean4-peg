@@ -16,6 +16,44 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 右端コピーを共有する、入力全体の数値index
+
+`RightmostCaptureIndex.locate_clip`は、元の保持語の入力全体での右端コピーを選ぶと、
+任意の将来boundでのコピー探索が、その一つの区間のstartとboundの比較だけになると証明する。
+位置は残り長で表すので、右端とは最小のstartである。そのstartがbound以下なら同じ区間、
+boundを超えていればdeadとなる。入口や本体の消費を移す操作ではない。
+
+`table x`は長さnの**入力全体**に対する(n+1)^2セルの配列で、元span(a,b)のセルは
+数値番地a*(n+1)+bに置く。`table_get`と`lookup_eq`は有効な元spanの直接参照と
+bound付き探索の一致を証明する。各値のmetadata選択は一つの配列参照と整数比較であり、
+runtimeに保持語を探索したり、入力依存literalを生成したりしない。
+`indexedNormalize_eq`で前節の有限mask付き正規化にも接続する。
+
+さらに`indexedMatch`はparameterを読むたびにこのindexで区間を選び直す。
+`indexedMatch_sources`は実際に比較するsource区間が、その再照合時のcursor以降に
+完全に収まることを証明する。deadなら旧保持語を比較せず失敗する。
+`indexedMatch_eq`は元spanの再照合と結果が同じと証明する。
+**metadataの一セル参照と、文字列再照合の全体コストは別である。**
+照合自体は選んだ区間と現在のsuffixの文字を比較する。
+
+`SequentialIndexedReplay`はこのmatcherを式・実引数の全再照合へ組み込む実数値評価器である。
+`SequentialIndexedFutureQueries`はindexを一度だけ構築して全ての実再帰呼出しで共有する。
+任意の有効なspan環境・任意の元構文・全physical clockで元のSeqに一致し、一階の場合は
+元文字列上の通常観測・全clock未定義も保存する。この新評価器は各parameter読出しで
+indexを参照し、本体へ有限maskを静的代入する前節の評価器とは独立している。
+
+このindexは後半の入力も使って作る。`index_depends_on_suffix`は、同じprefixを持つ
+ab#abとab#ccで旧保持語abのセルが異なることをkernelで確認する。
+従って、前半だけから作るcell-probe/通信のpreprocessingへはそのまま流用できない。
+metadata配列は二次サイズで、この実装の線形空間上界は主張しない。
+indexの構成、元入口への復帰を普通のSeq文法へ翻訳したわけでも、総probe数・総時間・
+更新コストの低い上界を証明したわけでもない。一般Par→Seq変換、言語クラスの一致・分離は未解決。
+
+検証: `lake build`（Audit込み）1,433 jobs成功。4新規modules・22新規public reportsは
+全て標準公理のみ。PR72全体は18新規modules・146新規guard（144標準・2無公理）。
+kernel例は右端コピーを過ぎた失敗、ordered choiceでcursorが戻った後の再利用、空捕捉、
+再帰aa/bb捕捉と親a/b復帰、実引数の失敗・未定義・preflightと全入力全clockのnullable未定義を確認する。
+
 ## 捕捉値を残り入力中の実コピーへ置き換える
 
 `FutureSpanRepresentatives`は任意の有効な数値span環境Eと入口boundについて、
