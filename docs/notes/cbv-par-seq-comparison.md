@@ -16,6 +16,38 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 文法に依存しない時間次数から分離へつなぐ、条件付きの別経路
+
+`Shallot.PegSeparation.CBVUniformDegree`は、既存の実TM上の対角言語PolyDiag dを
+一般Par/Seq比較へ接続する。`FixedDegreeTime d L`は、ある決定性multitape TMと係数cが
+Lを決定し、全入力wでc*(|w|+1)^dステップまでに停止するという具体的な条件である。
+係数・tape数・machine alphabetは言語ごとに変えてよく、次数dだけを固定する。
+
+`degreeDiagonal_par`は全dで元の文字列言語
+`PolyDiag d (ParTableau.inputBits x)`のPar所属を証明する。
+`degreeDiagonal_not_seq_of_uniform_bound`は、**二文字上のSeq全体に同じ次数dの
+TM上界を別途与えたときに限り**、この元文字列言語のSeq非所属を証明する。
+`uniform_seq_degree_separates`は既証明のSeq⊆Parと合わせた、一般クラスの条件付き真包含である。
+上界の仮定そのものをこのmoduleで証明したわけではない。
+
+反対に`binary_reverse_requires_unbounded_degrees`と
+`original_reverse_requires_unbounded_degrees`は、逆包含が成り立つなら、全dについて
+PolyDiag dのSeq所属と、どの次数dの実TMでも決定不能であることが同時に必要だと証明する。
+個々のSeq言語が超多項式時間を要するという意味ではない。
+既存の「各文法ごとに何らかの多項式時間上界がある」は∀g ∃d_gであり、
+ここで必要な∃d ∀gと交換できない。既存のarity依存の有限表上界から共通次数は得ていない。
+
+調査上の候補として、[Barash–Okhotin, Grammars with two-sided contexts](https://arxiv.org/html/1405.5598v1)
+は、文法に依存しない四次時間の解析法を与え、同論文は三次への改善にも言及する。
+ただしその意味はsubstringと左右contextに対する述語であり、一階Seqの複数捕捉・
+同じcallerへの束縛の相関・優先選択・失敗と未定義を保存する変換は未構成である。
+論文の計算モデルからここでの実TMへ移す場合のコストも別途検証が必要で、d=3又は4を
+このLean上界に直接代入できるとは主張しない。外部文法の上界をprojectの公理へ追加していない。
+
+検証: `lake build`（Audit込み）1,435 jobs成功。5新規public reportsは全て標準公理のみ。
+PR72全体は20新規modules・169新規guard（167標準・2無公理）。新しいSeq上界、
+文脈付き文法への変換、無条件のPar/Seq一致又は分離は未解決。
+
 ## 外部のPEG非所属witnessを、Seqの結論へ移す前の監査
 
 [Kim–Park, Sections 4.3–4.5](https://arxiv.org/html/2608.29592v1#S4.SS3)のwitnessを

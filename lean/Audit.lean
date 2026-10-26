@@ -1,3 +1,4 @@
+import Shallot.Peg.Separation.CBVUniformDegree
 import MacroPeg.CBV.SequentialLiveProbeTriangle
 import MacroPeg.CBV.SequentialIndexedReplay
 import MacroPeg.CBV.RightmostCaptureIndex
@@ -40225,3 +40226,27 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialLiveProbeTriangle.source_accepts
+
+/-- info: 'Shallot.PegSeparation.degreeDiagonal_par' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.degreeDiagonal_par
+
+/-- info: 'Shallot.PegSeparation.degreeDiagonal_not_seq_of_uniform_bound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.degreeDiagonal_not_seq_of_uniform_bound
+
+/-- info: 'Shallot.PegSeparation.uniform_seq_degree_separates' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.uniform_seq_degree_separates
+
+/-- info: 'Shallot.PegSeparation.binary_reverse_requires_unbounded_degrees' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.binary_reverse_requires_unbounded_degrees
+
+/-- info: 'Shallot.PegSeparation.original_reverse_requires_unbounded_degrees' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.original_reverse_requires_unbounded_degrees
