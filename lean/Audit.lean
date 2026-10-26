@@ -1,3 +1,6 @@
+import MacroPeg.CBV.FutureSpanRepresentatives
+import MacroPeg.CBV.SequentialFutureQueries
+import MacroPeg.CBV.FutureSpanExamples
 import MacroPeg.CBV.LiveCaptureQuotient
 import MacroPeg.CBV.LiveCaptureProfiles
 import MacroPeg.CBV.CaptureReadSupport
@@ -39889,3 +39892,117 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.LiveCaptureProfiles.distinct_contexts' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.LiveCaptureProfiles.distinct_contexts
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureSpanRepresentatives.probe_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureSpanRepresentatives.probe_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureSpanRepresentatives.locate_some' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureSpanRepresentatives.locate_some
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureSpanRepresentatives.locate_none' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureSpanRepresentatives.locate_none
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureSpanRepresentatives.environment_length' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureSpanRepresentatives.environment_length
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureSpanRepresentatives.environment_valid' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureSpanRepresentatives.environment_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureSpanRepresentatives.views_lookup' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureSpanRepresentatives.views_lookup
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureSpanRepresentatives.parameter_view' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureSpanRepresentatives.parameter_view
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureSpanRepresentatives.views_mask' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureSpanRepresentatives.views_mask
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureSpanRepresentatives.masks_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureSpanRepresentatives.masks_length
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureSpanRepresentatives.mem_masks' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureSpanRepresentatives.mem_masks
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureSpanRepresentatives.variants_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureSpanRepresentatives.variants_length
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureSpanRepresentatives.body_variant' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureSpanRepresentatives.body_variant
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureSpanRepresentatives.expression' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureSpanRepresentatives.expression
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFutureQueries.prepared_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFutureQueries.prepared_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFutureQueries.query_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFutureQueries.query_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFutureQueries.run_correct' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFutureQueries.run_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFutureQueries.decide_eq_standard' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFutureQueries.decide_eq_standard
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFutureQueries.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFutureQueries.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFutureQueries.undefined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFutureQueries.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureSpanExamples.independent_future_copies' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureSpanExamples.independent_future_copies
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureSpanExamples.dead_is_not_empty' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureSpanExamples.dead_is_not_empty
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureSpanExamples.recursive_captures_and_parent' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureSpanExamples.recursive_captures_and_parent
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureSpanExamples.nullable_star_stays_undefined' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureSpanExamples.nullable_star_stays_undefined
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureSpanExamples.invalid_call_preflight' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureSpanExamples.invalid_call_preflight
+
+/-- info: 'Shallot.MacroPeg.CBV.FutureSpanExamples.body_mask_matters' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FutureSpanExamples.body_mask_matters

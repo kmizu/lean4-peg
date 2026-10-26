@@ -16,6 +16,40 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 捕捉値を残り入力中の実コピーへ置き換える
+
+`FutureSpanRepresentatives`は任意の有効な数値span環境Eと入口boundについて、
+各保持語を残り入力中で探索する。見つかれば、その同じ語を表す実区間(p,q)、
+`q ≤ p ≤ bound`へ置き換える。見つからなければ`none`という失敗tagを保持する。
+空語は必ず`some (0,0)`となり、失敗tagとは異なる。
+`locate_some`は区間の範囲と元の保持語との一致を、`locate_none`は全ての将来位置での
+照合不能を証明する。parserの入口位置そのものは動かさない。
+
+数値環境では失敗tagのslotを便宜上(0,0)へ写すが、本体の対応するparameterは
+`failAlways`へ置換する。生きたslotだけを通常のparameterとして読む。
+`expression`は任意の一階本体、Par/Seqのsoundな実再帰表、bound以下の全入口で
+元の環境との評価一致を証明する。`body_variant`はその本体がarity rについて
+長さ2^rの固定候補listに入ることを証明する。この候補listは元の本体とlive/deadの
+Boolean maskだけから構成され、入力・捕捉語・数値位置をコードへ埋め込まない。
+候補には重複があってよく、2^rは異なる本体の正確な個数ではない。
+
+`SequentialFutureQueries`はこの処理をSeqの実数値引数評価と再帰呼出しへ接続する。
+各rule entryで正規化し、前段の同じquery evaluatorを使って書換え済み本体を実行する。
+任意の一階文法・一階開始式・有効な元環境について、全physical clockで元のevVに
+一致し、通常の有限観測と全clock未定義も保存する。引数評価の消費・失敗・未定義、
+invalid rule/arityのpreflight、子の新しい捕捉値と親復帰を保持する。
+
+これは値の表現定理と独立した数値interpreterである。探索自身は元の保持区間を読み、
+原入力全体へアクセスする。**評価器全体から過去入力へのアクセスを除去したわけではない。**
+実コピーの選択はLeanの明示的探索で、通常のSeq文法に実装した操作ではない。
+任意位置からの探索、捕捉を構成した後の元入口への復帰、一般Par→Seq compiler、
+少ない総probe数や低い更新コストは証明していない。一般の言語クラス比較は未解決。
+
+検証: `lake build`（Audit込み）1,429 jobs成功。3新規modules・25新規public reportsは
+全て標準公理のみ。PR72全体は14新規modules・124新規guard（122標準・2無公理）。
+kernel例は独立した実コピー、実際に読まれるdead値、空語との区別、predicateとactual、
+再帰aa/bb捕捉と親a/b復帰、全入力・全clockのnullable未定義とpreflightを確認する。
+
 ## 任意の継続に対して保持値を同一視できる正確な範囲
 
 `LiveCaptureQuotient`は一つの残り入力xに対して、保持語wがxのどこかのsuffix先頭で

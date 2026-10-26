@@ -1,3 +1,6 @@
+import MacroPeg.CBV.FutureSpanRepresentatives
+import MacroPeg.CBV.SequentialFutureQueries
+import MacroPeg.CBV.FutureSpanExamples
 import MacroPeg.CBV.LiveCaptureQuotient
 import MacroPeg.CBV.LiveCaptureProfiles
 import MacroPeg.CBV.CaptureReadSupport
