@@ -16,6 +16,62 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 任意の継続に対して保持値を同一視できる正確な範囲
+
+`LiveCaptureQuotient`は一つの残り入力xに対して、保持語wがxのどこかのsuffix先頭で
+再照合できるかを有限検査する。`profile x (some w)`は再照合可能なら`some w`、
+一度も照合できなければ`none`。未束縛も`none`である。
+空語は常に再照合可能なので、未束縛・非空dead語と同一視しない。
+
+`envAgree_iff_profiles`は、このprofileの各slotでの一致が、既存の全suffix再照合一致
+`EnvAgree`と同値であることを証明する。さらに`observations_contexts_iff`は、任意の
+固定した一階文法とPar/Seqについて、次の二つが同値であると証明する。
+
+- 二つの保持環境のprofileが各slotで同じ。
+- 任意の一階継続eで保持値をliteralとして束縛したとき、同じ元入力xを全消費する
+  通常の有限観測`SObs ... x (some [])`が一致する。
+
+逆方向は実際の文脈`lead;param(k);trail`で証明する。
+xにある保持語wの一つの出現を選ぶと、元入力を全消費してwだけを区別する文脈になる。
+`live_distinguishing_test`は異なるlive語に対するこの具体的な文脈を構成する。
+残余cursorや任意の特定clockだけの違いに依存しない。
+継続のliteral wrapperは、区別する入力・保持語に応じて選べる。
+
+`LiveCaptureProfiles`は、長さ2nの残り入力`a^n b^n`について、正確なprofile代表の
+重複なし有限listを構成する。live語はちょうど`a^i b^j`（0≤i,j≤n）であり、
+それぞれ異なるclassになる。これにdead/unbound classを足すので、代表数は
+`(n+1)*(n+1)+1`。全profileがこのlistに入り、各代表は正規化後も自分自身である。
+dead classは実際の非空保持語`c`でも実現する。
+`distinct_contexts`は異なるlive代表が、固定一階文法の通常の全入力消費観測で
+区別できることを全nで証明する。
+
+これは全ての継続に通用する、文法から独立した値の同一視の必要十分条件である。
+固定された一つのbodyに特有の同一視は、これより粗くてよい。前のunused-field正規化は
+その一例である。代表数は可能な値の種類数であり、同時に必要なmemory cell数、
+総probe数又は更新時間の下界ではない。位置・共有構造等によるコンパクトな符号化も
+排除していない。captured wordの値表現を選ぶ定理であり、一般の本体入口の移動や
+Par→Seqの固定文法compiler、言語クラスの一致・分離は未解決のままである。
+
+検証: `lake build`（Audit込み）1,426 jobs成功。今回の2 modules・27 public reportsを
+全てAudit guardへ統合（26標準公理・1無公理）。PR72全体は11新規modules・99新規guard。
+
+## 関連モデルから上界を移す際の確認
+
+[Loff–Moreira–Reis](https://www.dcc.fc.up.pt/~nam/resources/publica/main.pdf)は、通常PEGに
+logspace reductionでP完全な言語が存在することを示す。既存の通常PEG→Seq埋込みと合わせた
+推論として、Seq全体のNL上界を得ればP=NLも従う。この含意を新たなLean定理として
+追加したわけではなく、NLへの単純な上界移送を期待できない理由として区別する。
+
+[Uezato, ICALP 2024](https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.ICALP.2024.155)の
+REWBLk=NLOGは、後方参照と先読みを持つ正規表現の結果である。
+論文の到達可能性例では、正の先読み内部の変数更新が外へ残り、入力を進めずに反復できる。
+こちらのSeqの不変な引数束縛・再帰・優先選択とは異なり、その上界をそのまま適用しない。
+
+[Rubtsov–Chudinov](https://arxiv.org/html/2406.14911v2)のDPPDAは、stackをpopした際に
+push時の入力位置へ戻れる機械として通常PEGを特徴づける。位置pointerを持つことだけでは、
+任意の捕捉環境と再照合をこの機械へ実装する橋は得られない。一般Seq→DPPDA変換は
+ここでは構成していない。これらの外部結果をprojectの公理や定理としてimportしていない。
+
 ## 読まれない捕捉を、実引数評価後のrow keyから除く
 
 `CaptureReadSupport`はraw式から、直接又は実引数・述語内で読むparameter番号を計算する。

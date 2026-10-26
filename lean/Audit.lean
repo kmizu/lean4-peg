@@ -1,3 +1,5 @@
+import MacroPeg.CBV.LiveCaptureQuotient
+import MacroPeg.CBV.LiveCaptureProfiles
 import MacroPeg.CBV.CaptureReadSupport
 import MacroPeg.CBV.SequentialCanonicalQueries
 import MacroPeg.CBV.CanonicalQueryExamples
@@ -39765,3 +39767,125 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.CanonicalQueryExamples.actual_reads_cannot_be_dropped' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.CanonicalQueryExamples.actual_reads_cannot_be_dropped
+
+/-- info: 'Shallot.MacroPeg.CBV.LiveCaptureQuotient.visible_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LiveCaptureQuotient.visible_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.LiveCaptureQuotient.invisible_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LiveCaptureQuotient.invisible_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.LiveCaptureQuotient.profile_some' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LiveCaptureQuotient.profile_some
+
+/-- info: 'Shallot.MacroPeg.CBV.LiveCaptureQuotient.profile_rest' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LiveCaptureQuotient.profile_rest
+
+/-- info: 'Shallot.MacroPeg.CBV.LiveCaptureQuotient.profile_empty' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LiveCaptureQuotient.profile_empty
+
+/-- info: 'Shallot.MacroPeg.CBV.LiveCaptureQuotient.profile_dead' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LiveCaptureQuotient.profile_dead
+
+/-- info: 'Shallot.MacroPeg.CBV.LiveCaptureQuotient.test_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LiveCaptureQuotient.test_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.LiveCaptureQuotient.test_accept' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LiveCaptureQuotient.test_accept
+
+/-- info: 'Shallot.MacroPeg.CBV.LiveCaptureQuotient.profiles_of_tests' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LiveCaptureQuotient.profiles_of_tests
+
+/-- info: 'Shallot.MacroPeg.CBV.LiveCaptureQuotient.envAgree_iff_profiles' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LiveCaptureQuotient.envAgree_iff_profiles
+
+/-- info: 'Shallot.MacroPeg.CBV.LiveCaptureQuotient.acceptance_contexts_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LiveCaptureQuotient.acceptance_contexts_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.LiveCaptureQuotient.live_injective' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LiveCaptureQuotient.live_injective
+
+/-- info: 'Shallot.MacroPeg.CBV.LiveCaptureQuotient.test_observation' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LiveCaptureQuotient.test_observation
+
+/-- info: 'Shallot.MacroPeg.CBV.LiveCaptureQuotient.live_distinguishing_test' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LiveCaptureQuotient.live_distinguishing_test
+
+/-- info: 'Shallot.MacroPeg.CBV.LiveCaptureQuotient.observations_contexts_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LiveCaptureQuotient.observations_contexts_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.LiveCaptureProfiles.value_injective' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LiveCaptureProfiles.value_injective
+
+/-- info: 'Shallot.MacroPeg.CBV.LiveCaptureProfiles.word_mem' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LiveCaptureProfiles.word_mem
+
+/-- info: 'Shallot.MacroPeg.CBV.LiveCaptureProfiles.values_visible' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LiveCaptureProfiles.values_visible
+
+/-- info: 'Shallot.MacroPeg.CBV.LiveCaptureProfiles.visible_iff_word_mem' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LiveCaptureProfiles.visible_iff_word_mem
+
+/-- info: 'Shallot.MacroPeg.CBV.LiveCaptureProfiles.words_nodup' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LiveCaptureProfiles.words_nodup
+
+/-- info: 'Shallot.MacroPeg.CBV.LiveCaptureProfiles.words_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LiveCaptureProfiles.words_length
+
+/-- info: 'Shallot.MacroPeg.CBV.LiveCaptureProfiles.representatives_nodup' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LiveCaptureProfiles.representatives_nodup
+
+/-- info: 'Shallot.MacroPeg.CBV.LiveCaptureProfiles.representatives_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LiveCaptureProfiles.representatives_length
+
+/-- info: 'Shallot.MacroPeg.CBV.LiveCaptureProfiles.profile_complete' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LiveCaptureProfiles.profile_complete
+
+/-- info: 'Shallot.MacroPeg.CBV.LiveCaptureProfiles.representative_fixed' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LiveCaptureProfiles.representative_fixed
+
+/-- info: 'Shallot.MacroPeg.CBV.LiveCaptureProfiles.dead_representative' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LiveCaptureProfiles.dead_representative
+
+/-- info: 'Shallot.MacroPeg.CBV.LiveCaptureProfiles.distinct_contexts' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LiveCaptureProfiles.distinct_contexts

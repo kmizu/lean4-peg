@@ -1,3 +1,5 @@
+import MacroPeg.CBV.LiveCaptureQuotient
+import MacroPeg.CBV.LiveCaptureProfiles
 import MacroPeg.CBV.CaptureReadSupport
 import MacroPeg.CBV.SequentialCanonicalQueries
 import MacroPeg.CBV.CanonicalQueryExamples
