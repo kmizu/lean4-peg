@@ -16,6 +16,38 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 任意Seqの数値表を、physical clockではなく入力位置の順に埋める
+
+`SequentialPositionRows`は、既存の位置再帰・有限empty-call閉包と、数値番地の実配列を
+接続した評価器である。残り長0から|input|まで順に表を埋める。
+位置pでは、より小さい位置の実配列だけを参照し、現在位置のempty環境に対するrule結果を
+|rules|回反復する。各反復の有限vectorは`freeze`によってArrayへ実体化し、結果を索引で読む。
+同位置の呼出しが渡す実引数は空捕捉だけになることを、既存の意味対応で使う。
+
+この局所vectorを一度構築してから同位置の全一般行で共有する。一般行の本体を計算する
+guardは、その行のcursorが現在位置pのときだけ真になる。他の位置の行は前の配列から保存する。
+したがって、各一般行について本体をphysical clockの全層で繰り返し評価する方式ではなく、
+その位置で一度計算する方式となる。局所反復のrule本体評価はこれとは別に残る。
+
+`localRounds_eq`は実数値span・実配列での局所vectorが、canonicalな位置閉包に一致すると証明する。
+`rows_correct`は埋めた位置より小さい全ての有効な行に対する不変条件を証明する。
+全位置の完了後、`run_correct`は任意の有効な実span環境と元のraw構文について、
+安定した元Seq表での評価と一致する。`decide_eq_standard`、`observations_iff`、
+`undefined_iff`は一階の場合の通常観測と全clock未定義へ接続する。
+runtimeの定義に元のcanonical表を引くoracleはなく、それは証明内だけで使う。
+個々の未安定なphysical clockの近似表を再現するという主張ではない。
+
+今回の`fill`は各位置で全key配列を走査・コピーするため、そのコストも残る。
+一般行の本体評価の回数削減と、配列走査・再照合・番地計算等を含む総時間は区別する。
+配列サイズは従来通りarity依存の有限gridであり、共通多項式次数や線形空間は主張しない。
+Par→Seq文法変換、一般の言語クラス一致・分離も未解決である。
+
+`SequentialPositionRowsExamples`は局所3-round chain、同位置で親の非空値を引継がず
+新しい空捕捉へresetするactual、再帰aa/bbと親a/b復帰、真の循環未定義と有限失敗、
+invalid preflight、全入力のnullable未定義をkernelで検証する。
+検証: `lake build`（Audit込み）1,438 jobs成功。14新規public reportsは全て標準公理のみ。
+PR72全体は23新規modules・191新規guard（189標準・2無公理）。
+
 ## 隣接性と全live化だけでは、全環境表の次数は固定できない
 
 `SequentialAdjacentProfiles`は、arity r・各field長0..nに対して、長さ2*(r+1)*nの

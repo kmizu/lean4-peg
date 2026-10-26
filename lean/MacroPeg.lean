@@ -1,3 +1,5 @@
+import MacroPeg.CBV.SequentialPositionRows
+import MacroPeg.CBV.SequentialPositionRowsExamples
 import MacroPeg.CBV.SequentialAdjacentProfiles
 import MacroPeg.CBV.SequentialLiveProbeTriangle
 import MacroPeg.CBV.SequentialIndexedReplay

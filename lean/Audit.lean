@@ -1,3 +1,5 @@
+import MacroPeg.CBV.SequentialPositionRows
+import MacroPeg.CBV.SequentialPositionRowsExamples
 import MacroPeg.CBV.SequentialAdjacentProfiles
 import Shallot.Peg.Separation.CBVUniformDegree
 import MacroPeg.CBV.SequentialLiveProbeTriangle
@@ -40289,3 +40291,71 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SequentialAdjacentProfiles.no_uniform_enumeration_degree' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialAdjacentProfiles.no_uniform_enumeration_degree
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPositionRows.localRounds_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPositionRows.localRounds_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPositionRows.evaluate_correct' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPositionRows.evaluate_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPositionRows.rows_correct' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPositionRows.rows_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPositionRows.run_correct' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPositionRows.run_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPositionRows.rows_size' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPositionRows.rows_size
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPositionRows.decide_eq_standard' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPositionRows.decide_eq_standard
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPositionRows.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPositionRows.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPositionRows.undefined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPositionRows.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPositionRowsExamples.local_rounds_are_materialized' depends on axioms: [propext,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPositionRowsExamples.local_rounds_are_materialized
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPositionRowsExamples.same_position_resets_captures' depends on axioms: [propext,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPositionRowsExamples.same_position_resets_captures
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPositionRowsExamples.recursive_captures_and_parent' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPositionRowsExamples.recursive_captures_and_parent
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPositionRowsExamples.failure_and_undefined' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPositionRowsExamples.failure_and_undefined
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPositionRowsExamples.invalid_call_preflight' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPositionRowsExamples.invalid_call_preflight
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPositionRowsExamples.nullable_star_stays_undefined' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPositionRowsExamples.nullable_star_stays_undefined
