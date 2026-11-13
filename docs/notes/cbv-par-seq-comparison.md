@@ -16,6 +16,410 @@
 `一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
 認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
 
+## 任意Seqの数値表を、physical clockではなく入力位置の順に埋める
+
+`SequentialPositionRows`は、既存の位置再帰・有限empty-call閉包と、数値番地の実配列を
+接続した評価器である。残り長0から|input|まで順に表を埋める。
+位置pでは、より小さい位置の実配列だけを参照し、現在位置のempty環境に対するrule結果を
+|rules|回反復する。各反復の有限vectorは`freeze`によってArrayへ実体化し、結果を索引で読む。
+同位置の呼出しが渡す実引数は空捕捉だけになることを、既存の意味対応で使う。
+
+この局所vectorを一度構築してから同位置の全一般行で共有する。一般行の本体を計算する
+guardは、その行のcursorが現在位置pのときだけ真になる。他の位置の行は前の配列から保存する。
+したがって、各一般行について本体をphysical clockの全層で繰り返し評価する方式ではなく、
+その位置で一度計算する方式となる。局所反復のrule本体評価はこれとは別に残る。
+
+`localRounds_eq`は実数値span・実配列での局所vectorが、canonicalな位置閉包に一致すると証明する。
+`rows_correct`は埋めた位置より小さい全ての有効な行に対する不変条件を証明する。
+全位置の完了後、`run_correct`は任意の有効な実span環境と元のraw構文について、
+安定した元Seq表での評価と一致する。`decide_eq_standard`、`observations_iff`、
+`undefined_iff`は一階の場合の通常観測と全clock未定義へ接続する。
+runtimeの定義に元のcanonical表を引くoracleはなく、それは証明内だけで使う。
+個々の未安定なphysical clockの近似表を再現するという主張ではない。
+
+今回の`fill`は各位置で全key配列を走査・コピーするため、そのコストも残る。
+一般行の本体評価の回数削減と、配列走査・再照合・番地計算等を含む総時間は区別する。
+配列サイズは従来通りarity依存の有限gridであり、共通多項式次数や線形空間は主張しない。
+Par→Seq文法変換、一般の言語クラス一致・分離も未解決である。
+
+`SequentialPositionRowsExamples`は局所3-round chain、同位置で親の非空値を引継がず
+新しい空捕捉へresetするactual、再帰aa/bbと親a/b復帰、真の循環未定義と有限失敗、
+invalid preflight、全入力のnullable未定義をkernelで検証する。
+検証: `lake build`（Audit込み）1,438 jobs成功。14新規public reportsは全て標準公理のみ。
+PR72全体は23新規modules・191新規guard（189標準・2無公理）。
+
+## 隣接性と全live化だけでは、全環境表の次数は固定できない
+
+`SequentialAdjacentProfiles`は、arity r・各field長0..nに対して、長さ2*(r+1)*nの
+一つのaだけの入力と、共通の残り長b=(r+1)*nを構成する。
+任意の長さtuple dsから、連続する実区間`spans b ds`を作る。
+`spans_window`はそれらが一つの消費区間を分割するWindowであると証明する。
+`literal_actuals`はdsに対応する有限literal引数列の実Seq評価が、正確にa^dの列を捕捉し
+bで終わると証明する。開始位置はb+sum(ds)。候補ごとにこの引数列は異なる。
+
+`window_profile`は、同じ入力の同じ残り位置で、全fieldがliveでありprofileが
+[some a^d_0,...,some a^d_(r-1)]になることを証明する。
+重複なし候補listの正確な長さは(n+1)^r。
+`no_uniform_enumeration_degree`は∀d ∃r ∀C ∃nという順で、候補数が
+C*(入力長+1)^dを超えると証明する。rを固定した後でも係数Cは自由に選べる。
+従って、隣接区間だけを残し、dead値を潰した上で全可能環境を列挙する方式から、
+arityに依存しない次数は出てこない。
+
+これは**許容される環境族の個数**である。全候補を一つの固定文法のrunが実際に
+要求するという主張ではなく、言語認識の時間下界でもない。tupleを少数の位置情報で
+表すこと、body専用の同一視、因数分解、再計算等は排除しない。
+前節の共通次数からの条件付き分離に必要な、Seq全体の上界は未証明のままである。
+
+関連モデルも区別した。[Kallmeyer–Maier, IWPT 2009](https://aclanthology.org/W09-3808/)
+のordered simple RCGは、変数の左右各一回の出現等の制限を持つ。
+Seq actualsの区間が隣接することだけでは、再照合・束縛・再帰を保ってこの構文へ
+移したことにならない。今回、意味保存compilerや新しい共通時間上界は構成していない。
+
+検証: `lake build`（Audit込み）1,436 jobs成功。8新規public reportsは全て標準公理のみ。
+PR72全体は21新規modules・177新規guard（175標準・2無公理）。一般Par→Seqと、
+無条件の言語クラス一致・分離は未解決。
+
+## 文法に依存しない時間次数から分離へつなぐ、条件付きの別経路
+
+`Shallot.PegSeparation.CBVUniformDegree`は、既存の実TM上の対角言語PolyDiag dを
+一般Par/Seq比較へ接続する。`FixedDegreeTime d L`は、ある決定性multitape TMと係数cが
+Lを決定し、全入力wでc*(|w|+1)^dステップまでに停止するという具体的な条件である。
+係数・tape数・machine alphabetは言語ごとに変えてよく、次数dだけを固定する。
+
+`degreeDiagonal_par`は全dで元の文字列言語
+`PolyDiag d (ParTableau.inputBits x)`のPar所属を証明する。
+`degreeDiagonal_not_seq_of_uniform_bound`は、**二文字上のSeq全体に同じ次数dの
+TM上界を別途与えたときに限り**、この元文字列言語のSeq非所属を証明する。
+`uniform_seq_degree_separates`は既証明のSeq⊆Parと合わせた、一般クラスの条件付き真包含である。
+上界の仮定そのものをこのmoduleで証明したわけではない。
+
+反対に`binary_reverse_requires_unbounded_degrees`と
+`original_reverse_requires_unbounded_degrees`は、逆包含が成り立つなら、全dについて
+PolyDiag dのSeq所属と、どの次数dの実TMでも決定不能であることが同時に必要だと証明する。
+個々のSeq言語が超多項式時間を要するという意味ではない。
+既存の「各文法ごとに何らかの多項式時間上界がある」は∀g ∃d_gであり、
+ここで必要な∃d ∀gと交換できない。既存のarity依存の有限表上界から共通次数は得ていない。
+
+調査上の候補として、[Barash–Okhotin, Grammars with two-sided contexts](https://arxiv.org/html/1405.5598v1)
+は、文法に依存しない四次時間の解析法を与え、同論文は三次への改善にも言及する。
+ただしその意味はsubstringと左右contextに対する述語であり、一階Seqの複数捕捉・
+同じcallerへの束縛の相関・優先選択・失敗と未定義を保存する変換は未構成である。
+論文の計算モデルからここでの実TMへ移す場合のコストも別途検証が必要で、d=3又は4を
+このLean上界に直接代入できるとは主張しない。外部文法の上界をprojectの公理へ追加していない。
+
+検証: `lake build`（Audit込み）1,435 jobs成功。5新規public reportsは全て標準公理のみ。
+PR72全体は20新規modules・169新規guard（167標準・2無公理）。新しいSeq上界、
+文脈付き文法への変換、無条件のPar/Seq一致又は分離は未解決。
+
+## 外部のPEG非所属witnessを、Seqの結論へ移す前の監査
+
+[Kim–Park, Sections 4.3–4.5](https://arxiv.org/html/2608.29592v1#S4.SS3)のwitnessを
+再確認した。record-first側Cではkeyを逆順、payloadを逆順の内積で比較し、その反転
+L=C^Rは線形CFLだが通常PEGでは認識不能とする。Lの入力順はquery、update vector、
+reversed recordsである。通常PEGの非所属は、捕捉を持つSeqの非所属ではない。
+既存の`pel_subset_firstOrder_cbv`はPEGからSeqへの包含であり、逆向きには使えない。
+この外部結果だけからPar/Seqの分離を結論する経路はない。
+
+正の方向の試案も区別する。query keyを先にSeqで捕捉し、payloadの再帰的比較へ
+その値を無消費で引き継げばよさそうに見えるが、実際の`P(param 0)`は引数として
+現在位置でparam 0を再照合する。値をそのまま転送するprimitiveではない。
+この注意はParにも当てはまり、Parの一般機械compilerが原点のprefix counterを
+再照合することとも矛盾しない。nullaryな子規則からcallerの保持環境を読むことも
+この一階の束縛規則では許されない。これは試案の未実装箇所であり、別のSeq文法の
+存在を否定する証明ではない。キーを同じ向きに書き換えるだけでも、上記witnessと
+別の言語になるため、元の非所属定理を流用できない。
+
+また、更新の前へquery keyのコピーを挿入して引継ぎを容易にすると、その部分が
+未公開queryに依存する。論文の前処理・各更新・queryをそれぞれ局所的に符号化する
+三段階モデルとは別のencodingになる。文法上の便利さだけでそのコピーを加えては
+元のcell-probe転送条件を満たしたことにならない。
+
+多頭pushdown等の一般結果も、headの復帰・複製、再照合、優先選択、束縛scopeを
+実装する意味対応なしには移せない。今回の調査では、その対応を与える既存定理は
+確認できなかった。新規のSeq所属/非所属、一般一致・分離、又は新しい機械上界を
+証明したとは扱わない。この監査のためのLeanコードや外部公理は追加しない。
+
+## liveな保持値のprofileでも、元の全呼出しキーは線形個に収まらない
+
+`SequentialLiveProbeTriangle`は、前のunused/deadなtargetを変更した固定二規則の一階Seqである。
+入力はa^n#a^n#a^n（長さ3n+2）。targetは#を消費してから、両方のparameterを実際に
+先読みする。実捕捉はa^mとa^r（m+r≤n）、target入口の残り入力は#a^nなので、
+両方ともliveであり、`target_reads_both`によって単純なunused-field除去でも落ちない。
+
+`run_formula`は全nで実clock2の成功と完全なcall traceを証明し、`source_accepts`は
+元の同じ入力の全消費SObsへ接続する。target呼出しはちょうど(m+r≤n)の三角形で、
+重複なく(n+1)(n+2)/2個。`request_profiles`は各呼出しの全継続profileが
+[some a^m,some a^r]であり、`profile_keys_nodup`はそれらも重複しないと証明する。
+`no_linear_profile_cache_bound`は、任意の定数Cについて、このdistinct key数が
+C*(入力長+1)を超えるnを構成する。
+
+従って、元の全callを保存するliteral cacheにunused-field除去と全継続profileの
+同一視を施すだけでは、線形個の総keyでの模倣は得られない。これは当該cache方式の障害である。
+**固定body専用のさらに粗い意味同一視、call除去、evictionと再計算、別の認識文法、
+preprocessingや総probe時間の下界は排除しない。** このsource自体も別の最適化で
+簡約できる可能性があり、Seq言語クラスの非所属や一般Par/Seq分離ではない。
+右端indexのmetadata参照数と、全評価のquery総量を区別する必要がある。
+
+検証: `lake build`（Audit込み）1,434 jobs成功。18新規public reportsは全て標準公理のみ。
+PR72全体は19新規modules・164新規guard（162標準・2無公理）。全nをkernelで証明し、
+固定サイズの実験から一般化したものではない。一般Par→Seqとクラスの一致・分離は未解決。
+
+## 右端コピーを共有する、入力全体の数値index
+
+`RightmostCaptureIndex.locate_clip`は、元の保持語の入力全体での右端コピーを選ぶと、
+任意の将来boundでのコピー探索が、その一つの区間のstartとboundの比較だけになると証明する。
+位置は残り長で表すので、右端とは最小のstartである。そのstartがbound以下なら同じ区間、
+boundを超えていればdeadとなる。入口や本体の消費を移す操作ではない。
+
+`table x`は長さnの**入力全体**に対する(n+1)^2セルの配列で、元span(a,b)のセルは
+数値番地a*(n+1)+bに置く。`table_get`と`lookup_eq`は有効な元spanの直接参照と
+bound付き探索の一致を証明する。各値のmetadata選択は一つの配列参照と整数比較であり、
+runtimeに保持語を探索したり、入力依存literalを生成したりしない。
+`indexedNormalize_eq`で前節の有限mask付き正規化にも接続する。
+
+さらに`indexedMatch`はparameterを読むたびにこのindexで区間を選び直す。
+`indexedMatch_sources`は実際に比較するsource区間が、その再照合時のcursor以降に
+完全に収まることを証明する。deadなら旧保持語を比較せず失敗する。
+`indexedMatch_eq`は元spanの再照合と結果が同じと証明する。
+**metadataの一セル参照と、文字列再照合の全体コストは別である。**
+照合自体は選んだ区間と現在のsuffixの文字を比較する。
+
+`SequentialIndexedReplay`はこのmatcherを式・実引数の全再照合へ組み込む実数値評価器である。
+`SequentialIndexedFutureQueries`はindexを一度だけ構築して全ての実再帰呼出しで共有する。
+任意の有効なspan環境・任意の元構文・全physical clockで元のSeqに一致し、一階の場合は
+元文字列上の通常観測・全clock未定義も保存する。この新評価器は各parameter読出しで
+indexを参照し、本体へ有限maskを静的代入する前節の評価器とは独立している。
+
+このindexは後半の入力も使って作る。`index_depends_on_suffix`は、同じprefixを持つ
+ab#abとab#ccで旧保持語abのセルが異なることをkernelで確認する。
+従って、前半だけから作るcell-probe/通信のpreprocessingへはそのまま流用できない。
+metadata配列は二次サイズで、この実装の線形空間上界は主張しない。
+indexの構成、元入口への復帰を普通のSeq文法へ翻訳したわけでも、総probe数・総時間・
+更新コストの低い上界を証明したわけでもない。一般Par→Seq変換、言語クラスの一致・分離は未解決。
+
+検証: `lake build`（Audit込み）1,433 jobs成功。4新規modules・22新規public reportsは
+全て標準公理のみ。PR72全体は18新規modules・146新規guard（144標準・2無公理）。
+kernel例は右端コピーを過ぎた失敗、ordered choiceでcursorが戻った後の再利用、空捕捉、
+再帰aa/bb捕捉と親a/b復帰、実引数の失敗・未定義・preflightと全入力全clockのnullable未定義を確認する。
+
+## 捕捉値を残り入力中の実コピーへ置き換える
+
+`FutureSpanRepresentatives`は任意の有効な数値span環境Eと入口boundについて、
+各保持語を残り入力中で探索する。見つかれば、その同じ語を表す実区間(p,q)、
+`q ≤ p ≤ bound`へ置き換える。見つからなければ`none`という失敗tagを保持する。
+空語は必ず`some (0,0)`となり、失敗tagとは異なる。
+`locate_some`は区間の範囲と元の保持語との一致を、`locate_none`は全ての将来位置での
+照合不能を証明する。parserの入口位置そのものは動かさない。
+
+数値環境では失敗tagのslotを便宜上(0,0)へ写すが、本体の対応するparameterは
+`failAlways`へ置換する。生きたslotだけを通常のparameterとして読む。
+`expression`は任意の一階本体、Par/Seqのsoundな実再帰表、bound以下の全入口で
+元の環境との評価一致を証明する。`body_variant`はその本体がarity rについて
+長さ2^rの固定候補listに入ることを証明する。この候補listは元の本体とlive/deadの
+Boolean maskだけから構成され、入力・捕捉語・数値位置をコードへ埋め込まない。
+候補には重複があってよく、2^rは異なる本体の正確な個数ではない。
+
+`SequentialFutureQueries`はこの処理をSeqの実数値引数評価と再帰呼出しへ接続する。
+各rule entryで正規化し、前段の同じquery evaluatorを使って書換え済み本体を実行する。
+任意の一階文法・一階開始式・有効な元環境について、全physical clockで元のevVに
+一致し、通常の有限観測と全clock未定義も保存する。引数評価の消費・失敗・未定義、
+invalid rule/arityのpreflight、子の新しい捕捉値と親復帰を保持する。
+
+これは値の表現定理と独立した数値interpreterである。探索自身は元の保持区間を読み、
+原入力全体へアクセスする。**評価器全体から過去入力へのアクセスを除去したわけではない。**
+実コピーの選択はLeanの明示的探索で、通常のSeq文法に実装した操作ではない。
+任意位置からの探索、捕捉を構成した後の元入口への復帰、一般Par→Seq compiler、
+少ない総probe数や低い更新コストは証明していない。一般の言語クラス比較は未解決。
+
+検証: `lake build`（Audit込み）1,429 jobs成功。3新規modules・25新規public reportsは
+全て標準公理のみ。PR72全体は14新規modules・124新規guard（122標準・2無公理）。
+kernel例は独立した実コピー、実際に読まれるdead値、空語との区別、predicateとactual、
+再帰aa/bb捕捉と親a/b復帰、全入力・全clockのnullable未定義とpreflightを確認する。
+
+## 任意の継続に対して保持値を同一視できる正確な範囲
+
+`LiveCaptureQuotient`は一つの残り入力xに対して、保持語wがxのどこかのsuffix先頭で
+再照合できるかを有限検査する。`profile x (some w)`は再照合可能なら`some w`、
+一度も照合できなければ`none`。未束縛も`none`である。
+空語は常に再照合可能なので、未束縛・非空dead語と同一視しない。
+
+`envAgree_iff_profiles`は、このprofileの各slotでの一致が、既存の全suffix再照合一致
+`EnvAgree`と同値であることを証明する。さらに`observations_contexts_iff`は、任意の
+固定した一階文法とPar/Seqについて、次の二つが同値であると証明する。
+
+- 二つの保持環境のprofileが各slotで同じ。
+- 任意の一階継続eで保持値をliteralとして束縛したとき、同じ元入力xを全消費する
+  通常の有限観測`SObs ... x (some [])`が一致する。
+
+逆方向は実際の文脈`lead;param(k);trail`で証明する。
+xにある保持語wの一つの出現を選ぶと、元入力を全消費してwだけを区別する文脈になる。
+`live_distinguishing_test`は異なるlive語に対するこの具体的な文脈を構成する。
+残余cursorや任意の特定clockだけの違いに依存しない。
+継続のliteral wrapperは、区別する入力・保持語に応じて選べる。
+
+`LiveCaptureProfiles`は、長さ2nの残り入力`a^n b^n`について、正確なprofile代表の
+重複なし有限listを構成する。live語はちょうど`a^i b^j`（0≤i,j≤n）であり、
+それぞれ異なるclassになる。これにdead/unbound classを足すので、代表数は
+`(n+1)*(n+1)+1`。全profileがこのlistに入り、各代表は正規化後も自分自身である。
+dead classは実際の非空保持語`c`でも実現する。
+`distinct_contexts`は異なるlive代表が、固定一階文法の通常の全入力消費観測で
+区別できることを全nで証明する。
+
+これは全ての継続に通用する、文法から独立した値の同一視の必要十分条件である。
+固定された一つのbodyに特有の同一視は、これより粗くてよい。前のunused-field正規化は
+その一例である。代表数は可能な値の種類数であり、同時に必要なmemory cell数、
+総probe数又は更新時間の下界ではない。位置・共有構造等によるコンパクトな符号化も
+排除していない。captured wordの値表現を選ぶ定理であり、一般の本体入口の移動や
+Par→Seqの固定文法compiler、言語クラスの一致・分離は未解決のままである。
+
+検証: `lake build`（Audit込み）1,426 jobs成功。今回の2 modules・27 public reportsを
+全てAudit guardへ統合（26標準公理・1無公理）。PR72全体は11新規modules・99新規guard。
+
+## 関連モデルから上界を移す際の確認
+
+[Loff–Moreira–Reis](https://www.dcc.fc.up.pt/~nam/resources/publica/main.pdf)は、通常PEGに
+logspace reductionでP完全な言語が存在することを示す。既存の通常PEG→Seq埋込みと合わせた
+推論として、Seq全体のNL上界を得ればP=NLも従う。この含意を新たなLean定理として
+追加したわけではなく、NLへの単純な上界移送を期待できない理由として区別する。
+
+[Uezato, ICALP 2024](https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.ICALP.2024.155)の
+REWBLk=NLOGは、後方参照と先読みを持つ正規表現の結果である。
+論文の到達可能性例では、正の先読み内部の変数更新が外へ残り、入力を進めずに反復できる。
+こちらのSeqの不変な引数束縛・再帰・優先選択とは異なり、その上界をそのまま適用しない。
+
+[Rubtsov–Chudinov](https://arxiv.org/html/2406.14911v2)のDPPDAは、stackをpopした際に
+push時の入力位置へ戻れる機械として通常PEGを特徴づける。位置pointerを持つことだけでは、
+任意の捕捉環境と再照合をこの機械へ実装する橋は得られない。一般Seq→DPPDA変換は
+ここでは構成していない。これらの外部結果をprojectの公理や定理としてimportしていない。
+
+## 読まれない捕捉を、実引数評価後のrow keyから除く
+
+`CaptureReadSupport`はraw式から、直接又は実引数・述語内で読むparameter番号を計算する。
+`expression/parallel/sequential`は、その番号の値だけ一致する二つの環境で、任意の
+同じ`evV` tableに対する評価が一致することを証明する。sourceの構文や実引数を変更しない。
+呼出し先が値を読まなくても、その値を使って実引数を評価するcaller側の参照は残す。
+
+`canonical body E`は、読まれる数値区間だけを保ち、他のslotを`(0,0)`へ置く。
+slot数とscopeは変わらず、有効な区間環境を保つ。結果は冪等である。
+`row_canonical`は、任意の文法・任意のphysical clockで、その規則の元rowと
+canonical環境のrowが一致すると証明する。これは同じ入力・同じtable layerでの同一視であり、
+異なる入力やclockのrowを同一視する主張ではない。
+
+`SequentialCanonicalQueries`は、この同一視を実際に各規則入口で使う、別の数値評価器である。
+元の実引数の左順評価・消費・失敗・未定義とrule/arity preflightを保ち、calleeへ入った後の
+保持環境だけを正規化する。再帰queryも同じ正規化を行う。
+`query_eq/run_correct`は、任意の有効incoming区間環境・raw式・全physical clockについて
+元の`evV/tblV`と一致する。一階文法・開始式なら全入力の残余観測・有限失敗・
+全clock未定義と元文字列言語を保存する。
+`key_sound/query_key_agree`は、同じgrammar/input/clockでcanonical keyが同じ二つの
+queryについて、元rowも新しい実queryも同じ結果となることを保証する。
+
+`CanonicalQueryExamples`は下記の三角形状query例へ接続する。
+元の実word値キーは`(n+1)(n+2)/2`個あるが、Tの本体はepsilonなので、全て
+`(rule=1, [(0,0),(0,0)], cursor=1)`という一つのkeyになる。
+F側の`n+1`個も含め、全source traceのqueryを覆う重複のないkey listを実際に作り、
+長さが`n+2`であることを全nで証明した。例のF/Tは非循環なので、使うlayerはそれぞれ2/1。
+この結果は、前のsource traceの二次個のrowが意味的にも個別に必要とはいえないことを、
+具体的な一般正規化で示す。
+
+独立のkernel例では、3引数の真ん中だけを消し、親a/bと子aa/bbを保った実再帰を検証した。
+真ん中の実引数の~/?消費も残る。unused actualの不一致と成功残余の違い、
+nullable actualの任意入力・全clock未定義、invalid callのpreflightも保存する。
+calleeがunusedでも、実引数内のparameter参照を消すと消費位置が変わる反例を固定した。
+
+この正規化queryは、数値番地のdense array実装とは別の評価器である。
+ここではmemoizationの実装、既存array全体の圧縮、総呼出し回数・総probe数・更新時間の
+改善は主張しない。実際に読まれる複数の保持値は残る。
+Par→Seqの一般文法変換でもなく、クラスの一致・分離は依然未解決。
+
+検証: `lake build`（Audit込み）1,424 jobs成功。今回の3 modules・28 public reportsを
+全てAudit guardへ統合し、標準Lean公理のみ。PR72全体は9新規modules・72新規guard。
+
+## 実callだけをキャッシュしても総row数は線形にならない
+
+`SequentialProbeTrace`は有限clockのSeq評価器へ規則queryの記録を加える。
+成功した実引数の後にcalleeの規則番号・数値捕捉環境・cursorを記録し、引数内やcallee内の
+queryも順序どおり残す。述語は内部の記録を捨てず、starの最後の失敗した試行も残す。
+不正な規則番号・arityのpreflightでは実引数を評価せず、calleeのqueryも発行しない。
+`eval_erase/args_erase/query_erase/run_correct`で記録を消すと既存の評価と正確に一致する。
+文法や式の終了性、incoming環境の隣接性を仮定しない。
+
+`SequentialProbeTriangle`は一つの固定した一階2規則文法を与える。
+`A`を`a*`、`&`を二重否定と書くと、構成は次のとおり。
+
+```text
+S    <- (&F(A) 'a')* '#' A '#'
+F(w) <- '#' (&T(w,A) 'a')* A '#'
+T(u,v) <- epsilon
+```
+
+戦略はSeqで、文法は入力長に依存しない。入力`a^n#a^n#`の全消費成功を
+`source_accepts`で証明した。clockは全nについて2で足りる。
+`run_formula/targets_eq_triangle`は、Tへの実query列が、mをnから0へ降順に、
+各mでrをn-mから0へ降順にした全組であることを証明する。
+実際の保持値は`a^m`と`a^r`であり、callee位置は全て1（最後の`#`の位置）。
+数値区間は`[(m+r+1,r+1),(r+1,1)]`となる。
+
+`targets_nodup/targets_word_keys_nodup`により、数値requestとしても、規則番号・
+実word値tuple・callee位置のキーとしても重複しない。
+`targets_count`の正確な式は`2 * targets.length = (n+1)*(n+2)`、
+`input_length`は`input.length = 2*n+2`。
+`no_linear_cache_bound`は任意の定数Cについて、実query数が`C*(input.length+1)`を超える
+入力があることを証明する。したがって、少数の固定規則・固定clock・各rowを一回だけ
+計算するmemoizationから、source全体の線形row予算は従わない。
+
+これは**sourceの実queryを個別に実行・保持する方式**に対する反例である。
+Tの本体はepsilonなので、文法の意味を利用するcompilerにはinline等の最適化の余地がある。
+同じ言語を認識する全ての文法・評価器の下界ではなく、任意の前処理やrow間の圧縮も
+否定していない。総query数の二次増加から、local serializationの各更新blockの下界を
+主張することもしない。一般cell-probe bridgeに必要なのは、こうしたsource依存の多くの
+queryを一括して扱う量的な構成、又は別の一般的な下界である。
+Par→Seq一般翻訳とクラスの一致・分離は引き続き未解決。
+
+検証: `lake build`（Audit込み）1,421 jobs成功。今回の2 modules・21 public reportsを
+全てAudit guardへ統合し、標準Lean公理のみ。PR72全体では6新規modules・44新規guard。
+
+## 任意の一階Seqの有限表を数値番地で直接引く
+
+`SequentialRowAddress`は区切り位置列を基数`n+1`の数として符号化する。
+規則ごとのoffsetはarityから計算し、区切り位置列を列挙したり入力文字を比較したりしない。
+`keys_get_address`は、規則のarityと座標の範囲を満たす列について、従来の`keys`の
+計算した番地に、その規則番号と区切り位置列が正確に入っていることを証明する。
+
+`SequentialSpanWindows`は数値区間評価器の意味保存を強める。queryが実装すべきなのは、
+実在する規則・正しいarity・隣接した引数区間の組だけでよい。
+任意の有効な区間環境について全rowを提供するという仮定は置かない。
+相互帰納の`args_spec`は、実引数評価が作る数値区間自体の`Window`とarityも保存する。
+外側の保持環境は隣接していなくてもよいが、各区間が元入力内にある必要がある。
+
+`SequentialAddressedEvaluator`はこの結果を使う独立した有限評価器である。
+各層はkey順の`Array Res`だけを持ち、queryは引数の区間から番地を計算して
+`Array.getElem?`を一回実行する。`query_address_lt`により、実callでは必ず範囲内になる。
+空引数の場合はcallee位置を、非空引数の場合は最初の区間の始点を区切り位置列の先頭とする。
+空捕捉は座標の重複のまま扱う。
+層を作る`compute`も元入力の数値区間と前層の同じqueryを使い、捕捉文字列の生成、
+word値を比較する行検索、元の`tblV`や旧有限表への実行時fallbackは使わない。
+無効な区間列には`none`を置く安全な過大近似であり、任意の不正queryの全row実装は主張しない。
+
+`rows_correct/run_correct`は全physical clock・全raw式・全有効位置で元の評価と一致する。
+一階文法・開始式については、元の全入力の残余観測・有限失敗・全clock未定義と一致する。
+入口の保持環境が空である言語認識に追加の制限はない。
+row数は以前と同じ`sum_i (n+1)^(arity_i+1)`で、clockも既存の線形上界を使う。
+
+kernel計算で、同じcallee位置の独立値a/bとaa/bの区別、子が新たに捕捉したaa/bbを
+照合した後の親a/bへの復帰、空捕捉、誤った規則番号・arityのpreflightを確認した。
+nullable starは任意入力・全clockで未定義のままと証明した。
+
+この一回のarray readは**一つの規則rowを取り出す処理**についての事実である。
+式評価全体のrow読出し回数、保持値照合の入力読出し回数、表の構築・入力更新の処理量、
+TM上のアドレス算術・array accessの時間を定数とは主張しない。
+特に、各層の多項式個のrowを作り直す現構成は、cell-probe下界に必要な
+短い更新blockあたりの小さい更新予算を満たす証明ではない。
+Par→Seq一般翻訳・クラスの一致又は真包含は引き続き未解決。
+
+検証: `lake build`（Audit込み）1,419 jobs成功。4新規Lean modulesの23 public reportsを
+全てAudit guardへ統合し、22 reportsは標準Lean公理のみ、1 reportは無公理。
+
 ## 任意の一階Seqを、隣接捕捉の区切り位置で有限表にする
 
 `SequentialTupleKeys/SequentialFiniteRows/SequentialFiniteEvaluator`は、制限付き文法templateを

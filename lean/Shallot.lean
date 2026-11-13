@@ -96,5 +96,6 @@ import Shallot.Peg.Separation.CBVBinary
 import Shallot.Peg.Separation.CBVSeqSpace
 import Shallot.Peg.Separation.CBVForwardBoolean
 import Shallot.Peg.Separation.CBVSeqLinearSpace
+import Shallot.Peg.Separation.CBVUniformDegree
 import Shallot.Peg.Separation.CBVRenamedCopy
 import Shallot.Peg.Separation.CBVPlainEmbedding
